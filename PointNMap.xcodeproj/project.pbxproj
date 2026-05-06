@@ -6,8 +6,49 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A3D78C462FABFA6F0010116D /* PointNMapShared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78C3E2FABFA6F0010116D /* PointNMapShared.framework */; };
+		A3D78C472FABFA6F0010116D /* PointNMapShared.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78C3E2FABFA6F0010116D /* PointNMapShared.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		A3D78C592FABFA820010116D /* PointNMapShaderTypes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78C512FABFA820010116D /* PointNMapShaderTypes.framework */; };
+		A3D78C5A2FABFA820010116D /* PointNMapShaderTypes.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78C512FABFA820010116D /* PointNMapShaderTypes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A3D78C442FABFA6F0010116D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A3D78C232FABF97E0010116D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A3D78C3D2FABFA6F0010116D;
+			remoteInfo = PointNMapShared;
+		};
+		A3D78C572FABFA820010116D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A3D78C232FABF97E0010116D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A3D78C502FABFA820010116D;
+			remoteInfo = PointNMapShaderTypes;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A3D78C4B2FABFA6F0010116D /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				A3D78C5A2FABFA820010116D /* PointNMapShaderTypes.framework in Embed Frameworks */,
+				A3D78C472FABFA6F0010116D /* PointNMapShared.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		A3D78C2B2FABF97E0010116D /* PointNMap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PointNMap.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A3D78C3E2FABFA6F0010116D /* PointNMapShared.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PointNMapShared.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A3D78C512FABFA820010116D /* PointNMapShaderTypes.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PointNMapShaderTypes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +57,36 @@
 			path = PointNMap;
 			sourceTree = "<group>";
 		};
+		A3D78C3F2FABFA6F0010116D /* PointNMapShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PointNMapShared;
+			sourceTree = "<group>";
+		};
+		A3D78C522FABFA820010116D /* PointNMapShaderTypes */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PointNMapShaderTypes;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A3D78C282FABF97E0010116D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A3D78C592FABFA820010116D /* PointNMapShaderTypes.framework in Frameworks */,
+				A3D78C462FABFA6F0010116D /* PointNMapShared.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3D78C3B2FABFA6F0010116D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3D78C4E2FABFA820010116D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +100,8 @@
 			isa = PBXGroup;
 			children = (
 				A3D78C2D2FABF97E0010116D /* PointNMap */,
+				A3D78C3F2FABFA6F0010116D /* PointNMapShared */,
+				A3D78C522FABFA820010116D /* PointNMapShaderTypes */,
 				A3D78C2C2FABF97E0010116D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,11 +110,30 @@
 			isa = PBXGroup;
 			children = (
 				A3D78C2B2FABF97E0010116D /* PointNMap.app */,
+				A3D78C3E2FABFA6F0010116D /* PointNMapShared.framework */,
+				A3D78C512FABFA820010116D /* PointNMapShaderTypes.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		A3D78C392FABFA6F0010116D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3D78C4C2FABFA820010116D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
 		A3D78C2A2FABF97E0010116D /* PointNMap */ = {
@@ -55,10 +143,13 @@
 				A3D78C272FABF97E0010116D /* Sources */,
 				A3D78C282FABF97E0010116D /* Frameworks */,
 				A3D78C292FABF97E0010116D /* Resources */,
+				A3D78C4B2FABFA6F0010116D /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A3D78C452FABFA6F0010116D /* PBXTargetDependency */,
+				A3D78C582FABFA820010116D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A3D78C2D2FABF97E0010116D /* PointNMap */,
@@ -69,6 +160,52 @@
 			productName = PointNMap;
 			productReference = A3D78C2B2FABF97E0010116D /* PointNMap.app */;
 			productType = "com.apple.product-type.application";
+		};
+		A3D78C3D2FABFA6F0010116D /* PointNMapShared */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A3D78C482FABFA6F0010116D /* Build configuration list for PBXNativeTarget "PointNMapShared" */;
+			buildPhases = (
+				A3D78C392FABFA6F0010116D /* Headers */,
+				A3D78C3A2FABFA6F0010116D /* Sources */,
+				A3D78C3B2FABFA6F0010116D /* Frameworks */,
+				A3D78C3C2FABFA6F0010116D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A3D78C3F2FABFA6F0010116D /* PointNMapShared */,
+			);
+			name = PointNMapShared;
+			packageProductDependencies = (
+			);
+			productName = PointNMapShared;
+			productReference = A3D78C3E2FABFA6F0010116D /* PointNMapShared.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		A3D78C502FABFA820010116D /* PointNMapShaderTypes */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A3D78C5B2FABFA820010116D /* Build configuration list for PBXNativeTarget "PointNMapShaderTypes" */;
+			buildPhases = (
+				A3D78C4C2FABFA820010116D /* Headers */,
+				A3D78C4D2FABFA820010116D /* Sources */,
+				A3D78C4E2FABFA820010116D /* Frameworks */,
+				A3D78C4F2FABFA820010116D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A3D78C522FABFA820010116D /* PointNMapShaderTypes */,
+			);
+			name = PointNMapShaderTypes;
+			packageProductDependencies = (
+			);
+			productName = PointNMapShaderTypes;
+			productReference = A3D78C512FABFA820010116D /* PointNMapShaderTypes.framework */;
+			productType = "com.apple.product-type.framework";
 		};
 /* End PBXNativeTarget section */
 
@@ -81,6 +218,12 @@
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
 					A3D78C2A2FABF97E0010116D = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+					A3D78C3D2FABFA6F0010116D = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+					A3D78C502FABFA820010116D = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
 				};
@@ -100,12 +243,28 @@
 			projectRoot = "";
 			targets = (
 				A3D78C2A2FABF97E0010116D /* PointNMap */,
+				A3D78C3D2FABFA6F0010116D /* PointNMapShared */,
+				A3D78C502FABFA820010116D /* PointNMapShaderTypes */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		A3D78C292FABF97E0010116D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3D78C3C2FABFA6F0010116D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3D78C4F2FABFA820010116D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +281,34 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A3D78C3A2FABFA6F0010116D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3D78C4D2FABFA820010116D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A3D78C452FABFA6F0010116D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A3D78C3D2FABFA6F0010116D /* PointNMapShared */;
+			targetProxy = A3D78C442FABFA6F0010116D /* PBXContainerItemProxy */;
+		};
+		A3D78C582FABFA820010116D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A3D78C502FABFA820010116D /* PointNMapShaderTypes */;
+			targetProxy = A3D78C572FABFA820010116D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A3D78C342FABF97F0010116D /* Debug */ = {
@@ -261,6 +447,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -293,6 +480,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -307,6 +495,162 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A3D78C492FABFA6F0010116D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UB6LB27Z2X;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMapShared;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_MODULE = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		A3D78C4A2FABFA6F0010116D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UB6LB27Z2X;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMapShared;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_MODULE = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		A3D78C5C2FABFA820010116D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UB6LB27Z2X;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMapShaderTypes;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_MODULE = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		A3D78C5D2FABFA820010116D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UB6LB27Z2X;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMapShaderTypes;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_MODULE = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
 			};
 			name = Release;
 		};
@@ -327,6 +671,24 @@
 			buildConfigurations = (
 				A3D78C372FABF97F0010116D /* Debug */,
 				A3D78C382FABF97F0010116D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A3D78C482FABFA6F0010116D /* Build configuration list for PBXNativeTarget "PointNMapShared" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A3D78C492FABFA6F0010116D /* Debug */,
+				A3D78C4A2FABFA6F0010116D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A3D78C5B2FABFA820010116D /* Build configuration list for PBXNativeTarget "PointNMapShaderTypes" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A3D78C5C2FABFA820010116D /* Debug */,
+				A3D78C5D2FABFA820010116D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
