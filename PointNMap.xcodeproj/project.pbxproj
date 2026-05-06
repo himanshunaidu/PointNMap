@@ -51,6 +51,17 @@
 		A3D78C512FABFA820010116D /* PointNMapShaderTypes.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PointNMapShaderTypes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A3D78C642FABFD290010116D /* Exceptions for "PointNMapShaderTypes" folder in "PointNMapShaderTypes" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			publicHeaders = (
+				PointNMapShaderTypes.h,
+				ShaderTypes.h,
+			);
+			target = A3D78C502FABFA820010116D /* PointNMapShaderTypes */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A3D78C2D2FABF97E0010116D /* PointNMap */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -64,6 +75,9 @@
 		};
 		A3D78C522FABFA820010116D /* PointNMapShaderTypes */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A3D78C642FABFD290010116D /* Exceptions for "PointNMapShaderTypes" folder in "PointNMapShaderTypes" target */,
+			);
 			path = PointNMapShaderTypes;
 			sourceTree = "<group>";
 		};
