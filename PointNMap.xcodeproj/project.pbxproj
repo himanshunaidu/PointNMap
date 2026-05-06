@@ -7,35 +7,35 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A3D78C462FABFA6F0010116D /* PointNMapShared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78C3E2FABFA6F0010116D /* PointNMapShared.framework */; };
-		A3D78C472FABFA6F0010116D /* PointNMapShared.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78C3E2FABFA6F0010116D /* PointNMapShared.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		A3D78C592FABFA820010116D /* PointNMapShaderTypes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78C512FABFA820010116D /* PointNMapShaderTypes.framework */; };
-		A3D78C5A2FABFA820010116D /* PointNMapShaderTypes.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78C512FABFA820010116D /* PointNMapShaderTypes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		A3D78D742FABFDC90010116D /* PointNMapShaderTypes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78C512FABFA820010116D /* PointNMapShaderTypes.framework */; };
-		A3D78D752FABFDC90010116D /* PointNMapShaderTypes.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78C512FABFA820010116D /* PointNMapShaderTypes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		A3D78D7B2FABFDE20010116D /* DequeModule in Frameworks */ = {isa = PBXBuildFile; productRef = A3D78D7A2FABFDE20010116D /* DequeModule */; };
+		A3D78DAD2FAC03140010116D /* PointNMapShaderTypes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78DA52FAC03140010116D /* PointNMapShaderTypes.framework */; };
+		A3D78DAE2FAC03140010116D /* PointNMapShaderTypes.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78DA52FAC03140010116D /* PointNMapShaderTypes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		A3D78DDE2FAC04360010116D /* PointNMapShared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78DD62FAC04360010116D /* PointNMapShared.framework */; };
+		A3D78DDF2FAC04360010116D /* PointNMapShared.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78DD62FAC04360010116D /* PointNMapShared.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		A3D78EF12FAC04810010116D /* PointNMapShaderTypes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78DA52FAC03140010116D /* PointNMapShaderTypes.framework */; };
+		A3D78EF22FAC04810010116D /* PointNMapShaderTypes.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78DA52FAC03140010116D /* PointNMapShaderTypes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		A3D78EF72FAC04970010116D /* DequeModule in Frameworks */ = {isa = PBXBuildFile; productRef = A3D78EF62FAC04970010116D /* DequeModule */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		A3D78C442FABFA6F0010116D /* PBXContainerItemProxy */ = {
+		A3D78DAB2FAC03140010116D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A3D78C232FABF97E0010116D /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = A3D78C3D2FABFA6F0010116D;
-			remoteInfo = PointNMapShared;
-		};
-		A3D78C572FABFA820010116D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = A3D78C232FABF97E0010116D /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = A3D78C502FABFA820010116D;
+			remoteGlobalIDString = A3D78DA42FAC03140010116D;
 			remoteInfo = PointNMapShaderTypes;
 		};
-		A3D78D762FABFDC90010116D /* PBXContainerItemProxy */ = {
+		A3D78DDC2FAC04360010116D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A3D78C232FABF97E0010116D /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = A3D78C502FABFA820010116D;
+			remoteGlobalIDString = A3D78DD52FAC04360010116D;
+			remoteInfo = PointNMapShared;
+		};
+		A3D78EF32FAC04810010116D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A3D78C232FABF97E0010116D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A3D78DA42FAC03140010116D;
 			remoteInfo = PointNMapShaderTypes;
 		};
 /* End PBXContainerItemProxy section */
@@ -47,19 +47,29 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				A3D78C5A2FABFA820010116D /* PointNMapShaderTypes.framework in Embed Frameworks */,
-				A3D78C472FABFA6F0010116D /* PointNMapShared.framework in Embed Frameworks */,
+				A3D78DDF2FAC04360010116D /* PointNMapShared.framework in Embed Frameworks */,
+				A3D78DAE2FAC03140010116D /* PointNMapShaderTypes.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A3D78D782FABFDC90010116D /* Embed Frameworks */ = {
+		A3D78DD02FAC04000010116D /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			name = "Embed ExtensionKit Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3D78EF52FAC04810010116D /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				A3D78D752FABFDC90010116D /* PointNMapShaderTypes.framework in Embed Frameworks */,
+				A3D78EF22FAC04810010116D /* PointNMapShaderTypes.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -68,25 +78,25 @@
 
 /* Begin PBXFileReference section */
 		A3D78C2B2FABF97E0010116D /* PointNMap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PointNMap.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A3D78C3E2FABFA6F0010116D /* PointNMapShared.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PointNMapShared.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		A3D78C512FABFA820010116D /* PointNMapShaderTypes.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PointNMapShaderTypes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A3D78DA52FAC03140010116D /* PointNMapShaderTypes.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PointNMapShaderTypes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A3D78DD62FAC04360010116D /* PointNMapShared.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PointNMapShared.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		A3D78C642FABFD290010116D /* Exceptions for "PointNMapShaderTypes" folder in "PointNMapShaderTypes" target */ = {
+		A3D78DAF2FAC03140010116D /* Exceptions for "PointNMapShaderTypes" folder in "PointNMapShaderTypes" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			publicHeaders = (
 				PointNMapShaderTypes.h,
 				ShaderTypes.h,
 			);
-			target = A3D78C502FABFA820010116D /* PointNMapShaderTypes */;
+			target = A3D78DA42FAC03140010116D /* PointNMapShaderTypes */;
 		};
-		A3D78D7C2FABFE810010116D /* Exceptions for "PointNMapShared" folder in "PointNMapShared" target */ = {
+		A3D78EF82FAC05030010116D /* Exceptions for "PointNMapShared" folder in "PointNMapShared" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			publicHeaders = (
 				PointNMapShared.h,
 			);
-			target = A3D78C3D2FABFA6F0010116D /* PointNMapShared */;
+			target = A3D78DD52FAC04360010116D /* PointNMapShared */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -96,20 +106,20 @@
 			path = PointNMap;
 			sourceTree = "<group>";
 		};
-		A3D78C3F2FABFA6F0010116D /* PointNMapShared */ = {
+		A3D78DA62FAC03140010116D /* PointNMapShaderTypes */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				A3D78D7C2FABFE810010116D /* Exceptions for "PointNMapShared" folder in "PointNMapShared" target */,
-			);
-			path = PointNMapShared;
-			sourceTree = "<group>";
-		};
-		A3D78C522FABFA820010116D /* PointNMapShaderTypes */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				A3D78C642FABFD290010116D /* Exceptions for "PointNMapShaderTypes" folder in "PointNMapShaderTypes" target */,
+				A3D78DAF2FAC03140010116D /* Exceptions for "PointNMapShaderTypes" folder in "PointNMapShaderTypes" target */,
 			);
 			path = PointNMapShaderTypes;
+			sourceTree = "<group>";
+		};
+		A3D78DD72FAC04360010116D /* PointNMapShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A3D78EF82FAC05030010116D /* Exceptions for "PointNMapShared" folder in "PointNMapShared" target */,
+			);
+			path = PointNMapShared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -119,24 +129,24 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A3D78C592FABFA820010116D /* PointNMapShaderTypes.framework in Frameworks */,
-				A3D78C462FABFA6F0010116D /* PointNMapShared.framework in Frameworks */,
+				A3D78DDE2FAC04360010116D /* PointNMapShared.framework in Frameworks */,
+				A3D78DAD2FAC03140010116D /* PointNMapShaderTypes.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A3D78C3B2FABFA6F0010116D /* Frameworks */ = {
+		A3D78DA22FAC03140010116D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A3D78D742FABFDC90010116D /* PointNMapShaderTypes.framework in Frameworks */,
-				A3D78D7B2FABFDE20010116D /* DequeModule in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A3D78C4E2FABFA820010116D /* Frameworks */ = {
+		A3D78DD32FAC04360010116D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A3D78EF12FAC04810010116D /* PointNMapShaderTypes.framework in Frameworks */,
+				A3D78EF72FAC04970010116D /* DequeModule in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -147,8 +157,8 @@
 			isa = PBXGroup;
 			children = (
 				A3D78C2D2FABF97E0010116D /* PointNMap */,
-				A3D78C3F2FABFA6F0010116D /* PointNMapShared */,
-				A3D78C522FABFA820010116D /* PointNMapShaderTypes */,
+				A3D78DA62FAC03140010116D /* PointNMapShaderTypes */,
+				A3D78DD72FAC04360010116D /* PointNMapShared */,
 				A3D78D732FABFDC90010116D /* Frameworks */,
 				A3D78C2C2FABF97E0010116D /* Products */,
 			);
@@ -158,8 +168,8 @@
 			isa = PBXGroup;
 			children = (
 				A3D78C2B2FABF97E0010116D /* PointNMap.app */,
-				A3D78C3E2FABFA6F0010116D /* PointNMapShared.framework */,
-				A3D78C512FABFA820010116D /* PointNMapShaderTypes.framework */,
+				A3D78DA52FAC03140010116D /* PointNMapShaderTypes.framework */,
+				A3D78DD62FAC04360010116D /* PointNMapShared.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -174,14 +184,14 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
-		A3D78C392FABFA6F0010116D /* Headers */ = {
+		A3D78DA02FAC03140010116D /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A3D78C4C2FABFA820010116D /* Headers */ = {
+		A3D78DD12FAC04360010116D /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -199,12 +209,13 @@
 				A3D78C282FABF97E0010116D /* Frameworks */,
 				A3D78C292FABF97E0010116D /* Resources */,
 				A3D78C4B2FABFA6F0010116D /* Embed Frameworks */,
+				A3D78DD02FAC04000010116D /* Embed ExtensionKit Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				A3D78C452FABFA6F0010116D /* PBXTargetDependency */,
-				A3D78C582FABFA820010116D /* PBXTargetDependency */,
+				A3D78DAC2FAC03140010116D /* PBXTargetDependency */,
+				A3D78DDD2FAC04360010116D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A3D78C2D2FABF97E0010116D /* PointNMap */,
@@ -216,53 +227,53 @@
 			productReference = A3D78C2B2FABF97E0010116D /* PointNMap.app */;
 			productType = "com.apple.product-type.application";
 		};
-		A3D78C3D2FABFA6F0010116D /* PointNMapShared */ = {
+		A3D78DA42FAC03140010116D /* PointNMapShaderTypes */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A3D78C482FABFA6F0010116D /* Build configuration list for PBXNativeTarget "PointNMapShared" */;
+			buildConfigurationList = A3D78DB02FAC03140010116D /* Build configuration list for PBXNativeTarget "PointNMapShaderTypes" */;
 			buildPhases = (
-				A3D78C392FABFA6F0010116D /* Headers */,
-				A3D78C3A2FABFA6F0010116D /* Sources */,
-				A3D78C3B2FABFA6F0010116D /* Frameworks */,
-				A3D78C3C2FABFA6F0010116D /* Resources */,
-				A3D78D782FABFDC90010116D /* Embed Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				A3D78D772FABFDC90010116D /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				A3D78C3F2FABFA6F0010116D /* PointNMapShared */,
-			);
-			name = PointNMapShared;
-			packageProductDependencies = (
-				A3D78D7A2FABFDE20010116D /* DequeModule */,
-			);
-			productName = PointNMapShared;
-			productReference = A3D78C3E2FABFA6F0010116D /* PointNMapShared.framework */;
-			productType = "com.apple.product-type.framework";
-		};
-		A3D78C502FABFA820010116D /* PointNMapShaderTypes */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = A3D78C5B2FABFA820010116D /* Build configuration list for PBXNativeTarget "PointNMapShaderTypes" */;
-			buildPhases = (
-				A3D78C4C2FABFA820010116D /* Headers */,
-				A3D78C4D2FABFA820010116D /* Sources */,
-				A3D78C4E2FABFA820010116D /* Frameworks */,
-				A3D78C4F2FABFA820010116D /* Resources */,
+				A3D78DA02FAC03140010116D /* Headers */,
+				A3D78DA12FAC03140010116D /* Sources */,
+				A3D78DA22FAC03140010116D /* Frameworks */,
+				A3D78DA32FAC03140010116D /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				A3D78C522FABFA820010116D /* PointNMapShaderTypes */,
+				A3D78DA62FAC03140010116D /* PointNMapShaderTypes */,
 			);
 			name = PointNMapShaderTypes;
 			packageProductDependencies = (
 			);
 			productName = PointNMapShaderTypes;
-			productReference = A3D78C512FABFA820010116D /* PointNMapShaderTypes.framework */;
+			productReference = A3D78DA52FAC03140010116D /* PointNMapShaderTypes.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		A3D78DD52FAC04360010116D /* PointNMapShared */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A3D78DE02FAC04360010116D /* Build configuration list for PBXNativeTarget "PointNMapShared" */;
+			buildPhases = (
+				A3D78DD12FAC04360010116D /* Headers */,
+				A3D78DD22FAC04360010116D /* Sources */,
+				A3D78DD32FAC04360010116D /* Frameworks */,
+				A3D78DD42FAC04360010116D /* Resources */,
+				A3D78EF52FAC04810010116D /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A3D78EF42FAC04810010116D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A3D78DD72FAC04360010116D /* PointNMapShared */,
+			);
+			name = PointNMapShared;
+			packageProductDependencies = (
+				A3D78EF62FAC04970010116D /* DequeModule */,
+			);
+			productName = PointNMapShared;
+			productReference = A3D78DD62FAC04360010116D /* PointNMapShared.framework */;
 			productType = "com.apple.product-type.framework";
 		};
 /* End PBXNativeTarget section */
@@ -278,10 +289,10 @@
 					A3D78C2A2FABF97E0010116D = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
-					A3D78C3D2FABFA6F0010116D = {
+					A3D78DA42FAC03140010116D = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
-					A3D78C502FABFA820010116D = {
+					A3D78DD52FAC04360010116D = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
 				};
@@ -304,8 +315,8 @@
 			projectRoot = "";
 			targets = (
 				A3D78C2A2FABF97E0010116D /* PointNMap */,
-				A3D78C3D2FABFA6F0010116D /* PointNMapShared */,
-				A3D78C502FABFA820010116D /* PointNMapShaderTypes */,
+				A3D78DA42FAC03140010116D /* PointNMapShaderTypes */,
+				A3D78DD52FAC04360010116D /* PointNMapShared */,
 			);
 		};
 /* End PBXProject section */
@@ -318,14 +329,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A3D78C3C2FABFA6F0010116D /* Resources */ = {
+		A3D78DA32FAC03140010116D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A3D78C4F2FABFA820010116D /* Resources */ = {
+		A3D78DD42FAC04360010116D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -342,14 +353,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A3D78C3A2FABFA6F0010116D /* Sources */ = {
+		A3D78DA12FAC03140010116D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A3D78C4D2FABFA820010116D /* Sources */ = {
+		A3D78DD22FAC04360010116D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -359,20 +370,20 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		A3D78C452FABFA6F0010116D /* PBXTargetDependency */ = {
+		A3D78DAC2FAC03140010116D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = A3D78C3D2FABFA6F0010116D /* PointNMapShared */;
-			targetProxy = A3D78C442FABFA6F0010116D /* PBXContainerItemProxy */;
+			target = A3D78DA42FAC03140010116D /* PointNMapShaderTypes */;
+			targetProxy = A3D78DAB2FAC03140010116D /* PBXContainerItemProxy */;
 		};
-		A3D78C582FABFA820010116D /* PBXTargetDependency */ = {
+		A3D78DDD2FAC04360010116D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = A3D78C502FABFA820010116D /* PointNMapShaderTypes */;
-			targetProxy = A3D78C572FABFA820010116D /* PBXContainerItemProxy */;
+			target = A3D78DD52FAC04360010116D /* PointNMapShared */;
+			targetProxy = A3D78DDC2FAC04360010116D /* PBXContainerItemProxy */;
 		};
-		A3D78D772FABFDC90010116D /* PBXTargetDependency */ = {
+		A3D78EF42FAC04810010116D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = A3D78C502FABFA820010116D /* PointNMapShaderTypes */;
-			targetProxy = A3D78D762FABFDC90010116D /* PBXContainerItemProxy */;
+			target = A3D78DA42FAC03140010116D /* PointNMapShaderTypes */;
+			targetProxy = A3D78EF32FAC04810010116D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -522,6 +533,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -555,6 +570,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -564,22 +583,18 @@
 			};
 			name = Release;
 		};
-		A3D78C492FABFA6F0010116D /* Debug */ = {
+		A3D78DB12FAC03140010116D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = UB6LB27Z2X;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/PointNMapShared",
-					"$(SRCROOT)/PointNMapShaderTypes",
-				);
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
@@ -591,39 +606,33 @@
 				MARKETING_VERSION = 1.0;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
-				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/PointNMapShared $(SRCROOT)/PointNMapShaderTypes";
-				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMapShared;
+				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMapShaderTypes;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_INSTALL_MODULE = YES;
-				SWIFT_INSTALL_OBJC_HEADER = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
 			name = Debug;
 		};
-		A3D78C4A2FABFA6F0010116D /* Release */ = {
+		A3D78DB22FAC03140010116D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = UB6LB27Z2X;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/PointNMapShared",
-					"$(SRCROOT)/PointNMapShaderTypes",
-				);
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
@@ -635,24 +644,22 @@
 				MARKETING_VERSION = 1.0;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
-				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/PointNMapShared $(SRCROOT)/PointNMapShaderTypes";
-				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMapShared;
+				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMapShaderTypes;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_INSTALL_MODULE = YES;
-				SWIFT_INSTALL_OBJC_HEADER = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
 			name = Release;
 		};
-		A3D78C5C2FABFA820010116D /* Debug */ = {
+		A3D78DE12FAC04360010116D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
@@ -664,6 +671,10 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/PointNMapShared",
+					"$(SRCROOT)/PointNMapShaderTypes",
+				);
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
@@ -675,10 +686,15 @@
 				MARKETING_VERSION = 1.0;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
-				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMapShaderTypes;
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/PointNMapShared $(SRCROOT)/PointNMapShaderTypes";
+				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMap.PointNMapShared;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_INSTALL_MODULE = YES;
@@ -691,7 +707,7 @@
 			};
 			name = Debug;
 		};
-		A3D78C5D2FABFA820010116D /* Release */ = {
+		A3D78DE22FAC04360010116D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
@@ -703,6 +719,10 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/PointNMapShared",
+					"$(SRCROOT)/PointNMapShaderTypes",
+				);
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
@@ -714,10 +734,15 @@
 				MARKETING_VERSION = 1.0;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
-				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMapShaderTypes;
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/PointNMapShared $(SRCROOT)/PointNMapShaderTypes";
+				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMap.PointNMapShared;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_INSTALL_MODULE = YES;
@@ -751,20 +776,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A3D78C482FABFA6F0010116D /* Build configuration list for PBXNativeTarget "PointNMapShared" */ = {
+		A3D78DB02FAC03140010116D /* Build configuration list for PBXNativeTarget "PointNMapShaderTypes" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				A3D78C492FABFA6F0010116D /* Debug */,
-				A3D78C4A2FABFA6F0010116D /* Release */,
+				A3D78DB12FAC03140010116D /* Debug */,
+				A3D78DB22FAC03140010116D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A3D78C5B2FABFA820010116D /* Build configuration list for PBXNativeTarget "PointNMapShaderTypes" */ = {
+		A3D78DE02FAC04360010116D /* Build configuration list for PBXNativeTarget "PointNMapShared" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				A3D78C5C2FABFA820010116D /* Debug */,
-				A3D78C5D2FABFA820010116D /* Release */,
+				A3D78DE12FAC04360010116D /* Debug */,
+				A3D78DE22FAC04360010116D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -783,7 +808,7 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		A3D78D7A2FABFDE20010116D /* DequeModule */ = {
+		A3D78EF62FAC04970010116D /* DequeModule */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A3D78D792FABFDE20010116D /* XCRemoteSwiftPackageReference "swift-collections" */;
 			productName = DequeModule;
