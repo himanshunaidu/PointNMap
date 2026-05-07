@@ -119,25 +119,52 @@ struct SetupView: View {
     var body: some View {
         return NavigationStack {
             VStack {
-                List {
-                    ForEach(selectedClasses, id: \.self) { accessibilityFeatureClass in
-                        Button(action: {
-                            
-                        }) {
-                            HStack {
-                                Text(accessibilityFeatureClass.name)
-                                    .foregroundStyle(SetupViewConstants.Colors.selectedClass)
-                                Spacer()
-                                Image(systemName: SetupViewConstants.Images.classSelectionColorHintIcon)
-                                    .resizable()
-                                    .frame(width: 20, height: 20)
-                                    .foregroundStyle(Color(UIColor(ciColor: accessibilityFeatureClass.color)))
-                                    .overlay(
-                                        Image(systemName: SetupViewConstants.Images.classSelectionColorHintBorderIcon)
-                                            .resizable()
-                                            .frame(width: 20, height: 20)
-                                            .foregroundStyle(SetupViewConstants.Colors.selectedClass)
-                                    )
+                VStack {
+                    Text(SetupViewConstants.Texts.selectClassesText)
+                        .font(.headline)
+                    List {
+                        ForEach(selectedClasses, id: \.self) { accessibilityFeatureClass in
+                            Button(action: {
+                                
+                            }) {
+                                HStack {
+                                    Text(accessibilityFeatureClass.name)
+                                        .foregroundStyle(SetupViewConstants.Colors.selectedClass)
+                                    Spacer()
+                                    Image(systemName: SetupViewConstants.Images.classSelectionColorHintIcon)
+                                        .resizable()
+                                        .frame(width: 20, height: 20)
+                                        .foregroundStyle(Color(UIColor(ciColor: accessibilityFeatureClass.color)))
+                                        .overlay(
+                                            Image(systemName: SetupViewConstants.Images.classSelectionColorHintBorderIcon)
+                                                .resizable()
+                                                .frame(width: 20, height: 20)
+                                                .foregroundStyle(SetupViewConstants.Colors.selectedClass)
+                                        )
+                                }
+                            }
+                        }
+                    }
+                }
+                VStack {
+                    Text("Current Features Processed")
+                        .font(.headline)
+                    List {
+                        ForEach(currentFeaturesViewModel.currentFeatures, id: \.id) { feature in
+                            VStack {
+                                HStack {
+                                    Spacer()
+                                    Text(feature.accessibilityFeatureClass.name)
+                                    Spacer()
+                                }
+                                ForEach(Array(feature.calculatedAttributeValues), id: \.key.id) { attributeValue in
+                                    HStack {
+                                        Text(attributeValue.key.name)
+                                            .foregroundStyle(.secondary)
+                                        Spacer()
+                                        Text(attributeValue.value?.description ?? "nil")
+                                    }
+                                }
                             }
                         }
                     }
@@ -165,7 +192,6 @@ struct SetupView: View {
     }
     
     private var mappingDestination: some View {
-        currentFeaturesViewModel.currentFeatures = []
         return ARCameraViewBase(selectedClasses: self.selectedClasses.sorted(), onCaptureComplete: onCaptureComplete)
     }
     
