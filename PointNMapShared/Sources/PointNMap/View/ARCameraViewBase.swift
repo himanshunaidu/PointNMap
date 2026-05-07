@@ -125,13 +125,17 @@ class ARCameraBaseManagerStatusViewModel: ObservableObject {
     }
 }
 
-public struct ARCameraView: View {
-    let selectedClasses: [AccessibilityFeatureClass]
+public struct ARCameraViewBase: View {
+    public let selectedClasses: [AccessibilityFeatureClass]
+    /// MARK: Extra callback if required. Else, the view will handle the flow to annotation view internally
+    private let onCaptureComplete: ((CaptureData) -> Void)?
+    /// MARK: Extra shared settings
+    @EnvironmentObject public var sharedBaseSettings: SharedBaseSettings
     
-    @EnvironmentObject var sharedAppData: SharedBaseData
-    @EnvironmentObject var sharedAppContext: SharedBaseContext
-    @EnvironmentObject var segmentationPipeline: SegmentationARPipeline
-    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject public var sharedAppData: SharedBaseData
+    @EnvironmentObject public var sharedAppContext: SharedBaseContext
+    @EnvironmentObject public var segmentationPipeline: SegmentationARPipeline
+    @Environment(\.dismiss) public var dismiss
 
     @StateObject private var manager: ARCameraManager = ARCameraManager()
     @StateObject private var managerConfigureStatusViewModel = ARCameraBaseManagerStatusViewModel()
@@ -142,6 +146,13 @@ public struct ARCameraView: View {
     @State private var showARCameraLearnMoreSheet = false
     
     @State private var showAnnotationView = false
+    
+    public init(
+        selectedClasses: [AccessibilityFeatureClass], onCaptureComplete: ((CaptureData) -> Void)?
+    ) {
+        self.selectedClasses = selectedClasses
+        self.onCaptureComplete = onCaptureComplete
+    }
     
     public var body: some View {
         Group {
@@ -204,7 +215,7 @@ public struct ARCameraView: View {
                 try manager.configure(
                     selectedClasses: selectedClasses, segmentationPipeline: segmentationPipeline,
                     metalContext: sharedAppContext.metalContext,
-                    isEnhancedAnalysisEnabled: sharedAppContext.isEnhancedAnalysisEnabled,
+                    isEnhancedAnalysisEnabled: sharedBaseSettings.isEnhancedAnalysisEnabled,
                     cameraOutputImageCallback: cameraOutputImageCallback
                 )
             } catch {
@@ -345,7 +356,12 @@ public struct ARCameraView: View {
                     captureImageData: captureData.imageData, captureMeshData: captureData.meshData,
                     location: locationManager.currentLocation?.coordinate, heading: locationManager.currentHeading?.trueHeading
                 )
-                showAnnotationView = true
+                if let onCaptureComplete = onCaptureComplete {
+                    onCaptureComplete(captureData)
+                    dismiss()
+                } else {
+                    showAnnotationView = true
+                }
             } catch ARCameraManagerError.finalSessionMeshUnavailable {
                 setHintText(ARCameraViewBaseConstants.Texts.cameraHintNoMeshText)
             } catch ARCameraManagerError.finalSessionNoSegmentationClass,

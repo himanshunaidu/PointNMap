@@ -7,11 +7,21 @@
 import SwiftUI
 import Combine
 
-final class SharedBaseContext: ObservableObject {
-    var metalContext: MetalContext?
-    var isEnhancedAnalysisEnabled: Bool = false
+public final class SharedBaseContext: ObservableObject {
+    public var metalContext: MetalContext?
     
-    func configure() throws {
+    public init() {}
+    
+    public func configure() throws {
         metalContext = try MetalContext()
+    }
+}
+
+/// MARK: Additional settings struct that can be used or replaced by the main app as needed.
+public final class SharedBaseSettings: ObservableObject {
+    public var isEnhancedAnalysisEnabled: Bool = false
+    
+    public init(isEnhancedAnalysisEnabled: Bool = false) {
+        self.isEnhancedAnalysisEnabled = isEnhancedAnalysisEnabled
     }
 }

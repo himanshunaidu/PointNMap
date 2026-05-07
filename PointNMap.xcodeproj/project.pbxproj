@@ -14,6 +14,8 @@
 		A3D78EF12FAC04810010116D /* PointNMapShaderTypes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78DA52FAC03140010116D /* PointNMapShaderTypes.framework */; };
 		A3D78EF22FAC04810010116D /* PointNMapShaderTypes.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78DA52FAC03140010116D /* PointNMapShaderTypes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A3D78EF72FAC04970010116D /* DequeModule in Frameworks */ = {isa = PBXBuildFile; productRef = A3D78EF62FAC04970010116D /* DequeModule */; };
+		A3D78EFA2FAC07840010116D /* DequeModule in Frameworks */ = {isa = PBXBuildFile; productRef = A3D78EF92FAC07840010116D /* DequeModule */; };
+		A3D78EFC2FAC07840010116D /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = A3D78EFB2FAC07840010116D /* OrderedCollections */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -131,6 +133,8 @@
 			files = (
 				A3D78DDE2FAC04360010116D /* PointNMapShared.framework in Frameworks */,
 				A3D78DAD2FAC03140010116D /* PointNMapShaderTypes.framework in Frameworks */,
+				A3D78EFC2FAC07840010116D /* OrderedCollections in Frameworks */,
+				A3D78EFA2FAC07840010116D /* DequeModule in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -222,6 +226,8 @@
 			);
 			name = PointNMap;
 			packageProductDependencies = (
+				A3D78EF92FAC07840010116D /* DequeModule */,
+				A3D78EFB2FAC07840010116D /* OrderedCollections */,
 			);
 			productName = PointNMap;
 			productReference = A3D78C2B2FABF97E0010116D /* PointNMap.app */;
@@ -519,6 +525,14 @@
 				DEVELOPMENT_TEAM = UB6LB27Z2X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/PointNMapShaderTypes",
+					"$(SRCROOT)/PointNMap",
+				);
+				INFOPLIST_KEY_NSCameraUsageDescription = "Used to segment surroundings";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Used to localize the detected features";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Used to localize the detected features";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "We want to save the filtered photo.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -530,6 +544,8 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/PointNMap $(SRCROOT)/PointNMapShaderTypes";
+				OTHER_CFLAGS = "-DACCELERATE_NEW_LAPACK";
 				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -540,6 +556,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "PointNMap/PointNMap-Bridging-Header.h";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -556,6 +573,14 @@
 				DEVELOPMENT_TEAM = UB6LB27Z2X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/PointNMapShaderTypes",
+					"$(SRCROOT)/PointNMap",
+				);
+				INFOPLIST_KEY_NSCameraUsageDescription = "Used to segment surroundings";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Used to localize the detected features";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Used to localize the detected features";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "We want to save the filtered photo.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -567,6 +592,8 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/PointNMap $(SRCROOT)/PointNMapShaderTypes";
+				OTHER_CFLAGS = "-DACCELERATE_NEW_LAPACK";
 				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.PointNMap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -577,6 +604,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "PointNMap/PointNMap-Bridging-Header.h";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -812,6 +840,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A3D78D792FABFDE20010116D /* XCRemoteSwiftPackageReference "swift-collections" */;
 			productName = DequeModule;
+		};
+		A3D78EF92FAC07840010116D /* DequeModule */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A3D78D792FABFDE20010116D /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = DequeModule;
+		};
+		A3D78EFB2FAC07840010116D /* OrderedCollections */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A3D78D792FABFDE20010116D /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = OrderedCollections;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

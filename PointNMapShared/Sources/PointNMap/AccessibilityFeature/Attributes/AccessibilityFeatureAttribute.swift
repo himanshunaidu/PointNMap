@@ -45,7 +45,7 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
         case categorical(typeID: String)
     }
     
-    public enum Value: Sendable, Codable, Equatable {
+    public enum Value: Sendable, Codable, Equatable, CustomStringConvertible {
         case length(Measurement<UnitLength>)
         case angle(Measurement<UnitAngle>)
         case number(Double)
@@ -66,6 +66,21 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
                 return c1 == c2
             default:
                 return false
+            }
+        }
+        
+        public var description: String {
+            switch self {
+            case .length(let measurement):
+                return String(format: "%.2f %@", measurement.value, measurement.unit.symbol)
+            case .angle(let measurement):
+                return String(format: "%.2f %@", measurement.value, measurement.unit.symbol)
+            case .number(let value):
+                return String(format: "%.2f", value)
+            case .flag(let value):
+                return value ? "yes" : "no"
+            case .categorical(let categoricalValue):
+                return categoricalValue.rawValue
             }
         }
     }
