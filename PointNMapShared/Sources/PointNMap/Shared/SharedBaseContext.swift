@@ -11,6 +11,8 @@ public final class SharedBaseContext: ObservableObject {
     public var metalContext: MetalContext?
     public var isEnhancedAnalysisEnabled: Bool = false
     
+    public init() {}
+    
     public func configure() throws {
         metalContext = try MetalContext()
     }

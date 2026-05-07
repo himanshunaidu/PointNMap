@@ -127,6 +127,8 @@ class ARCameraBaseManagerStatusViewModel: ObservableObject {
 
 public struct ARCameraViewBase: View {
     public let selectedClasses: [AccessibilityFeatureClass]
+    /// MARK: Extra callback if required. Else, the view will handle the flow to annotation view internally
+    private let onCaptureComplete: ((CaptureData) -> Void)?
     
     @EnvironmentObject public var sharedAppData: SharedBaseData
     @EnvironmentObject public var sharedAppContext: SharedBaseContext
@@ -143,8 +145,11 @@ public struct ARCameraViewBase: View {
     
     @State private var showAnnotationView = false
     
-    public init(selectedClasses: [AccessibilityFeatureClass]) {
+    public init(
+        selectedClasses: [AccessibilityFeatureClass], onCaptureComplete: ((CaptureData) -> Void)?
+    ) {
         self.selectedClasses = selectedClasses
+        self.onCaptureComplete = onCaptureComplete
     }
     
     public var body: some View {
@@ -349,7 +354,12 @@ public struct ARCameraViewBase: View {
                     captureImageData: captureData.imageData, captureMeshData: captureData.meshData,
                     location: locationManager.currentLocation?.coordinate, heading: locationManager.currentHeading?.trueHeading
                 )
-                showAnnotationView = true
+                if let onCaptureComplete = onCaptureComplete {
+                    onCaptureComplete(captureData)
+                    dismiss()
+                } else {
+                    showAnnotationView = true
+                }
             } catch ARCameraManagerError.finalSessionMeshUnavailable {
                 setHintText(ARCameraViewBaseConstants.Texts.cameraHintNoMeshText)
             } catch ARCameraManagerError.finalSessionNoSegmentationClass,

@@ -1,5 +1,5 @@
 //
-//  ContentView.swift
+//  SetupView.swift
 //  PointNMap
 //
 //  Created by Himanshu on 5/6/26.
@@ -8,7 +8,8 @@
 import SwiftUI
 import PointNMapShared
 
-enum ContentViewConstants {
+/// Pulled from SetupView of iOSPointMapper. Not relevant, only for UI.
+enum SetupViewConstants {
     enum Texts {
         static let setupViewTitle = "Setup"
         static let selectedWorkspaceTitle = "Selected Workspace"
@@ -92,8 +93,13 @@ enum ContentViewConstants {
     }
 }
 
-struct ContentView: View {
+/// Set up view for demo
+struct SetupView: View {
     @State private var selectedClasses: [AccessibilityFeatureClass] = []
+    
+    @StateObject private var sharedAppData: SharedBaseData = SharedBaseData()
+    @StateObject private var sharedAppContext: SharedBaseContext = SharedBaseContext()
+    @StateObject private var segmentationPipeline: SegmentationARPipeline = SegmentationARPipeline()
     
     var body: some View {
         return NavigationStack {
@@ -105,17 +111,17 @@ struct ContentView: View {
                         }) {
                             HStack {
                                 Text(accessibilityFeatureClass.name)
-                                    .foregroundStyle(ContentViewConstants.Colors.selectedClass)
+                                    .foregroundStyle(SetupViewConstants.Colors.selectedClass)
                                 Spacer()
-                                Image(systemName: ContentViewConstants.Images.classSelectionColorHintIcon)
+                                Image(systemName: SetupViewConstants.Images.classSelectionColorHintIcon)
                                     .resizable()
                                     .frame(width: 20, height: 20)
                                     .foregroundStyle(Color(UIColor(ciColor: accessibilityFeatureClass.color)))
                                     .overlay(
-                                        Image(systemName: ContentViewConstants.Images.classSelectionColorHintBorderIcon)
+                                        Image(systemName: SetupViewConstants.Images.classSelectionColorHintBorderIcon)
                                             .resizable()
                                             .frame(width: 20, height: 20)
-                                            .foregroundStyle(ContentViewConstants.Colors.selectedClass)
+                                            .foregroundStyle(SetupViewConstants.Colors.selectedClass)
                                     )
                             }
                         }
@@ -123,31 +129,49 @@ struct ContentView: View {
                 }
             }
             .padding()
-        }
-        .navigationBarTitle(ContentViewConstants.Texts.setupViewTitle, displayMode: .inline)
-        .navigationBarItems(
-            trailing:
-                NavigationLink(destination: mappingDestination) {
-                    Text("Next")
-                        .foregroundStyle(Color.primary)
-                        .font(.headline)
-                }
-        )
-        .onAppear {
-            // For demonstration purposes, we select only sidewalk class by default
-            guard let sidewalkClass = PointNMapConstants.SelectedAccessibilityFeatureConfig.classes.first(where: { $0.kind == .sidewalk }) else {
-                return
+            .navigationTitle(SetupViewConstants.Texts.setupViewTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(
+                trailing:
+                    NavigationLink(destination: mappingDestination) {
+                        Text("Next")
+                            .foregroundStyle(Color.primary)
+                            .font(.headline)
+                    }
+            )
+            .onAppear {
+                configure()
             }
-            self.selectedClasses = [sidewalkClass]
         }
+        .environmentObject(self.sharedAppData)
+        .environmentObject(self.sharedAppContext)
+        .environmentObject(self.segmentationPipeline)
     }
     
     @ViewBuilder
     private var mappingDestination: some View {
-        ARCameraViewBase(selectedClasses: self.selectedClasses.sorted())
+        ARCameraViewBase(selectedClasses: self.selectedClasses.sorted(), onCaptureComplete: onCaptureComplete)
+    }
+    
+    public func configure() {
+        // For demonstration purposes, we select only sidewalk class by default
+        guard let sidewalkClass = PointNMapConstants.SelectedAccessibilityFeatureConfig.classes.first(where: { $0.kind == .sidewalk }) else {
+            return
+        }
+        self.selectedClasses = [sidewalkClass]
+        do {
+            try self.sharedAppContext.configure()
+            try segmentationPipeline.configure()
+        } catch {
+            print("Error during setup configuration: \(error)")
+        }
+    }
+    
+    public func onCaptureComplete(captureData: CaptureData) {
+        
     }
 }
 
 //#Preview {
-//    ContentView()
+//    SetupView()
 //}
