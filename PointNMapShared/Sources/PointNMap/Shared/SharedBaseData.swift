@@ -10,34 +10,34 @@ import Combine
 import simd
 
 @MainActor
-final class SharedBaseData: ObservableObject {
+public final class SharedBaseData: ObservableObject {
     @Published var isUploadReady: Bool = false
-    var isLidarAvailable: Bool = ARCameraUtils.checkDepthSupport()
+    public var isLidarAvailable: Bool = ARCameraUtils.checkDepthSupport()
     
-    var currentCaptureDataRecord: CaptureData?
+    public var currentCaptureDataRecord: CaptureData?
     /// A queue to hold recent capture image data.
-    var captureDataQueue: SafeDeque<CaptureImageData>
-    var captureDataCapacity: Int
+    public var captureDataQueue: SafeDeque<CaptureImageData>
+    public var captureDataCapacity: Int
     
-    init(captureDataCapacity: Int = 5) {
+    public init(captureDataCapacity: Int = 5) {
         self.captureDataCapacity = captureDataCapacity
         self.captureDataQueue = SafeDeque<CaptureImageData>(capacity: captureDataCapacity)
     }
     
-    func refreshQueue() async {
+    public func refreshQueue() async {
         await self.captureDataQueue.removeAll()
     }
     
-    func refreshData() {
+    public func refreshData() {
         self.isUploadReady = false
         self.currentCaptureDataRecord = nil
     }
     
-    func saveCaptureData(_ data: CaptureData) {
+    public func saveCaptureData(_ data: CaptureData) {
         self.currentCaptureDataRecord = data
     }
     
-    func appendCaptureDataToQueue(_ data: (any CaptureImageDataProtocol)) async {
+    public func appendCaptureDataToQueue(_ data: (any CaptureImageDataProtocol)) async {
         let captureImageData = CaptureImageData(data)
         await self.captureDataQueue.appendBack(captureImageData)
     }

@@ -125,13 +125,13 @@ class ARCameraBaseManagerStatusViewModel: ObservableObject {
     }
 }
 
-public struct ARCameraView: View {
-    let selectedClasses: [AccessibilityFeatureClass]
+public struct ARCameraViewBase: View {
+    public let selectedClasses: [AccessibilityFeatureClass]
     
-    @EnvironmentObject var sharedAppData: SharedBaseData
-    @EnvironmentObject var sharedAppContext: SharedBaseContext
-    @EnvironmentObject var segmentationPipeline: SegmentationARPipeline
-    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject public var sharedAppData: SharedBaseData
+    @EnvironmentObject public var sharedAppContext: SharedBaseContext
+    @EnvironmentObject public var segmentationPipeline: SegmentationARPipeline
+    @Environment(\.dismiss) public var dismiss
 
     @StateObject private var manager: ARCameraManager = ARCameraManager()
     @StateObject private var managerConfigureStatusViewModel = ARCameraBaseManagerStatusViewModel()
@@ -142,6 +142,10 @@ public struct ARCameraView: View {
     @State private var showARCameraLearnMoreSheet = false
     
     @State private var showAnnotationView = false
+    
+    public init(selectedClasses: [AccessibilityFeatureClass]) {
+        self.selectedClasses = selectedClasses
+    }
     
     public var body: some View {
         Group {

@@ -7,11 +7,11 @@
 import SwiftUI
 import Combine
 
-final class SharedBaseContext: ObservableObject {
-    var metalContext: MetalContext?
-    var isEnhancedAnalysisEnabled: Bool = false
+public final class SharedBaseContext: ObservableObject {
+    public var metalContext: MetalContext?
+    public var isEnhancedAnalysisEnabled: Bool = false
     
-    func configure() throws {
+    public func configure() throws {
         metalContext = try MetalContext()
     }
 }
