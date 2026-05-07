@@ -206,6 +206,8 @@ class AnnotationViewStatusViewBaseModel: ObservableObject {
 public struct AnnotationViewBase: View {
     let selectedClasses: [AccessibilityFeatureClass]
     let captureLocation: CLLocationCoordinate2D
+    /// MARK: Extra shared settings
+    @EnvironmentObject public var sharedBaseSettings: SharedBaseSettings
     
     @EnvironmentObject var sharedAppData: SharedBaseData
     @EnvironmentObject var sharedBaseContext: SharedBaseContext
@@ -448,7 +450,7 @@ public struct AnnotationViewBase: View {
                 throw AnnotationViewBaseError.invalidCaptureDataRecord
             }
             var captureMeshData: (any CaptureMeshDataProtocol)? = nil
-            if sharedBaseContext.isEnhancedAnalysisEnabled {
+            if sharedBaseSettings.isEnhancedAnalysisEnabled {
                 guard let captureMeshDataResults = currentCaptureDataRecord.meshData?.captureMeshDataResults else {
                     throw AnnotationViewBaseError.invalidCaptureDataRecord
                 }
@@ -461,14 +463,13 @@ public struct AnnotationViewBase: View {
             try segmentationAnnontationPipeline.configure()
             try attributeEstimationPipeline.configure(
                 captureImageData: currentCaptureDataRecord.imageData,
-                /// TODO: MESH PROCESSING: Enable mesh data processing
                 captureMeshData: captureMeshData
             )
             try manager.configure(
                 selectedClasses: selectedClasses, segmentationAnnotationPipeline: segmentationAnnontationPipeline,
                 captureImageData: currentCaptureDataRecord.imageData,
                 captureMeshData: captureMeshData,
-                isEnhancedAnalysisEnabled: sharedBaseContext.isEnhancedAnalysisEnabled
+                isEnhancedAnalysisEnabled: sharedBaseSettings.isEnhancedAnalysisEnabled
             )
             let captureDataHistory = Array(await sharedAppData.captureDataQueue.snapshot())
             manager.setupAlignedSegmentationLabelImages(captureDataHistory: captureDataHistory)

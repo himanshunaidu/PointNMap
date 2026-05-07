@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 import PointNMapShared
 
 /// Pulled from SetupView of iOSPointMapper. Not relevant, only for UI.
@@ -95,11 +96,25 @@ enum SetupViewConstants {
 
 /// Set up view for demo
 struct SetupView: View {
+    
     @State private var selectedClasses: [AccessibilityFeatureClass] = []
+    let isEnhancedAnalysisEnabled = true
     
     @StateObject private var sharedAppData: SharedBaseData = SharedBaseData()
     @StateObject private var sharedAppContext: SharedBaseContext = SharedBaseContext()
     @StateObject private var segmentationPipeline: SegmentationARPipeline = SegmentationARPipeline()
+    
+    /// MARK: In this demo, instead of processing all the attributes in the Annotation View, the caller Content View itself would do it after getting the results from the Camera View.
+    @StateObject var manager: AnnotationImageManager = AnnotationImageManager()
+    @StateObject var segmentationAnnontationPipeline: SegmentationAnnotationPipeline = SegmentationAnnotationPipeline()
+    @StateObject var attributeEstimationPipeline: AttributeEstimationPipeline = AttributeEstimationPipeline()
+    /// MARK: In this demo, additional settings are passed through the a shared settings object.
+    /// Unlike iOSPointMapper, where specific view models are used.
+    @StateObject private var sharedBaseSettings: SharedBaseSettings = SharedBaseSettings()
+    class CurrentFeaturesViewModel: ObservableObject {
+        @Published var currentFeatures: [EditableAccessibilityFeature] = []
+    }
+    @StateObject private var currentFeaturesViewModel: CurrentFeaturesViewModel = CurrentFeaturesViewModel()
     
     var body: some View {
         return NavigationStack {
@@ -146,11 +161,12 @@ struct SetupView: View {
         .environmentObject(self.sharedAppData)
         .environmentObject(self.sharedAppContext)
         .environmentObject(self.segmentationPipeline)
+        .environmentObject(self.sharedBaseSettings)
     }
     
-    @ViewBuilder
     private var mappingDestination: some View {
-        ARCameraViewBase(selectedClasses: self.selectedClasses.sorted(), onCaptureComplete: onCaptureComplete)
+        currentFeaturesViewModel.currentFeatures = []
+        return ARCameraViewBase(selectedClasses: self.selectedClasses.sorted(), onCaptureComplete: onCaptureComplete)
     }
     
     public func configure() {
@@ -158,17 +174,62 @@ struct SetupView: View {
         guard let sidewalkClass = PointNMapConstants.SelectedAccessibilityFeatureConfig.classes.first(where: { $0.kind == .sidewalk }) else {
             return
         }
+        self.sharedBaseSettings.isEnhancedAnalysisEnabled = self.isEnhancedAnalysisEnabled
         self.selectedClasses = [sidewalkClass]
         do {
             try self.sharedAppContext.configure()
             try segmentationPipeline.configure()
+            try segmentationAnnontationPipeline.configure()
         } catch {
             print("Error during setup configuration: \(error)")
         }
     }
     
     public func onCaptureComplete(captureData: CaptureData) {
-        
+        Task {
+            do {
+                var captureMeshData: (any CaptureMeshDataProtocol)? = nil
+                if sharedBaseSettings.isEnhancedAnalysisEnabled {
+                    guard let captureMeshDataResults = captureData.meshData?.captureMeshDataResults else {
+                        throw NSError(
+                            domain: "CaptureMeshDataErrorDomain", code: -1, userInfo: [NSLocalizedDescriptionKey: "Mesh data is missing from capture data."]
+                        )
+                    }
+                    captureMeshData = CaptureImageAndMeshData(
+                        captureImageData: CaptureImageData(captureData.imageData),
+                        captureMeshDataResults: captureMeshDataResults
+                    )
+                }
+                try attributeEstimationPipeline.configure(
+                    captureImageData: captureData.imageData,
+                    captureMeshData: captureMeshData
+                )
+                try manager.configure(
+                    selectedClasses: selectedClasses, segmentationAnnotationPipeline: segmentationAnnontationPipeline,
+                    captureImageData: captureData.imageData,
+                    captureMeshData: captureMeshData,
+                    isEnhancedAnalysisEnabled: sharedBaseSettings.isEnhancedAnalysisEnabled
+                )
+                let captureDataHistory = Array(await sharedAppData.captureDataQueue.snapshot())
+                manager.setupAlignedSegmentationLabelImages(captureDataHistory: captureDataHistory)
+                
+                var currentFeatures: [EditableAccessibilityFeature] = []
+                try selectedClasses.forEach { currentClass in
+                    let accessibilityFeatures = try manager.updateFeatureClass(accessibilityFeatureClass: currentClass)
+                    try accessibilityFeatures.forEach { accessibilityFeature in
+                        try attributeEstimationPipeline.setPrerequisites(accessibilityFeature: accessibilityFeature)
+                        try attributeEstimationPipeline.processAttributeRequest(
+                            accessibilityFeature: accessibilityFeature
+                        )
+                        attributeEstimationPipeline.clearPrerequisites()
+                    }
+                    currentFeatures.append(contentsOf: accessibilityFeatures)
+                }
+                currentFeaturesViewModel.currentFeatures = currentFeatures
+            } catch {
+                print("Error configuring attribute estimation pipeline: \(error)")
+            }
+        }
     }
 }
 

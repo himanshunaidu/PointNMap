@@ -129,6 +129,8 @@ public struct ARCameraViewBase: View {
     public let selectedClasses: [AccessibilityFeatureClass]
     /// MARK: Extra callback if required. Else, the view will handle the flow to annotation view internally
     private let onCaptureComplete: ((CaptureData) -> Void)?
+    /// MARK: Extra shared settings
+    @EnvironmentObject public var sharedBaseSettings: SharedBaseSettings
     
     @EnvironmentObject public var sharedAppData: SharedBaseData
     @EnvironmentObject public var sharedAppContext: SharedBaseContext
@@ -213,7 +215,7 @@ public struct ARCameraViewBase: View {
                 try manager.configure(
                     selectedClasses: selectedClasses, segmentationPipeline: segmentationPipeline,
                     metalContext: sharedAppContext.metalContext,
-                    isEnhancedAnalysisEnabled: sharedAppContext.isEnhancedAnalysisEnabled,
+                    isEnhancedAnalysisEnabled: sharedBaseSettings.isEnhancedAnalysisEnabled,
                     cameraOutputImageCallback: cameraOutputImageCallback
                 )
             } catch {
