@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A328F79B2FB6E0E500C426CF /* Placeholder.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A328F7932FB6E0E400C426CF /* Placeholder.framework */; };
+		A328F79C2FB6E0E500C426CF /* Placeholder.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A328F7932FB6E0E400C426CF /* Placeholder.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A3D78DAD2FAC03140010116D /* PointNMapShaderTypes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78DA52FAC03140010116D /* PointNMapShaderTypes.framework */; };
 		A3D78DAE2FAC03140010116D /* PointNMapShaderTypes.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78DA52FAC03140010116D /* PointNMapShaderTypes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A3D78DDE2FAC04360010116D /* PointNMapShared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3D78DD62FAC04360010116D /* PointNMapShared.framework */; };
@@ -19,6 +21,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		A328F7992FB6E0E500C426CF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A3D78C232FABF97E0010116D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A328F7922FB6E0E400C426CF;
+			remoteInfo = Placeholder;
+		};
 		A3D78DAB2FAC03140010116D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A3D78C232FABF97E0010116D /* Project object */;
@@ -51,6 +60,7 @@
 			files = (
 				A3D78DDF2FAC04360010116D /* PointNMapShared.framework in Embed Frameworks */,
 				A3D78DAE2FAC03140010116D /* PointNMapShaderTypes.framework in Embed Frameworks */,
+				A328F79C2FB6E0E500C426CF /* Placeholder.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -79,12 +89,20 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A328F7932FB6E0E400C426CF /* Placeholder.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Placeholder.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A3D78C2B2FABF97E0010116D /* PointNMap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PointNMap.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A3D78DA52FAC03140010116D /* PointNMapShaderTypes.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PointNMapShaderTypes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A3D78DD62FAC04360010116D /* PointNMapShared.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PointNMapShared.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A328F79F2FB6E0E500C426CF /* Exceptions for "Placeholder" folder in "Placeholder" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			publicHeaders = (
+				Placeholder.h,
+			);
+			target = A328F7922FB6E0E400C426CF /* Placeholder */;
+		};
 		A3D78DAF2FAC03140010116D /* Exceptions for "PointNMapShaderTypes" folder in "PointNMapShaderTypes" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			publicHeaders = (
@@ -103,6 +121,14 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		A328F7942FB6E0E500C426CF /* Placeholder */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A328F79F2FB6E0E500C426CF /* Exceptions for "Placeholder" folder in "Placeholder" target */,
+			);
+			path = Placeholder;
+			sourceTree = "<group>";
+		};
 		A3D78C2D2FABF97E0010116D /* PointNMap */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = PointNMap;
@@ -127,11 +153,19 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		A328F7902FB6E0E400C426CF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A3D78C282FABF97E0010116D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				A3D78DDE2FAC04360010116D /* PointNMapShared.framework in Frameworks */,
+				A328F79B2FB6E0E500C426CF /* Placeholder.framework in Frameworks */,
 				A3D78DAD2FAC03140010116D /* PointNMapShaderTypes.framework in Frameworks */,
 				A3D78EFC2FAC07840010116D /* OrderedCollections in Frameworks */,
 				A3D78EFA2FAC07840010116D /* DequeModule in Frameworks */,
@@ -163,6 +197,7 @@
 				A3D78C2D2FABF97E0010116D /* PointNMap */,
 				A3D78DA62FAC03140010116D /* PointNMapShaderTypes */,
 				A3D78DD72FAC04360010116D /* PointNMapShared */,
+				A328F7942FB6E0E500C426CF /* Placeholder */,
 				A3D78D732FABFDC90010116D /* Frameworks */,
 				A3D78C2C2FABF97E0010116D /* Products */,
 			);
@@ -174,6 +209,7 @@
 				A3D78C2B2FABF97E0010116D /* PointNMap.app */,
 				A3D78DA52FAC03140010116D /* PointNMapShaderTypes.framework */,
 				A3D78DD62FAC04360010116D /* PointNMapShared.framework */,
+				A328F7932FB6E0E400C426CF /* Placeholder.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -188,6 +224,13 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
+		A328F78E2FB6E0E400C426CF /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A3D78DA02FAC03140010116D /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
@@ -205,6 +248,29 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
+		A328F7922FB6E0E400C426CF /* Placeholder */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A328F7A02FB6E0E500C426CF /* Build configuration list for PBXNativeTarget "Placeholder" */;
+			buildPhases = (
+				A328F78E2FB6E0E400C426CF /* Headers */,
+				A328F78F2FB6E0E400C426CF /* Sources */,
+				A328F7902FB6E0E400C426CF /* Frameworks */,
+				A328F7912FB6E0E400C426CF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A328F7942FB6E0E500C426CF /* Placeholder */,
+			);
+			name = Placeholder;
+			packageProductDependencies = (
+			);
+			productName = Placeholder;
+			productReference = A328F7932FB6E0E400C426CF /* Placeholder.framework */;
+			productType = "com.apple.product-type.framework";
+		};
 		A3D78C2A2FABF97E0010116D /* PointNMap */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A3D78C362FABF97F0010116D /* Build configuration list for PBXNativeTarget "PointNMap" */;
@@ -220,6 +286,7 @@
 			dependencies = (
 				A3D78DAC2FAC03140010116D /* PBXTargetDependency */,
 				A3D78DDD2FAC04360010116D /* PBXTargetDependency */,
+				A328F79A2FB6E0E500C426CF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A3D78C2D2FABF97E0010116D /* PointNMap */,
@@ -292,6 +359,9 @@
 				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
+					A328F7922FB6E0E400C426CF = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
 					A3D78C2A2FABF97E0010116D = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
@@ -323,11 +393,19 @@
 				A3D78C2A2FABF97E0010116D /* PointNMap */,
 				A3D78DA42FAC03140010116D /* PointNMapShaderTypes */,
 				A3D78DD52FAC04360010116D /* PointNMapShared */,
+				A328F7922FB6E0E400C426CF /* Placeholder */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		A328F7912FB6E0E400C426CF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A3D78C292FABF97E0010116D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -352,6 +430,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		A328F78F2FB6E0E400C426CF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A3D78C272FABF97E0010116D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -376,6 +461,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		A328F79A2FB6E0E500C426CF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A328F7922FB6E0E400C426CF /* Placeholder */;
+			targetProxy = A328F7992FB6E0E500C426CF /* PBXContainerItemProxy */;
+		};
 		A3D78DAC2FAC03140010116D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = A3D78DA42FAC03140010116D /* PointNMapShaderTypes */;
@@ -394,6 +484,72 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		A328F79D2FB6E0E500C426CF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = UB6LB27Z2X;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.Placeholder;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		A328F79E2FB6E0E500C426CF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = UB6LB27Z2X;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = himanshunaidu.Placeholder;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
 		A3D78C342FABF97F0010116D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -786,6 +942,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		A328F7A02FB6E0E500C426CF /* Build configuration list for PBXNativeTarget "Placeholder" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A328F79D2FB6E0E500C426CF /* Debug */,
+				A328F79E2FB6E0E500C426CF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		A3D78C262FABF97E0010116D /* Build configuration list for PBXProject "PointNMap" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
