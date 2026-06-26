@@ -11,7 +11,7 @@ import PointNMapShaderTypes
 /**
  Extension for utilities related to world point extraction and plane calculation.
  */
-public extension AttributeEstimationPipeline {
+public extension AttributeEstimationPipeline {    
     /**
      Get world points corresponding to the feature based on the segmentation label image and depth map, using the world points processor.
      */
@@ -74,7 +74,7 @@ public extension AttributeEstimationPipeline {
             throw AttributeEstimationPipelineError.missingCaptureData
         }
         var plane: Plane
-        let worldPointsLocal: [WorldPoint] = try worldPoints ?? self.getWorldPoints(
+        let worldPointsLocal: [WorldPoint] = try worldPoints ?? self.getCachedWorldPoints(
             accessibilityFeature: accessibilityFeature
         )
         plane = try planeProcessorLocal.fitPlanePCA(worldPoints: worldPointsLocal)
@@ -105,71 +105,6 @@ public extension AttributeEstimationPipeline {
             imageSize: captureImageData.captureImageDataResults.segmentationLabelImage.extent.size
         )
         return projectedPlane
-    }
-}
-
-/**
- Extension for caching counterparts of world point extraction and plane calculation.
- */
-extension AttributeEstimationPipeline {
-    /// Caching counterpart of getWorldPoints
-    func getCachedWorldPoints(
-        accessibilityFeature: any EditableAccessibilityFeatureProtocol
-    ) throws -> [WorldPoint] {
-        if let cachedWorldPoints = self.prerequisiteCache.worldPoints {
-            return cachedWorldPoints
-        } else {
-            let worldPoints = try self.getWorldPoints(accessibilityFeature: accessibilityFeature)
-            self.prerequisiteCache.worldPoints = worldPoints
-            return worldPoints
-        }
-    }
-    
-    /// Caching counterpart of getWorldPointsGrid
-    func getCachedWorldPointsGrid(
-        accessibilityFeature: any EditableAccessibilityFeatureProtocol
-    ) throws -> WorldPointsGrid {
-        if let cachedWorldPointsGrid = self.prerequisiteCache.worldPointsGrid {
-            return cachedWorldPointsGrid
-        } else {
-            let worldPointsGrid = try self.getWorldPointsGrid(accessibilityFeature: accessibilityFeature)
-            self.prerequisiteCache.worldPointsGrid = worldPointsGrid
-            return worldPointsGrid
-        }
-    }
-    
-    /// Caching counterpart of calculateAlignedPlane
-    func getCachedAlignedPlane(
-        _ accessibilityFeature: any EditableAccessibilityFeatureProtocol,
-        worldPoints: [WorldPoint]? = nil
-    ) throws -> Plane {
-        if let cachedAlignedPlane = self.prerequisiteCache.pointAlignedPlane {
-            return cachedAlignedPlane
-        } else {
-            let alignedPlane = try self.calculateAlignedPlane(
-                accessibilityFeature: accessibilityFeature,
-                worldPoints: worldPoints
-            )
-            self.prerequisiteCache.pointAlignedPlane = alignedPlane
-            return alignedPlane
-        }
-    }
-    
-    /// Caching counterpart of calculateProjectedPlane
-    func getCachedProjectedPlane(
-        accessibilityFeature: any EditableAccessibilityFeatureProtocol,
-        plane: Plane
-    ) throws -> ProjectedPlane {
-        if let cachedProjectedPlane = self.prerequisiteCache.pointProjectedPlane {
-            return cachedProjectedPlane
-        } else {
-            let projectedPlane = try self.calculateProjectedPlane(
-                accessibilityFeature: accessibilityFeature,
-                plane: plane
-            )
-            self.prerequisiteCache.pointProjectedPlane = projectedPlane
-            return projectedPlane
-        }
     }
 }
 
@@ -206,7 +141,7 @@ public extension AttributeEstimationPipeline {
         var plane: Plane
         /// Using the vertices of the mesh polygons as points to fit the plane.
         /// TODO: For optimization, replace the usage of meshPolygons with meshTriangles (GPU-based)
-        let meshPolygonsLocal: [MeshPolygon] = try meshPolygons ?? self.getMeshContents(
+        let meshPolygonsLocal: [MeshPolygon] = try meshPolygons ?? self.getCachedMeshContents(
             accessibilityFeature: accessibilityFeature
         ).polygons
         let worldPointsFromMesh: [WorldPoint] = meshPolygonsLocal.map { triangle in
@@ -225,3 +160,4 @@ public extension AttributeEstimationPipeline {
         return alignedPlane
     }
 }
+

@@ -127,6 +127,7 @@ class ARCameraBaseManagerStatusViewModel: ObservableObject {
 
 public struct ARCameraViewBase: View {
     public let selectedClasses: [AccessibilityFeatureClass]
+    let selectedAttributesByClass: [AccessibilityFeatureClass: Set<AccessibilityFeatureAttribute>]
     /// MARK: Extra callback if required. Else, the view will handle the flow to annotation view internally
     private let onCaptureComplete: ((CaptureData) -> Void)?
     /// MARK: Extra shared settings

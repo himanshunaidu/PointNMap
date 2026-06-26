@@ -243,9 +243,10 @@ struct SetupView: View {
                 try selectedClasses.forEach { currentClass in
                     let accessibilityFeatures = try manager.updateFeatureClass(accessibilityFeatureClass: currentClass)
                     try accessibilityFeatures.forEach { accessibilityFeature in
-                        try attributeEstimationPipeline.setPrerequisites(accessibilityFeature: accessibilityFeature)
+//                        try attributeEstimationPipeline.setPrerequisites(accessibilityFeature: accessibilityFeature)
                         try attributeEstimationPipeline.processAttributeRequest(
-                            accessibilityFeature: accessibilityFeature
+                            accessibilityFeature: accessibilityFeature,
+                            attributes: Set(currentClass.kind.attributes)
                         )
                         attributeEstimationPipeline.clearPrerequisites()
                     }
