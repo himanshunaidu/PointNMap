@@ -109,6 +109,71 @@ public extension AttributeEstimationPipeline {
 }
 
 /**
+ Extension for caching counterparts of world point extraction and plane calculation.
+ */
+extension AttributeEstimationPipeline {
+    /// Caching counterpart of getWorldPoints
+    func getCachedWorldPoints(
+        accessibilityFeature: any EditableAccessibilityFeatureProtocol
+    ) throws -> [WorldPoint] {
+        if let cachedWorldPoints = self.prerequisiteCache.worldPoints {
+            return cachedWorldPoints
+        } else {
+            let worldPoints = try self.getWorldPoints(accessibilityFeature: accessibilityFeature)
+            self.prerequisiteCache.worldPoints = worldPoints
+            return worldPoints
+        }
+    }
+    
+    /// Caching counterpart of getWorldPointsGrid
+    func getCachedWorldPointsGrid(
+        accessibilityFeature: any EditableAccessibilityFeatureProtocol
+    ) throws -> WorldPointsGrid {
+        if let cachedWorldPointsGrid = self.prerequisiteCache.worldPointsGrid {
+            return cachedWorldPointsGrid
+        } else {
+            let worldPointsGrid = try self.getWorldPointsGrid(accessibilityFeature: accessibilityFeature)
+            self.prerequisiteCache.worldPointsGrid = worldPointsGrid
+            return worldPointsGrid
+        }
+    }
+    
+    /// Caching counterpart of calculateAlignedPlane
+    func getCachedAlignedPlane(
+        _ accessibilityFeature: any EditableAccessibilityFeatureProtocol,
+        worldPoints: [WorldPoint]? = nil
+    ) throws -> Plane {
+        if let cachedAlignedPlane = self.prerequisiteCache.pointAlignedPlane {
+            return cachedAlignedPlane
+        } else {
+            let alignedPlane = try self.calculateAlignedPlane(
+                accessibilityFeature: accessibilityFeature,
+                worldPoints: worldPoints
+            )
+            self.prerequisiteCache.pointAlignedPlane = alignedPlane
+            return alignedPlane
+        }
+    }
+    
+    /// Caching counterpart of calculateProjectedPlane
+    func getCachedProjectedPlane(
+        accessibilityFeature: any EditableAccessibilityFeatureProtocol,
+        plane: Plane
+    ) throws -> ProjectedPlane {
+        if let cachedProjectedPlane = self.prerequisiteCache.pointProjectedPlane {
+            return cachedProjectedPlane
+        } else {
+            let projectedPlane = try self.calculateProjectedPlane(
+                accessibilityFeature: accessibilityFeature,
+                plane: plane
+            )
+            self.prerequisiteCache.pointProjectedPlane = projectedPlane
+            return projectedPlane
+        }
+    }
+}
+
+/**
  Extension for utilities related to mesh polygon extraction and plane calculation.
  */
 public extension AttributeEstimationPipeline {

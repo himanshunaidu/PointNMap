@@ -222,11 +222,13 @@ public class AttributeEstimationPipeline: ObservableObject {
     }
     
     public func processAttributeRequest(
-        accessibilityFeature: any EditableAccessibilityFeatureProtocol
+        accessibilityFeature: any EditableAccessibilityFeatureProtocol,
+        attributes: Set<AccessibilityFeatureAttribute>
     ) throws {
         var attributeAssignmentFlagError = false
         
-        for attribute in accessibilityFeature.accessibilityFeatureClass.kind.attributes {
+//        for attribute in accessibilityFeature.accessibilityFeatureClass.kind.attributes {
+        for attribute in attributes {
             do {
                 switch attribute {
                 case .width:

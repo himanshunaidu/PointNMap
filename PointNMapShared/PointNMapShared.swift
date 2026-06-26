@@ -14,3 +14,7 @@ public enum PointNMapSharedResources {
         Bundle(for: PointNMapSharedBundleToken.self)
     }
 }
+
+public enum PointNMapSharedBuildMarker {
+    public static let value = "Submodule build marker 2026-06-07"
+}
