@@ -64,17 +64,21 @@ extension AttributeEstimationPipeline {
     
     /// Caching counterpart of getWorldPointsGrid
     func getCachedWorldPointsGrid(
-        accessibilityFeature: any EditableAccessibilityFeatureProtocol
+        accessibilityFeature: any EditableAccessibilityFeatureProtocol,
+        worldPoints: [WorldPoint]
     ) throws -> WorldPointsGrid {
         return try self.prerequisiteCache.getOrCompute(\.worldPointsGrid) {
-            try self.getWorldPointsGrid(accessibilityFeature: accessibilityFeature)
+            try self.getWorldPointsGrid(
+                accessibilityFeature: accessibilityFeature,
+                worldPoints: worldPoints
+            )
         }
     }
     
     /// Caching counterpart of calculateAlignedPlane
     func getCachedAlignedPlane(
         accessibilityFeature: any EditableAccessibilityFeatureProtocol,
-        worldPoints: [WorldPoint]? = nil
+        worldPoints: [WorldPoint]
     ) throws -> Plane {
         return try self.prerequisiteCache.getOrCompute(\.pointAlignedPlane) {
             try self.calculateAlignedPlane(
@@ -114,7 +118,7 @@ public extension AttributeEstimationPipeline {
     /// Caching counterpart of calculateAlignedPlane for mesh polygons
     func getCachedAlignedPlane(
         accessibilityFeature: any EditableAccessibilityFeatureProtocol,
-        meshPolygons: [MeshPolygon]? = nil
+        meshPolygons: [MeshPolygon]
     ) throws -> Plane {
         return try self.prerequisiteCache.getOrCompute(\.meshAlignedPlane) {
             try self.calculateAlignedPlane(

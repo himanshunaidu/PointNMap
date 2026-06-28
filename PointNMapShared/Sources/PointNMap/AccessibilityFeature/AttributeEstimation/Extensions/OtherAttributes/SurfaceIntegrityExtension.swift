@@ -31,9 +31,12 @@ public extension AttributeEstimationPipeline {
             throw AttributeEstimationPipelineError.missingPreprocessors
         }
         let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
-        let worldPointsGrid = try self.getCachedWorldPointsGrid(accessibilityFeature: accessibilityFeature)
         let worldPoints: [WorldPoint] = try self.getCachedWorldPoints(
             accessibilityFeature: accessibilityFeature
+        )
+        let worldPointsGrid = try self.getCachedWorldPointsGrid(
+            accessibilityFeature: accessibilityFeature,
+            worldPoints: worldPoints
         )
         let alignedPlane: Plane = try self.getCachedAlignedPlane(
             accessibilityFeature: accessibilityFeature, worldPoints: worldPoints
@@ -169,16 +172,16 @@ public extension AttributeEstimationPipeline {
         guard let captureImageData = self.captureImageData else {
             throw AttributeEstimationPipelineError.missingCaptureData
         }
-        guard let surfaceNormalsProcessor = self.surfaceNormalsProcessor else {
-            throw AttributeEstimationPipelineError.missingPreprocessors
-        }
         guard let surfaceIntegrityProcessor = self.surfaceIntegrityProcessor else {
             throw AttributeEstimationPipelineError.missingPreprocessors
         }
         let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
-        let worldPointsGrid = try self.getCachedWorldPointsGrid(accessibilityFeature: accessibilityFeature)
         let worldPoints: [WorldPoint] = try self.getCachedWorldPoints(
             accessibilityFeature: accessibilityFeature
+        )
+        let worldPointsGrid = try self.getCachedWorldPointsGrid(
+            accessibilityFeature: accessibilityFeature,
+            worldPoints: worldPoints
         )
         let alignedPlane: Plane = try self.getCachedAlignedPlane(
             accessibilityFeature: accessibilityFeature, worldPoints: worldPoints

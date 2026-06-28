@@ -98,6 +98,7 @@ enum SetupViewConstants {
 struct SetupView: View {
     
     @State private var selectedClasses: [AccessibilityFeatureClass] = []
+    @State private var selectedAttributesByClass: [AccessibilityFeatureClass: Set<AccessibilityFeatureAttribute>] = [:]
     let isEnhancedAnalysisEnabled = true
     
     @StateObject private var sharedAppData: SharedBaseData = SharedBaseData()
@@ -192,7 +193,11 @@ struct SetupView: View {
     }
     
     private var mappingDestination: some View {
-        return ARCameraViewBase(selectedClasses: self.selectedClasses.sorted(), onCaptureComplete: onCaptureComplete)
+        return ARCameraViewBase(
+            selectedClasses: self.selectedClasses.sorted(),
+            selectedAttributesByClass: self.selectedAttributesByClass,
+            onCaptureComplete: onCaptureComplete
+        )
     }
     
     public func configure() {
@@ -202,6 +207,8 @@ struct SetupView: View {
         }
         self.sharedBaseSettings.isEnhancedAnalysisEnabled = self.isEnhancedAnalysisEnabled
         self.selectedClasses = [sidewalkClass]
+        // We add all the attributes for the sidewalk class
+        self.selectedAttributesByClass[sidewalkClass] = Set(sidewalkClass.kind.attributes)
         do {
             try self.sharedAppContext.configure()
             try segmentationPipeline.configure()
