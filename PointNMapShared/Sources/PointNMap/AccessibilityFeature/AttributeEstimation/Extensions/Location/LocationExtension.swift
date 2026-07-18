@@ -81,10 +81,10 @@ public extension AttributeEstimationPipeline {
             throw AttributeEstimationPipelineError.missingCaptureData
         }
         let captureImageDataConcrete = CaptureImageData(captureImageData)
-        let worldPoints = try self.prerequisiteCache.worldPoints ?? self.getWorldPoints(
+        let worldPoints = try self.getCachedWorldPoints(
             accessibilityFeature: accessibilityFeature
         )
-        let alignedPlane = try self.prerequisiteCache.pointAlignedPlane ?? self.calculateAlignedPlane(
+        let alignedPlane = try self.getCachedAlignedPlane(
             accessibilityFeature: accessibilityFeature, worldPoints: worldPoints
         )
         do {
@@ -156,11 +156,11 @@ public extension AttributeEstimationPipeline {
             throw AttributeEstimationPipelineError.missingCaptureData
         }
         let captureImageDataConcrete = CaptureImageData(captureImageData)
-        let meshContents: MeshContents = try self.prerequisiteCache.meshContents ?? self.getMeshContents(
+        let meshContents: MeshContents = try self.getCachedMeshContents(
             accessibilityFeature: accessibilityFeature
         )
-        let meshPolygons: [MeshPolygon] = self.prerequisiteCache.meshPolygons ?? meshContents.polygons
-        let alignedPlane: Plane = try self.prerequisiteCache.meshAlignedPlane ?? self.calculateAlignedPlane(
+        let meshPolygons: [MeshPolygon] = meshContents.polygons
+        let alignedPlane: Plane = try self.getCachedAlignedPlane(
             accessibilityFeature: accessibilityFeature, meshPolygons: meshPolygons
         )
         return try getLocationFromMeshForLineStringByPlane(

@@ -28,10 +28,10 @@ public extension AttributeEstimationPipeline {
     func calculateRunningSlopeFromImage(
         accessibilityFeature: any EditableAccessibilityFeatureProtocol
     ) throws -> AccessibilityFeatureAttribute.Value {
-        let worldPoints: [WorldPoint] = try self.prerequisiteCache.worldPoints ?? self.getWorldPoints(
+        let worldPoints: [WorldPoint] = try self.getCachedWorldPoints(
             accessibilityFeature: accessibilityFeature
         )
-        let alignedPlane: Plane = try self.prerequisiteCache.pointAlignedPlane ?? self.calculateAlignedPlane(
+        let alignedPlane: Plane = try self.getCachedAlignedPlane(
             accessibilityFeature: accessibilityFeature, worldPoints: worldPoints
         )
         let runningVector = simd_normalize(alignedPlane.firstVector)
@@ -52,10 +52,10 @@ public extension AttributeEstimationPipeline {
         accessibilityFeature: any EditableAccessibilityFeatureProtocol
     ) throws -> AccessibilityFeatureAttribute.Value {
         /// TODO: For optimization, replace the usage of meshPolygons with meshTriangles (GPU-based)
-        let meshPolygons: [MeshPolygon] = try self.prerequisiteCache.meshPolygons ?? self.getMeshContents(
+        let meshPolygons: [MeshPolygon] = try self.getCachedMeshContents(
             accessibilityFeature: accessibilityFeature
         ).polygons
-        let alignedPlane: Plane = try self.prerequisiteCache.meshAlignedPlane ?? self.calculateAlignedPlane(
+        let alignedPlane: Plane = try self.getCachedAlignedPlane(
             accessibilityFeature: accessibilityFeature, meshPolygons: meshPolygons
         )
         let runningVector = simd_normalize(alignedPlane.firstVector)

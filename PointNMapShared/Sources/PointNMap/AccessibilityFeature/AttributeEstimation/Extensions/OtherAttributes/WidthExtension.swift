@@ -36,10 +36,10 @@ public extension AttributeEstimationPipeline {
         guard let captureImageData = self.captureImageData else {
             throw AttributeEstimationPipelineError.missingCaptureData
         }
-        let worldPoints: [WorldPoint] = try self.prerequisiteCache.worldPoints ?? self.getWorldPoints(
+        let worldPoints: [WorldPoint] = try self.getCachedWorldPoints(
             accessibilityFeature: accessibilityFeature
         )
-        let alignedPlane: Plane = try self.prerequisiteCache.pointAlignedPlane ?? self.calculateAlignedPlane(
+        let alignedPlane: Plane = try self.getCachedAlignedPlane(
             accessibilityFeature: accessibilityFeature, worldPoints: worldPoints
         )
         let projectedPoints = try worldPointsProcessor.projectPointsToPlane(
@@ -78,10 +78,10 @@ public extension AttributeEstimationPipeline {
         }
         /// First, get the reference bins from mesh triangle centroids
         /// TODO: For optimization, replace the usage of meshPolygons with meshTriangles (GPU-based)
-        let meshPolygons: [MeshPolygon] = try self.prerequisiteCache.meshPolygons ?? self.getMeshContents(
+        let meshPolygons: [MeshPolygon] = try self.getCachedMeshContents(
             accessibilityFeature: accessibilityFeature
         ).polygons
-        let alignedPlane: Plane = try self.prerequisiteCache.meshAlignedPlane ?? self.calculateAlignedPlane(
+        let alignedPlane: Plane = try self.getCachedAlignedPlane(
             accessibilityFeature: accessibilityFeature, meshPolygons: meshPolygons
         )
         let worldPointsFromMesh: [WorldPoint] = meshPolygons.map { triangle in
@@ -95,7 +95,7 @@ public extension AttributeEstimationPipeline {
         )
         let projectedPointBins = try planeAttributeProcessor.binProjectedPoints(projectedPoints: projectedPoints)
         /// Then, get the actual bins from the mesh triangles themselves
-        let meshTriangles: [MeshTriangle] = try self.prerequisiteCache.meshTriangles ?? self.getMeshContents(
+        let meshTriangles: [MeshTriangle] = try self.getCachedMeshContents(
             accessibilityFeature: accessibilityFeature
         ).triangles
         let meshProjectedPointBins = try planeAttributeProcessor.binMeshTriangles(

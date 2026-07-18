@@ -27,27 +27,30 @@ public extension AttributeEstimationPipeline {
         guard let captureImageData = self.captureImageData else {
             throw AttributeEstimationPipelineError.missingCaptureData
         }
-        guard let surfaceNormalsProcessor = self.surfaceNormalsProcessor else {
-            throw AttributeEstimationPipelineError.missingPreprocessors
-        }
         guard let surfaceIntegrityProcessor = self.surfaceIntegrityProcessor else {
             throw AttributeEstimationPipelineError.missingPreprocessors
         }
         let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
-        let worldPointsGrid = try self.prerequisiteCache.worldPointsGrid ?? self.getWorldPointsGrid(accessibilityFeature: accessibilityFeature)
-        let worldPoints: [WorldPoint] = try self.prerequisiteCache.worldPoints ?? self.getWorldPoints(
+        let worldPoints: [WorldPoint] = try self.getCachedWorldPoints(
             accessibilityFeature: accessibilityFeature
         )
-        let alignedPlane: Plane = try self.prerequisiteCache.pointAlignedPlane ?? self.calculateAlignedPlane(
+        let worldPointsGrid = try self.getCachedWorldPointsGrid(
+            accessibilityFeature: accessibilityFeature,
+            worldPoints: worldPoints
+        )
+        let alignedPlane: Plane = try self.getCachedAlignedPlane(
             accessibilityFeature: accessibilityFeature, worldPoints: worldPoints
         )
-        let projectedPlane: ProjectedPlane = try self.prerequisiteCache.pointProjectedPlane ?? self.calculateProjectedPlane(
+        let projectedPlane: ProjectedPlane = try self.getCachedProjectedPlane(
             accessibilityFeature: accessibilityFeature, plane: alignedPlane
         )
-        let surfaceNormalsGrid: SurfaceNormalsForPointsGrid = try self.prerequisiteCache.surfaceNormalsGrid ?? surfaceNormalsProcessor.getSurfaceNormalsFromWorldPoints(
+//        let surfaceNormalsGrid: SurfaceNormalsForPointsGrid = try self.prerequisiteCache.surfaceNormalsGrid ?? surfaceNormalsProcessor.getSurfaceNormalsFromWorldPoints(
+//            worldPointsGrid: worldPointsGrid, plane: alignedPlane, projectedPlane: projectedPlane
+//        )
+//        self.prerequisiteCache.surfaceNormalsGrid = surfaceNormalsGrid
+        let surfaceNormalsGrid: SurfaceNormalsForPointsGrid = try self.getCachedSurfaceNormalsGrid(
             worldPointsGrid: worldPointsGrid, plane: alignedPlane, projectedPlane: projectedPlane
         )
-        self.prerequisiteCache.surfaceNormalsGrid = surfaceNormalsGrid
         let surfaceIntegrityResults = try surfaceIntegrityProcessor.getIntegrityResultsFromImage(
             worldPointsGrid: worldPointsGrid, plane: alignedPlane, surfaceNormalsForPointsGrid: surfaceNormalsGrid,
             damageDetectionResults: damageDetectionResults, captureData: captureImageData
@@ -72,12 +75,12 @@ public extension AttributeEstimationPipeline {
             throw AttributeEstimationPipelineError.missingPreprocessors
         }
         let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
-        let meshContents: MeshContents = try self.prerequisiteCache.meshContents ?? self.getMeshContents(
+        let meshContents: MeshContents = try self.getCachedMeshContents(
             accessibilityFeature: accessibilityFeature
         )
-        let meshPolygons: [MeshPolygon] = self.prerequisiteCache.meshPolygons ?? meshContents.polygons
-        let meshTriangles: [MeshTriangle] = self.prerequisiteCache.meshTriangles ?? meshContents.triangles
-        let alignedPlane: Plane = try self.prerequisiteCache.meshAlignedPlane ?? self.calculateAlignedPlane(
+        let meshPolygons: [MeshPolygon] = meshContents.polygons
+        let meshTriangles: [MeshTriangle] = meshContents.triangles
+        let alignedPlane: Plane = try self.getCachedAlignedPlane(
             accessibilityFeature: accessibilityFeature, meshPolygons: meshPolygons
         )
 //        let projectedPlane: ProjectedPlane = try self.prerequisiteCache.meshProjectedPlane ?? self.calculateProjectedPlane(
@@ -169,27 +172,30 @@ public extension AttributeEstimationPipeline {
         guard let captureImageData = self.captureImageData else {
             throw AttributeEstimationPipelineError.missingCaptureData
         }
-        guard let surfaceNormalsProcessor = self.surfaceNormalsProcessor else {
-            throw AttributeEstimationPipelineError.missingPreprocessors
-        }
         guard let surfaceIntegrityProcessor = self.surfaceIntegrityProcessor else {
             throw AttributeEstimationPipelineError.missingPreprocessors
         }
         let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
-        let worldPointsGrid = try self.prerequisiteCache.worldPointsGrid ?? self.getWorldPointsGrid(accessibilityFeature: accessibilityFeature)
-        let worldPoints: [WorldPoint] = try self.prerequisiteCache.worldPoints ?? self.getWorldPoints(
+        let worldPoints: [WorldPoint] = try self.getCachedWorldPoints(
             accessibilityFeature: accessibilityFeature
         )
-        let alignedPlane: Plane = try self.prerequisiteCache.pointAlignedPlane ?? self.calculateAlignedPlane(
+        let worldPointsGrid = try self.getCachedWorldPointsGrid(
+            accessibilityFeature: accessibilityFeature,
+            worldPoints: worldPoints
+        )
+        let alignedPlane: Plane = try self.getCachedAlignedPlane(
             accessibilityFeature: accessibilityFeature, worldPoints: worldPoints
         )
-        let projectedPlane: ProjectedPlane = try self.prerequisiteCache.pointProjectedPlane ?? self.calculateProjectedPlane(
+        let projectedPlane: ProjectedPlane = try self.getCachedProjectedPlane(
             accessibilityFeature: accessibilityFeature, plane: alignedPlane
         )
-        let surfaceNormalsGrid: SurfaceNormalsForPointsGrid = try self.prerequisiteCache.surfaceNormalsGrid ?? surfaceNormalsProcessor.getSurfaceNormalsFromWorldPoints(
+//        let surfaceNormalsGrid: SurfaceNormalsForPointsGrid = try self.prerequisiteCache.surfaceNormalsGrid ?? surfaceNormalsProcessor.getSurfaceNormalsFromWorldPoints(
+//            worldPointsGrid: worldPointsGrid, plane: alignedPlane, projectedPlane: projectedPlane
+//        )
+//        self.prerequisiteCache.surfaceNormalsGrid = surfaceNormalsGrid
+        let surfaceNormalsGrid: SurfaceNormalsForPointsGrid = try self.getCachedSurfaceNormalsGrid(
             worldPointsGrid: worldPointsGrid, plane: alignedPlane, projectedPlane: projectedPlane
         )
-        self.prerequisiteCache.surfaceNormalsGrid = surfaceNormalsGrid
         let (deviantPoints, validPoints) = try surfaceIntegrityProcessor.getSurfaceNormalIntegrityValueFromImage(
             worldPointsGrid: worldPointsGrid, plane: alignedPlane, surfaceNormalsForPointsGrid: surfaceNormalsGrid,
             damageDetectionResults: damageDetectionResults, captureData: captureImageData
@@ -212,12 +218,12 @@ public extension AttributeEstimationPipeline {
             throw AttributeEstimationPipelineError.missingPreprocessors
         }
         let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
-        let meshContents: MeshContents = try self.prerequisiteCache.meshContents ?? self.getMeshContents(
+        let meshContents: MeshContents = try self.getCachedMeshContents(
             accessibilityFeature: accessibilityFeature
         )
-        let meshPolygons: [MeshPolygon] = self.prerequisiteCache.meshPolygons ?? meshContents.polygons
-        let meshTriangles: [MeshTriangle] = self.prerequisiteCache.meshTriangles ?? meshContents.triangles
-        let alignedPlane: Plane = try self.prerequisiteCache.meshAlignedPlane ?? self.calculateAlignedPlane(
+        let meshPolygons: [MeshPolygon] = meshContents.polygons
+        let meshTriangles: [MeshTriangle] = meshContents.triangles
+        let alignedPlane: Plane = try self.getCachedAlignedPlane(
             accessibilityFeature: accessibilityFeature, meshPolygons: meshPolygons
         )
         let (totalDeviantPolygons, totalValidPolygons) = try surfaceIntegrityProcessor.getSurfaceNormalIntegrityValueFromMesh(
@@ -251,10 +257,10 @@ extension AttributeEstimationPipeline {
         guard let captureImageData = self.captureImageData else {
             throw AttributeEstimationPipelineError.missingCaptureData
         }
-        let worldPoints: [WorldPoint] = try self.prerequisiteCache.worldPoints ?? self.getWorldPoints(
+        let worldPoints: [WorldPoint] = try self.getCachedWorldPoints(
             accessibilityFeature: accessibilityFeature
         )
-        let alignedPlane: Plane = try self.prerequisiteCache.pointAlignedPlane ?? self.calculateAlignedPlane(
+        let alignedPlane: Plane = try self.getCachedAlignedPlane(
             accessibilityFeature: accessibilityFeature, worldPoints: worldPoints
         )
         let heightFromGround = getHeightFromGround(plane: alignedPlane, cameraTransform: captureImageData.cameraTransform)
@@ -271,11 +277,11 @@ extension AttributeEstimationPipeline {
         guard let captureMeshData = self.captureMeshData else {
             throw AttributeEstimationPipelineError.missingCaptureData
         }
-        let meshContents: MeshContents = try self.prerequisiteCache.meshContents ?? self.getMeshContents(
+        let meshContents: MeshContents = try self.getCachedMeshContents(
             accessibilityFeature: accessibilityFeature
         )
-        let meshPolygons: [MeshPolygon] = self.prerequisiteCache.meshPolygons ?? meshContents.polygons
-        let alignedPlane: Plane = try self.prerequisiteCache.meshAlignedPlane ?? self.calculateAlignedPlane(
+        let meshPolygons: [MeshPolygon] = meshContents.polygons
+        let alignedPlane: Plane = try self.getCachedAlignedPlane(
             accessibilityFeature: accessibilityFeature, meshPolygons: meshPolygons
         )
         let heightFromGround = getHeightFromGround(plane: alignedPlane, cameraTransform: captureMeshData.cameraTransform)

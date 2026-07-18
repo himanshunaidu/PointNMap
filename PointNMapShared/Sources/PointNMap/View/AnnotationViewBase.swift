@@ -205,6 +205,7 @@ class AnnotationViewStatusViewBaseModel: ObservableObject {
 
 public struct AnnotationViewBase: View {
     let selectedClasses: [AccessibilityFeatureClass]
+    let selectedAttributesByClass: [AccessibilityFeatureClass: Set<AccessibilityFeatureAttribute>]
     let captureLocation: CLLocationCoordinate2D
     /// MARK: Extra shared settings
     @EnvironmentObject public var sharedBaseSettings: SharedBaseSettings
@@ -488,13 +489,14 @@ public struct AnnotationViewBase: View {
             var lastEstimationError: Error? = nil
             accessibilityFeatures.forEach { accessibilityFeature in
                 do {
-                    try attributeEstimationPipeline.setPrerequisites(accessibilityFeature: accessibilityFeature)
+//                    try attributeEstimationPipeline.setPrerequisites(accessibilityFeature: accessibilityFeature)
                     try attributeEstimationPipeline.processLocationRequest(
                         deviceLocation: captureLocation,
                         accessibilityFeature: accessibilityFeature
                     )
                     try attributeEstimationPipeline.processAttributeRequest(
-                        accessibilityFeature: accessibilityFeature
+                        accessibilityFeature: accessibilityFeature,
+                        attributes: selectedAttributesByClass[currentClass] ?? []
                     )
                     attributeEstimationPipeline.clearPrerequisites()
                 } catch {
@@ -538,23 +540,23 @@ public struct AnnotationViewBase: View {
                     featureSelectedStatus[oldFeature.id] = false /// Selected, but not highlighted
                 }
                 /// MARK: Temporary code for visualization. Incurs significant performance overhead.
-                if currentClass.kind.attributes.contains(where: {
-                    $0 == .width || $0 == .runningSlope || $0 == .crossSlope || $0 == .surfaceIntegrity
-                }) {
-                    let plane = try attributeEstimationPipeline.calculateAlignedPlane(
-                        accessibilityFeature: currentFeature, worldPoints: nil
-                    )
-                    let projectedPlane = try attributeEstimationPipeline.calculateProjectedPlane(
-                        accessibilityFeature: currentFeature, plane: plane
-                    )
-                    let damageDetectionResults = try attributeEstimationPipeline.getDamageDetectionResults(
-                        accessibilityFeature: currentFeature
-                    )
-                    updateFeatureResults = AnnotationImageFeatureUpdateResults(
-                        plane: plane, projectedPlane: projectedPlane,
-                        damageDetectionResults: damageDetectionResults
-                    )
-                }
+//                if currentClass.kind.attributes.contains(where: {
+//                    $0 == .width || $0 == .runningSlope || $0 == .crossSlope || $0 == .surfaceIntegrity
+//                }) {
+//                    let plane = try attributeEstimationPipeline.calculateAlignedPlane(
+//                        accessibilityFeature: currentFeature, worldPoints: nil
+//                    )
+//                    let projectedPlane = try attributeEstimationPipeline.calculateProjectedPlane(
+//                        accessibilityFeature: currentFeature, plane: plane
+//                    )
+//                    let damageDetectionResults = try attributeEstimationPipeline.getDamageDetectionResults(
+//                        accessibilityFeature: currentFeature
+//                    )
+//                    updateFeatureResults = AnnotationImageFeatureUpdateResults(
+//                        plane: plane, projectedPlane: projectedPlane,
+//                        damageDetectionResults: damageDetectionResults
+//                    )
+//                }
             } else {
                 accessibilityFeatures = featureSelectionViewModel.instances
                 featureSelectedStatus = featureSelectionViewModel.instances.reduce(into: [:]) { dict, feature in

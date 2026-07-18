@@ -11,7 +11,7 @@ import PointNMapShaderTypes
 /**
  Extension for utilities related to world point extraction and plane calculation.
  */
-public extension AttributeEstimationPipeline {
+public extension AttributeEstimationPipeline {    
     /**
      Get world points corresponding to the feature based on the segmentation label image and depth map, using the world points processor.
      */
@@ -39,7 +39,10 @@ public extension AttributeEstimationPipeline {
     /**
      Restructure world points into a 2D grid based on their projected pixel coordinates, for more efficient spatial queries.
      */
-    func getWorldPointsGrid(accessibilityFeature: any EditableAccessibilityFeatureProtocol) throws -> WorldPointsGrid {
+    func getWorldPointsGrid(
+        accessibilityFeature: any EditableAccessibilityFeatureProtocol,
+        worldPoints: [WorldPoint]
+    ) throws -> WorldPointsGrid {
         guard let captureImageData = self.captureImageData else {
             throw AttributeEstimationPipelineError.missingCaptureData
         }
@@ -48,9 +51,6 @@ public extension AttributeEstimationPipeline {
                 AttributeEstimationPipelineConstants.Texts.worldPointsProcessorKey
             )
         }
-        let worldPoints: [WorldPoint] = try self.prerequisiteCache.worldPoints ?? self.getWorldPoints(
-            accessibilityFeature: accessibilityFeature
-        )
         let worldPointsGrid: WorldPointsGrid = try worldPointsProcessor.getWorldPointsGrid(
             worldPoints: worldPoints,
             cameraTransform: captureImageData.cameraTransform,
@@ -65,7 +65,7 @@ public extension AttributeEstimationPipeline {
      */
     func calculateAlignedPlane(
         accessibilityFeature: any EditableAccessibilityFeatureProtocol,
-        worldPoints: [WorldPoint]? = nil
+        worldPoints: [WorldPoint]
     ) throws -> Plane {
         guard let planeProcessorLocal = self.planeProcessor else {
             throw AttributeEstimationPipelineError.configurationError(AttributeEstimationPipelineConstants.Texts.planeProcessorKey)
@@ -74,10 +74,7 @@ public extension AttributeEstimationPipeline {
             throw AttributeEstimationPipelineError.missingCaptureData
         }
         var plane: Plane
-        let worldPointsLocal: [WorldPoint] = try worldPoints ?? self.getWorldPoints(
-            accessibilityFeature: accessibilityFeature
-        )
-        plane = try planeProcessorLocal.fitPlanePCA(worldPoints: worldPointsLocal)
+        plane = try planeProcessorLocal.fitPlanePCA(worldPoints: worldPoints)
         let alignedPlane = try planeProcessorLocal.alignPlaneWithViewDirection(
             plane: plane,
             cameraTransform: captureImageData.cameraTransform,
@@ -130,7 +127,7 @@ public extension AttributeEstimationPipeline {
     
     func calculateAlignedPlane(
         accessibilityFeature: any EditableAccessibilityFeatureProtocol,
-        meshPolygons: [MeshPolygon]? = nil
+        meshPolygons: [MeshPolygon]
     ) throws -> Plane {
         guard let planeProcessorLocal = self.planeProcessor else {
             throw AttributeEstimationPipelineError.configurationError(AttributeEstimationPipelineConstants.Texts.planeProcessorKey)
@@ -141,13 +138,10 @@ public extension AttributeEstimationPipeline {
         var plane: Plane
         /// Using the vertices of the mesh polygons as points to fit the plane.
         /// TODO: For optimization, replace the usage of meshPolygons with meshTriangles (GPU-based)
-        let meshPolygonsLocal: [MeshPolygon] = try meshPolygons ?? self.getMeshContents(
-            accessibilityFeature: accessibilityFeature
-        ).polygons
-        let worldPointsFromMesh: [WorldPoint] = meshPolygonsLocal.map { triangle in
+        let worldPointsFromMesh: [WorldPoint] = meshPolygons.map { triangle in
             return WorldPoint(p: triangle.centroid)
         }
-        let areasFromMesh: [Float] = meshPolygonsLocal.map { triangle in
+        let areasFromMesh: [Float] = meshPolygons.map { triangle in
             return triangle.area
         }
         plane = try planeProcessorLocal.fitPlanePCA(points: worldPointsFromMesh, weights: areasFromMesh)
@@ -160,3 +154,4 @@ public extension AttributeEstimationPipeline {
         return alignedPlane
     }
 }
+

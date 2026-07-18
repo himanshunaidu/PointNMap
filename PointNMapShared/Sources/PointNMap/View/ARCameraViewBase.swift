@@ -127,6 +127,7 @@ class ARCameraBaseManagerStatusViewModel: ObservableObject {
 
 public struct ARCameraViewBase: View {
     public let selectedClasses: [AccessibilityFeatureClass]
+    public let selectedAttributesByClass: [AccessibilityFeatureClass: Set<AccessibilityFeatureAttribute>]
     /// MARK: Extra callback if required. Else, the view will handle the flow to annotation view internally
     private let onCaptureComplete: ((CaptureData) -> Void)?
     /// MARK: Extra shared settings
@@ -148,9 +149,12 @@ public struct ARCameraViewBase: View {
     @State private var showAnnotationView = false
     
     public init(
-        selectedClasses: [AccessibilityFeatureClass], onCaptureComplete: ((CaptureData) -> Void)?
+        selectedClasses: [AccessibilityFeatureClass],
+        selectedAttributesByClass: [AccessibilityFeatureClass: Set<AccessibilityFeatureAttribute>],
+        onCaptureComplete: ((CaptureData) -> Void)?
     ) {
         self.selectedClasses = selectedClasses
+        self.selectedAttributesByClass = selectedAttributesByClass
         self.onCaptureComplete = onCaptureComplete
     }
     
@@ -276,7 +280,8 @@ public struct ARCameraViewBase: View {
         .fullScreenCover(isPresented: $showAnnotationView) {
             if let captureLocation = locationManager.currentLocation?.coordinate {
                 AnnotationViewBase(
-                    selectedClasses: selectedClasses, captureLocation: captureLocation
+                    selectedClasses: selectedClasses, selectedAttributesByClass: selectedAttributesByClass,
+                    captureLocation: captureLocation
                 )
             } else {
                 InvalidContentView(

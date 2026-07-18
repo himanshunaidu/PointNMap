@@ -60,23 +60,7 @@ public enum AttributeEstimationPipelineConstants {
     The individual attribute calculation functions have a lot of redundant code to get the relevant properties from the prerequisite cache.
     Find a way to streamline this.
  */
-public class AttributeEstimationPipeline: ObservableObject {
-    public struct PrerequisiteCache: Sendable {
-        public var worldPoints: [WorldPoint]? = nil
-        public var worldPointsGrid: WorldPointsGrid? = nil
-        public var pointAlignedPlane: Plane? = nil
-        public var pointProjectedPlane: ProjectedPlane? = nil
-        public var meshContents: MeshContents? = nil
-        public var meshPolygons: [MeshPolygon]? = nil
-        public var meshTriangles: [MeshTriangle]? = nil
-        public var meshAlignedPlane: Plane? = nil
-        public var meshProjectedPlane: ProjectedPlane? = nil
-        
-        /// Additional lazy properties for caching can be added here as needed.
-        public var surfaceNormalsGrid: SurfaceNormalsForPointsGrid? = nil
-        
-    }
-    
+public class AttributeEstimationPipeline: ObservableObject {    
     public var captureImageData: (any CaptureImageDataProtocol)?
     public var captureMeshData: (any CaptureMeshDataProtocol)?
     
@@ -117,67 +101,58 @@ public class AttributeEstimationPipeline: ObservableObject {
         self.damageDetectionPipeline = damageDetectionPipeline
     }
     
-    public func setPrerequisites(
-        accessibilityFeature: any EditableAccessibilityFeatureProtocol
-    ) throws {
-        let accessibilityFeatureKind = accessibilityFeature.accessibilityFeatureClass.kind
-        let isMeshEnabled: Bool = captureMeshData != nil
-        var worldPoints: [WorldPoint]? = nil
-        var worldPointsGrid: WorldPointsGrid? = nil
-        var pointAlignedPlane: Plane? = nil
-        var pointProjectedPlane: ProjectedPlane? = nil
-        var meshContents: MeshContents? = nil
-        var meshPolygons: [MeshPolygon]? = nil
-        var meshTriangles: [MeshTriangle]? = nil
-        var meshAlignedPlane: Plane? = nil
-        var meshProjectedPlane: ProjectedPlane? = nil
-        switch(accessibilityFeatureKind) {
-        case .sidewalk:
-            if isMeshEnabled {
-                meshContents = try self.getMeshContents(accessibilityFeature: accessibilityFeature)
-                meshPolygons = meshContents?.polygons
-                meshTriangles = meshContents?.triangles
-                let calculatedMeshAlignedPlane = try self.calculateAlignedPlane(
-                    accessibilityFeature: accessibilityFeature, meshPolygons: meshPolygons
-                )
-                meshAlignedPlane = calculatedMeshAlignedPlane
-                meshProjectedPlane = try self.calculateProjectedPlane(
-                    accessibilityFeature: accessibilityFeature, plane: calculatedMeshAlignedPlane
-                )
-            }
-            /// TODO: We can actually, eventually, comment this out since we don't need world points if mesh data is available.
-            /// But we will have to ensure that none of the attribute calculations rely on world points in that case, which may require some refactoring, so leaving it for now.
-            worldPoints = try self.getWorldPoints(accessibilityFeature: accessibilityFeature)
-            worldPointsGrid = try self.getWorldPointsGrid(accessibilityFeature: accessibilityFeature)
-            let calculatedPointProjectedPlane = try self.calculateAlignedPlane(
-                accessibilityFeature: accessibilityFeature, worldPoints: worldPoints
-            )
-            pointAlignedPlane = calculatedPointProjectedPlane
-            pointProjectedPlane = try self.calculateProjectedPlane(
-                accessibilityFeature: accessibilityFeature, plane: calculatedPointProjectedPlane
-            )
-        default:
-            break
-        }
-        self.prerequisiteCache.worldPoints = worldPoints
-        self.prerequisiteCache.worldPointsGrid = worldPointsGrid
-        self.prerequisiteCache.pointAlignedPlane = pointAlignedPlane
-        self.prerequisiteCache.pointProjectedPlane = pointProjectedPlane
-        self.prerequisiteCache.meshContents = meshContents
-        self.prerequisiteCache.meshPolygons = meshPolygons
-        self.prerequisiteCache.meshTriangles = meshTriangles
-        self.prerequisiteCache.meshAlignedPlane = meshAlignedPlane
-        self.prerequisiteCache.meshProjectedPlane = meshProjectedPlane
-    }
-    
-    public func clearPrerequisites() {
-        self.prerequisiteCache.worldPoints = nil
-        self.prerequisiteCache.pointAlignedPlane = nil
-        self.prerequisiteCache.meshContents = nil
-        self.prerequisiteCache.meshPolygons = nil
-        self.prerequisiteCache.meshTriangles = nil
-        self.prerequisiteCache.meshAlignedPlane = nil
-    }
+//    public func setPrerequisites(
+//        accessibilityFeature: any EditableAccessibilityFeatureProtocol
+//    ) throws {
+//        let accessibilityFeatureKind = accessibilityFeature.accessibilityFeatureClass.kind
+//        let isMeshEnabled: Bool = captureMeshData != nil
+//        var worldPoints: [WorldPoint]? = nil
+//        var worldPointsGrid: WorldPointsGrid? = nil
+//        var pointAlignedPlane: Plane? = nil
+//        var pointProjectedPlane: ProjectedPlane? = nil
+//        var meshContents: MeshContents? = nil
+//        var meshPolygons: [MeshPolygon]? = nil
+//        var meshTriangles: [MeshTriangle]? = nil
+//        var meshAlignedPlane: Plane? = nil
+//        var meshProjectedPlane: ProjectedPlane? = nil
+//        switch(accessibilityFeatureKind) {
+//        case .sidewalk:
+//            if isMeshEnabled {
+//                meshContents = try self.getMeshContents(accessibilityFeature: accessibilityFeature)
+//                meshPolygons = meshContents?.polygons
+//                meshTriangles = meshContents?.triangles
+//                let calculatedMeshAlignedPlane = try self.calculateAlignedPlane(
+//                    accessibilityFeature: accessibilityFeature, meshPolygons: meshPolygons
+//                )
+//                meshAlignedPlane = calculatedMeshAlignedPlane
+//                meshProjectedPlane = try self.calculateProjectedPlane(
+//                    accessibilityFeature: accessibilityFeature, plane: calculatedMeshAlignedPlane
+//                )
+//            }
+//            /// TODO: We can actually, eventually, comment this out since we don't need world points if mesh data is available.
+//            /// But we will have to ensure that none of the attribute calculations rely on world points in that case, which may require some refactoring, so leaving it for now.
+//            worldPoints = try self.getWorldPoints(accessibilityFeature: accessibilityFeature)
+//            worldPointsGrid = try self.getWorldPointsGrid(accessibilityFeature: accessibilityFeature)
+//            let calculatedPointProjectedPlane = try self.calculateAlignedPlane(
+//                accessibilityFeature: accessibilityFeature, worldPoints: worldPoints
+//            )
+//            pointAlignedPlane = calculatedPointProjectedPlane
+//            pointProjectedPlane = try self.calculateProjectedPlane(
+//                accessibilityFeature: accessibilityFeature, plane: calculatedPointProjectedPlane
+//            )
+//        default:
+//            break
+//        }
+//        self.prerequisiteCache.worldPoints = worldPoints
+//        self.prerequisiteCache.worldPointsGrid = worldPointsGrid
+//        self.prerequisiteCache.pointAlignedPlane = pointAlignedPlane
+//        self.prerequisiteCache.pointProjectedPlane = pointProjectedPlane
+//        self.prerequisiteCache.meshContents = meshContents
+//        self.prerequisiteCache.meshPolygons = meshPolygons
+//        self.prerequisiteCache.meshTriangles = meshTriangles
+//        self.prerequisiteCache.meshAlignedPlane = meshAlignedPlane
+//        self.prerequisiteCache.meshProjectedPlane = meshProjectedPlane
+//    }
     
     public func processLocationRequest(
         deviceLocation: CLLocationCoordinate2D,
@@ -222,11 +197,13 @@ public class AttributeEstimationPipeline: ObservableObject {
     }
     
     public func processAttributeRequest(
-        accessibilityFeature: any EditableAccessibilityFeatureProtocol
+        accessibilityFeature: any EditableAccessibilityFeatureProtocol,
+        attributes: Set<AccessibilityFeatureAttribute>
     ) throws {
         var attributeAssignmentFlagError = false
         
-        for attribute in accessibilityFeature.accessibilityFeatureClass.kind.attributes {
+//        for attribute in accessibilityFeature.accessibilityFeatureClass.kind.attributes {
+        for attribute in attributes {
             do {
                 switch attribute {
                 case .width:
