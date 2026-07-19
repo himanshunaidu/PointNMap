@@ -43,7 +43,7 @@ public enum AccessibilityFeatureKind: String, Identifiable, Codable, CaseIterabl
         ]
         case .curbRamp: return [
             .width, .runningSlope, .crossSlope,
-            .widthLegacy, .runningSlopeLegacy, .crossSlopeLegacy,
+//            .widthLegacy, .runningSlopeLegacy, .crossSlopeLegacy,
             .widthFromImage, .runningSlopeFromImage, .crossSlopeFromImage
         ]
         default : return []

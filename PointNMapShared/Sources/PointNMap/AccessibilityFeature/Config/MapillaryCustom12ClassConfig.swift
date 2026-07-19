@@ -54,8 +54,9 @@ public extension AccessibilityFeatureConfig {
             
             AccessibilityFeatureClass(
                 id: "curb_ramp", name: "Curb Ramp", kind: .curbRamp,
-                grayscaleValue: 8.0 / 255.0, labelValue: 8,
+                grayscaleValue: 7.0 / 255.0, labelValue: 7,
                 color: CIColor(red: 1.0, green: 1.0, blue: 0.0),
+                meshClassification: [.floor]
             ),
             
             AccessibilityFeatureClass(
