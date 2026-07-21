@@ -16,6 +16,9 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
     case width
     case runningSlope
     case crossSlope
+    /**
+     Surface integrity-related attributes
+     */
     case surfaceIntegrity
     case surfaceDisruption
     case heightFromGround

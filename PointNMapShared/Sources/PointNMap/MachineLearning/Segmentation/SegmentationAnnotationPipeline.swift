@@ -224,13 +224,17 @@ public final class SegmentationAnnotationPipeline: ObservableObject {
         var detectedFeatures: [DetectedAccessibilityFeature] = try contourRequestProcessor.processRequest(
             from: segmentationLabelImage
         )
-        /// TODO: Handle sidewalk feature differently if needed, and improve the relevant trapezoid-creation logic.
         let largestFeature = detectedFeatures.sorted(by: {$0.contourDetails.area > $1.contourDetails.area}).first
         guard let largestFeature = largestFeature,
-              accessibilityFeatureClass.kind == .sidewalk else {
+              accessibilityFeatureClass.kind.isUniquePerCapture else {
             self.isProcessing = false
             return detectedFeatures
         }
+        if accessibilityFeatureClass.kind != .sidewalk {
+            self.isProcessing = false
+            return [largestFeature]
+        }
+        /// TODO: Handle sidewalk feature differently if needed, and improve the relevant trapezoid-creation logic.
         let isTrapezoidFlipped = [.left, .leftMirrored, .right, .rightMirrored].contains(orientation)
         if let trapezoidPoints = ContourUtils.getTrapezoid(
             normalizedPoints: largestFeature.contourDetails.normalizedPoints,
