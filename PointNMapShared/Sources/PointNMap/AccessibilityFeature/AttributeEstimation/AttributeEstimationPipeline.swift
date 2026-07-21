@@ -260,6 +260,40 @@ public class AttributeEstimationPipeline: ObservableObject {
                     try accessibilityFeature.setAttributeValue(
                         heightFromGroundAttributeValue, for: .heightFromGround, isCalculated: true
                     )
+                /// TODO: Add some generalizable default values
+                case .rampWidth:
+                    guard let value = AccessibilityFeatureAttribute.rampWidth.value(from: 0) else { continue }
+                    try accessibilityFeature.setAttributeValue(value, for: .rampWidth, isCalculated: true)
+                case .rampLength:
+                    guard let value = AccessibilityFeatureAttribute.rampLength.value(from: 0) else { continue }
+                    try accessibilityFeature.setAttributeValue(value, for: .rampLength, isCalculated: true)
+                case .rampRunningSlope:
+                    guard let value = AccessibilityFeatureAttribute.rampRunningSlope.value(from: 0) else { continue }
+                    try accessibilityFeature.setAttributeValue(value, for: .rampRunningSlope, isCalculated: true)
+                case .rampCrossSlope:
+                    guard let value = AccessibilityFeatureAttribute.rampCrossSlope.value(from: 0) else { continue }
+                    try accessibilityFeature.setAttributeValue(value, for: .rampCrossSlope, isCalculated: true)
+                case .leftFlareSlope:
+                    guard let value = AccessibilityFeatureAttribute.leftFlareSlope.value(from: 0) else { continue }
+                    try accessibilityFeature.setAttributeValue(value, for: .leftFlareSlope, isCalculated: true)
+                case .rightFlareSlope:
+                    guard let value = AccessibilityFeatureAttribute.rightFlareSlope.value(from: 0) else { continue }
+                    try accessibilityFeature.setAttributeValue(value, for: .rightFlareSlope, isCalculated: true)
+                case .counterSlope:
+                    guard let value = AccessibilityFeatureAttribute.counterSlope.value(from: 0) else { continue }
+                    try accessibilityFeature.setAttributeValue(value, for: .counterSlope, isCalculated: true)
+                case .turningSpaceWidth:
+                    guard let value = AccessibilityFeatureAttribute.turningSpaceWidth.value(from: 0) else { continue }
+                    try accessibilityFeature.setAttributeValue(value, for: .turningSpaceWidth, isCalculated: true)
+                case .turningSpaceLength:
+                    guard let value = AccessibilityFeatureAttribute.turningSpaceLength.value(from: 0) else { continue }
+                    try accessibilityFeature.setAttributeValue(value, for: .turningSpaceLength, isCalculated: true)
+                case .turningSpaceRunningSlope:
+                    guard let value = AccessibilityFeatureAttribute.turningSpaceRunningSlope.value(from: 0) else { continue }
+                    try accessibilityFeature.setAttributeValue(value, for: .turningSpaceRunningSlope, isCalculated: true)
+                case .turningSpaceCrossSlope:
+                    guard let value = AccessibilityFeatureAttribute.turningSpaceCrossSlope.value(from: 0) else { continue }
+                    try accessibilityFeature.setAttributeValue(value, for: .turningSpaceCrossSlope, isCalculated: true)
                 default:
                     continue
                 }

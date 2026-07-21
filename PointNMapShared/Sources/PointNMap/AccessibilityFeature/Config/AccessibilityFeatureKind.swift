@@ -43,9 +43,12 @@ public enum AccessibilityFeatureKind: String, Identifiable, Codable, CaseIterabl
             .widthFromImage, .runningSlopeFromImage, .crossSlopeFromImage
         ]
         case .curbRamp: return [
-            .width, .runningSlope, .crossSlope,
-//            .widthLegacy, .runningSlopeLegacy, .crossSlopeLegacy,
-            .widthFromImage, .runningSlopeFromImage, .crossSlopeFromImage
+            .rampWidth, .rampLength,
+            .rampRunningSlope, .rampCrossSlope,
+            .leftFlareSlope, .rightFlareSlope,
+            .counterSlope,
+            .turningSpaceWidth, .turningSpaceLength,
+            .turningSpaceRunningSlope, .turningSpaceCrossSlope
         ]
         default : return []
         }

@@ -484,4 +484,19 @@ public extension AccessibilityFeatureAttribute {
             return categoricalValue.rawValue
         }
     }
+    
+    func defaultValue() -> Value? {
+        switch self.valueType {
+        case .length:
+            return .length(Measurement(value: 0.0, unit: .meters))
+        case .angle:
+            return .angle(Measurement(value: 0.0, unit: .degrees))
+        case .number:
+            return .number(0.0)
+        case .flag:
+            return .flag(false)
+        case .categorical(let typeID):
+            return nil
+        }
+    }
 }
