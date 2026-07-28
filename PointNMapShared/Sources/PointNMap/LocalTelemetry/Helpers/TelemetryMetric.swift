@@ -14,12 +14,15 @@ public enum TelemetryMetric: String, CaseIterable, Codable, Hashable, Sendable {
     // MARK: Perception latency
 
     /// Unit: milliseconds (ms).
+    /// Covered in ARCameraManager (ARCameraView -> ARCameraManager)
     case preprocessingLatency = "preprocessing_latency"
 
     /// Unit: milliseconds (ms).
+    /// Covered in SegmentationARPipeline  (SetupView -> SegmentationARPipeline)
     case segmentationInferenceLatency = "segmentation_inference_latency"
 
     /// Unit: milliseconds (ms).
+    /// Covered in ARCameraManager  (ARCameraView -> ARCameraManager)
     case postprocessingLatency = "postprocessing_latency"
 
     /// Unit: milliseconds (ms), from AR frame receipt to overlay publication.
@@ -34,6 +37,7 @@ public enum TelemetryMetric: String, CaseIterable, Codable, Hashable, Sendable {
     case inferenceSubmissionRate = "inference_submission_rate"
 
     /// Unit: hertz (Hz).
+    /// Covered in ARCameraManager (ARCameraView -> ARCameraManager)
     case processedFrameRate = "processed_frame_rate"
 
     /// Unit: hertz (Hz).
@@ -51,6 +55,7 @@ public enum TelemetryMetric: String, CaseIterable, Codable, Hashable, Sendable {
     // MARK: Capture
 
     /// Unit: milliseconds (ms).
+    /// Covered in ARCameraManager (ARCameraView -> ARCameraManager)
     case captureToLocalResultLatency = "capture_to_local_result_latency"
 
     /// Unit: milliseconds (ms).
@@ -59,6 +64,7 @@ public enum TelemetryMetric: String, CaseIterable, Codable, Hashable, Sendable {
     // MARK: Network
 
     /// Unit: bytes.
+    /// Covered in ChangesetService (ARCameraView -> APIChangesetUploadController -> ChangesetService)
     case uploadPayloadSize = "upload_payload_size"
 
     /// Unit: milliseconds (ms).

@@ -185,6 +185,10 @@ public final class ARCameraManager: NSObject, ObservableObject, ARSessionCameraP
     public var isEnhancedAnalysisEnabled: Bool = false
     public var metalContext: MetalContext? = nil
     public var cameraOutputImageCallback: ((any CaptureImageDataProtocol) -> Void)? = nil
+    
+    public var telemetryEncoder: TelemetryEncoder? = nil
+    public var processedFrameRateTracker: RateTracker? = nil
+    
     /// Mesh update callbacks not in use for now, as creating snapshots in real-time is expensive.
 //    var cameraOutputMeshCallback: ((any CaptureMeshDataProtocol) -> Void)? = nil
     
@@ -239,7 +243,8 @@ public final class ARCameraManager: NSObject, ObservableObject, ARSessionCameraP
         metalContext: MetalContext?,
         isEnhancedAnalysisEnabled: Bool,
         cameraOutputImageCallback: ((any CaptureImageDataProtocol) -> Void)? = nil,
-        pixelBufferPoolSize: CGSize = PointNMapConstants.SelectedAccessibilityFeatureConfig.inputSize
+        pixelBufferPoolSize: CGSize = PointNMapConstants.SelectedAccessibilityFeatureConfig.inputSize,
+        telemetryEncoder: TelemetryEncoder? = nil
     ) throws {
         self.selectedClasses = selectedClasses
         self.segmentationPipeline = segmentationPipeline
@@ -253,6 +258,8 @@ public final class ARCameraManager: NSObject, ObservableObject, ARSessionCameraP
         try setUpPreAllocatedPixelBufferPools(size: pixelBufferPoolSize)
         self.cameraOutputImageCallback = cameraOutputImageCallback
         self.isConfigured = true
+        
+        self.telemetryEncoder = telemetryEncoder
         
         Task { @MainActor in
             
@@ -319,6 +326,12 @@ public extension ARCameraManager {
         guard let metalContext = metalContext else {
             return
         }
+        if self.processedFrameRateTracker == nil {
+            self.processedFrameRateTracker = RateTracker(
+                metric: .processedFrameRate,
+                telemetryEncoder: self.telemetryEncoder
+            )
+        }
         
         let pixelBuffer = frame.capturedImage
         let cameraTransform = frame.camera.transform
@@ -334,6 +347,14 @@ public extension ARCameraManager {
         /// Perform async processing in a Task. Read the consumer-provided orientation on the MainActor
         Task {
              do {
+                 let captureId: UUID = UUID()
+                 let captureToLocalResultLatencyTimer = MetricTimer(
+                     metric: .captureToLocalResultLatency,
+                     telemetryEncoder: self.telemetryEncoder,
+                     metadata: [
+                         "frame_id": captureId.uuidString
+                     ]
+                 )
                  let cameraImageResults = try await self.processCameraImage(
                      image: cameraImage, depthImage: depthImage,
                      interfaceOrientation: interfaceOrientation,
@@ -345,7 +366,7 @@ public extension ARCameraManager {
                      detectedFeatureMap: cameraImageResults.detectedFeatureMap
                  )
                  let captureImageData = CaptureImageData(
-                     id: UUID(),
+                     id: captureId,
                      timestamp: Date().timeIntervalSince1970,
                      cameraImage: cameraImageResults.cameraImage,
                      cameraTransform: cameraImageResults.cameraTransform,
@@ -356,6 +377,8 @@ public extension ARCameraManager {
                      confidenceImage: cameraImageResults.confidenceImage,
                      captureImageDataResults: captureImageDataResults
                  )
+                 await captureToLocalResultLatencyTimer.stop()
+                 processedFrameRateTracker?.mark()
                  await MainActor.run {
                      var results = cameraImageResults
                      results.depthImage = depthImage
@@ -395,6 +418,10 @@ public extension ARCameraManager {
         guard let segmentationPipeline = segmentationPipeline else {
             throw ARCameraManagerError.segmentationNotConfigured
         }
+        let preprocessingLatencyTimer = MetricTimer(
+            metric: .preprocessingLatency,
+            telemetryEncoder: self.telemetryEncoder
+        )
         /// Pre-process the image: orient, center-crop, and back to pixel buffer
         let originalSize: CGSize = image.extent.size
         let imageOrientation: CGImagePropertyOrientation = CameraOrientation.getCGImageOrientationForInterface(
@@ -419,9 +446,15 @@ public extension ARCameraManager {
                 croppedDepthImage, context: rawContext, pixelBufferPool: depthPixelBufferPool, colorSpace: depthColorSpace
             )
         }
+        await preprocessingLatencyTimer.stop()
         let segmentationResults: SegmentationARPipelineResults = try await segmentationPipeline.processRequest(
             with: inputImage, depthImage: inputDepthImage,
             highPriority: highPriority
+        )
+        
+        let postprocessingLatencyTimer = MetricTimer(
+            metric: .postprocessingLatency,
+            telemetryEncoder: self.telemetryEncoder
         )
         
         var segmentationImage = segmentationResults.segmentationImage
@@ -463,6 +496,8 @@ public extension ARCameraManager {
             cameraCache.cameraImageSize = originalSize
             cameraCache.interfaceOrientation = interfaceOrientation
         }
+        
+        await postprocessingLatencyTimer.stop()
         
         let cameraImageResults = ARCameraImageResults(
             cameraImage: image,
