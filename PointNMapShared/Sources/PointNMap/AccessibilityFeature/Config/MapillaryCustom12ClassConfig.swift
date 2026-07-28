@@ -9,6 +9,7 @@ import CoreImage
 import ARKit
 
 public extension AccessibilityFeatureConfig {
+    // Accessible color palette: https://www.sussex.ac.uk/tel/resource/tel_website/accessiblecontrast/?q=FFFFFF~003b49~1d4289~94a596~e56db1~d3273e~00bfb2~d6d2c4~ffc845~dc582a~41b6e6~1b365d~be84a3~5d3754~7da1c4~f2c75c~d0d3d4~007a78~000000
     static let mapillaryCustom12Config: AccessibilityFeatureClassConfig = AccessibilityFeatureClassConfig(
         modelURL: PointNMapSharedResources.bundle.url(forResource: "bisenetv2_12_640_640_model_final_accessibility_12_short", withExtension: "mlmodelc"),
         classes: [
@@ -31,31 +32,32 @@ public extension AccessibilityFeatureConfig {
             AccessibilityFeatureClass(
                 id: "building", name: "Building", kind: .building,
                 grayscaleValue: 3.0 / 255.0, labelValue: 3,
-                color: CIColor(red: 0.275, green: 0.275, blue: 0.275),
+//                color: CIColor(red: 0.275, green: 0.275, blue: 0.275),
+                color: CIColor(red: 0.114, green: 0.259, blue: 0.537) // blue
             ),
             
             AccessibilityFeatureClass(
                 id: "pole", name: "Pole", kind: .pole,
                 grayscaleValue: 4.0 / 255.0, labelValue: 4,
-                color: CIColor(red: 0.600, green: 0.600, blue: 0.600),
+                color: CIColor(red: 0, green: 0.749, blue: 0.698), // light blue
             ),
             
             AccessibilityFeatureClass(
                 id: "traffic_light", name: "Traffic light", kind: .trafficLight,
                 grayscaleValue: 5.0 / 255.0, labelValue: 5,
-                color: CIColor(red: 0.980, green: 0.667, blue: 0.118)
+                color: CIColor(red: 0.827, green: 0.153, blue: 0.243) // red
             ),
             
             AccessibilityFeatureClass(
                 id: "traffic_sign", name: "Traffic sign", kind: .trafficSign,
                 grayscaleValue: 6.0 / 255.0, labelValue: 6,
-                color: CIColor(red: 0.863, green: 0.863, blue: 0.000),
+                color: CIColor(red: 0.863, green: 0.345, blue: 0.165), // orange
             ),
             
             AccessibilityFeatureClass(
                 id: "curb_ramp", name: "Curb Ramp", kind: .curbRamp,
                 grayscaleValue: 7.0 / 255.0, labelValue: 7,
-                color: CIColor(red: 1.0, green: 1.0, blue: 0.0),
+                color: CIColor(red: 1.0, green: 0.784, blue: 0.271), // yellow
                 meshClassification: [.floor]
             ),
             

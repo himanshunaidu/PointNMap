@@ -262,16 +262,23 @@ public class AttributeEstimationPipeline: ObservableObject {
                     )
                 /// TODO: Add some generalizable default values
                 case .rampWidth:
-                    guard let value = AccessibilityFeatureAttribute.rampWidth.value(from: 0) else { continue }
+                    let value = try self.calculateWidth(
+                        accessibilityFeature: accessibilityFeature
+                    )
                     try accessibilityFeature.setAttributeValue(value, for: .rampWidth, isCalculated: true)
                 case .rampLength:
                     guard let value = AccessibilityFeatureAttribute.rampLength.value(from: 0) else { continue }
                     try accessibilityFeature.setAttributeValue(value, for: .rampLength, isCalculated: true)
                 case .rampRunningSlope:
-                    guard let value = AccessibilityFeatureAttribute.rampRunningSlope.value(from: 0) else { continue }
+                    let value = try self.calculateRunningSlope(
+                        accessibilityFeature: accessibilityFeature
+                    )
+//                    guard let value = AccessibilityFeatureAttribute.rampRunningSlope.value(from: 0) else { continue }
                     try accessibilityFeature.setAttributeValue(value, for: .rampRunningSlope, isCalculated: true)
                 case .rampCrossSlope:
-                    guard let value = AccessibilityFeatureAttribute.rampCrossSlope.value(from: 0) else { continue }
+                    let value = try self.calculateCrossSlope(
+                        accessibilityFeature: accessibilityFeature
+                    )
                     try accessibilityFeature.setAttributeValue(value, for: .rampCrossSlope, isCalculated: true)
                 case .leftFlareSlope:
                     guard let value = AccessibilityFeatureAttribute.leftFlareSlope.value(from: 0) else { continue }

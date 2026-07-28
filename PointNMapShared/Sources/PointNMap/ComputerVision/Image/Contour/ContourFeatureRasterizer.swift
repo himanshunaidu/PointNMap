@@ -35,9 +35,9 @@ public struct ContourFeatureRasterizer {
     
     public static func rasterizeFeatures(
         detectedFeatures: [any DetectedFeatureProtocol], size: CGSize,
-        polygonConfig: RasterizeConfig = RasterizeConfig(color: .white, width: 2.0),
-        boundsConfig: RasterizeConfig = RasterizeConfig(color: .white, width: 2.0),
-        centroidConfig: RasterizeConfig = RasterizeConfig(color: .white, width: 2.0)
+        polygonConfig: RasterizeConfig = RasterizeConfig(color: .white, width: 5.0),
+        boundsConfig: RasterizeConfig = RasterizeConfig(color: .white, width: 5.0),
+        centroidConfig: RasterizeConfig = RasterizeConfig(color: .white, width: 5.0)
     ) -> CGImage? {
         
         UIGraphicsBeginImageContextWithOptions(size, false, 1.0)
@@ -92,9 +92,9 @@ public struct ContourFeatureRasterizer {
     public static func updateRasterizedFeatures(
         baseImage: CGImage,
         detectedFeature: [any DetectedFeatureProtocol], size: CGSize,
-        polygonConfig: RasterizeConfig = RasterizeConfig(color: .white, width: 2.0),
-        boundsConfig: RasterizeConfig = RasterizeConfig(color: .white, width: 2.0),
-        centroidConfig: RasterizeConfig = RasterizeConfig(color: .white, width: 2.0)
+        polygonConfig: RasterizeConfig = RasterizeConfig(color: .white, width: 5.0),
+        boundsConfig: RasterizeConfig = RasterizeConfig(color: .white, width: 5.0),
+        centroidConfig: RasterizeConfig = RasterizeConfig(color: .white, width: 5.0)
     ) -> CGImage? {
         let baseUIImage = UIImage(cgImage: baseImage)
         

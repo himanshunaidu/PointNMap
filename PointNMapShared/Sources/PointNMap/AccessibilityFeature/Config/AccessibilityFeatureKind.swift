@@ -45,10 +45,10 @@ public enum AccessibilityFeatureKind: String, Identifiable, Codable, CaseIterabl
         case .curbRamp: return [
             .rampWidth, .rampLength,
             .rampRunningSlope, .rampCrossSlope,
-            .leftFlareSlope, .rightFlareSlope,
-            .counterSlope,
+//            .leftFlareSlope, .rightFlareSlope,
+//            .counterSlope,
             .turningSpaceWidth, .turningSpaceLength,
-            .turningSpaceRunningSlope, .turningSpaceCrossSlope
+//            .turningSpaceRunningSlope, .turningSpaceCrossSlope
         ]
         default : return []
         }
@@ -71,6 +71,24 @@ public enum AccessibilityFeatureKind: String, Identifiable, Codable, CaseIterabl
             return true
         default:
             return false
+        }
+    }
+    
+    /// MARK: Temporary property to restrict maximum number of instances per feature
+    public var maxInstancesPerCapture: Int? {
+        switch self {
+        case .sidewalk, .curbRamp:
+            return nil
+        case .building:
+            return 3
+        case .pole, .trafficLight, .trafficSign:
+            return 5
+        case .vegetation:
+            return nil
+        case .unknown:
+            return nil
+        @unknown default:
+            return nil
         }
     }
 }

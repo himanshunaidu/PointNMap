@@ -224,7 +224,11 @@ public final class SegmentationAnnotationPipeline: ObservableObject {
         var detectedFeatures: [DetectedAccessibilityFeature] = try contourRequestProcessor.processRequest(
             from: segmentationLabelImage
         )
-        let largestFeature = detectedFeatures.sorted(by: {$0.contourDetails.area > $1.contourDetails.area}).first
+        let largestFeatures = detectedFeatures.sorted(by: {$0.contourDetails.area > $1.contourDetails.area})
+        if let maxInstancesPerCapture = accessibilityFeatureClass.kind.maxInstancesPerCapture {
+            detectedFeatures = Array(largestFeatures.prefix(maxInstancesPerCapture))
+        }
+        let largestFeature = largestFeatures.first
         guard let largestFeature = largestFeature,
               accessibilityFeatureClass.kind.isUniquePerCapture else {
             self.isProcessing = false
