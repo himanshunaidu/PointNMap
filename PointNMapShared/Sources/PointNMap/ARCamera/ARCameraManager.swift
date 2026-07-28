@@ -806,9 +806,15 @@ public extension ARCameraManager {
             let captureData = try await performFinalSessionMeshUpdate(
                 captureImageData: captureImageData
             )
+            processedFrameRateTracker?.flush(
+                metadata: ["reason": "mapping_session_ended"]
+            )
             return .imageAndMeshData(captureData)
         } else {
             let captureData = try await performFinalSessionFrameUpdate()
+            processedFrameRateTracker?.flush(
+                metadata: ["reason": "mapping_session_ended"]
+            )
             return .imageData(captureData)
         }
     }
