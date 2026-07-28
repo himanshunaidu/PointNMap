@@ -12,6 +12,7 @@ final class MetricJSONLEncoder {
 
     private let fileHandle: FileHandle
     private let jsonEncoder: JSONEncoder
+    /// The number of records to append before synchronizing the file handle to disk.
     private let synchronizeEveryNRecords: Int
     private var recordsSinceSynchronization: Int = 0
 
