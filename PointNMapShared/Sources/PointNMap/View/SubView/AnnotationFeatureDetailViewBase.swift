@@ -95,23 +95,23 @@ public struct AnnotationFeatureDetailViewBase<
     
     public var accessibilityFeature: Feature
     public let title: String
-    private let locationSection: (Feature) -> LocationSection
-    private let correctedLocationSection: (Feature) -> CorrectedLocationSection
-    private let ambiguitySection: (Feature) -> AmbiguitySection
+    private let locationSection: (Feature, Binding<Int>) -> LocationSection
+    private let correctedLocationSection: (Feature, Binding<Int>) -> CorrectedLocationSection
+    private let ambiguitySection: (Feature, Binding<Int>) -> AmbiguitySection
     
     private let locationFormatter = AnnotationFeatureDetailLocationFormatter()
     
     @StateObject private var statusViewModel = AnnotationFeatureDetailViewBase.StatusViewModel()
     @FocusState private var focusedField: AccessibilityFeatureAttribute?
     /// Note: Fields such as pickers don't have built-in ways to update their UI based on user input. Hence we need to trigger a refresh manually when their value changes.
-    @State private var refreshTrigger: Int = 0
+    @State public var refreshTrigger: Int = 0
     
     public init(
         accessibilityFeature: Feature,
         title: String,
-        @ViewBuilder locationSection: @escaping (Feature) -> LocationSection,
-        @ViewBuilder correctedLocationSection: @escaping (Feature) -> CorrectedLocationSection,
-        @ViewBuilder ambiguitySection: @escaping (Feature) -> AmbiguitySection
+        @ViewBuilder locationSection: @escaping (Feature, Binding<Int>) -> LocationSection,
+        @ViewBuilder correctedLocationSection: @escaping (Feature, Binding<Int>) -> CorrectedLocationSection,
+        @ViewBuilder ambiguitySection: @escaping (Feature, Binding<Int>) -> AmbiguitySection
     ) {
         self.accessibilityFeature = accessibilityFeature
         self.title = title
@@ -135,17 +135,20 @@ public struct AnnotationFeatureDetailViewBase<
                 /**
                  Location Section
                  */
-                locationSection(accessibilityFeature)
+                locationSection(accessibilityFeature, $refreshTrigger)
+                    .id(refreshTrigger) // Refresh the Location section when refreshTrigger changes
                 
                 /**
                 Location Section 2
                  */
-                correctedLocationSection(accessibilityFeature)
+                correctedLocationSection(accessibilityFeature, $refreshTrigger)
+                    .id(refreshTrigger) // Refresh the Location section when refreshTrigger changes
                 
                 /**
                 Ambiguity Section
                  */
-                ambiguitySection(accessibilityFeature)
+                ambiguitySection(accessibilityFeature, $refreshTrigger)
+                    .id(refreshTrigger) // Refresh the Location section when refreshTrigger changes
                 
                 /**
                  The Attributes Section
@@ -513,16 +516,16 @@ where CorrectedLocationSection == EmptyView, AmbiguitySection == EmptyView {
     init(
         accessibilityFeature: Feature,
         title: String,
-        @ViewBuilder locationSection: @escaping (Feature) -> LocationSection
+        @ViewBuilder locationSection: @escaping (Feature, Binding<Int>) -> LocationSection
     ) {
         self.init(
             accessibilityFeature: accessibilityFeature,
             title: title,
             locationSection: locationSection,
-            correctedLocationSection: { _ in
+            correctedLocationSection: { _, _ in
                 EmptyView()
             },
-            ambiguitySection: { _ in
+            ambiguitySection: { _, _ in
                 EmptyView()
             }
         )

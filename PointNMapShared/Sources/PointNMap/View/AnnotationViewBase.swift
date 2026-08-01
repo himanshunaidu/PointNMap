@@ -277,7 +277,7 @@ public struct AnnotationViewBase: View {
                 AnnotationFeatureDetailViewBase(
                     accessibilityFeature: currentFeature,
                     title: "\(currentFeature.accessibilityFeatureClass.name.capitalized): \(currentFeatureIndex)"
-                ) { feature in
+                ) { feature, _ in
                     EmptyView()
                 }
                     .presentationDetents([.medium, .large])
