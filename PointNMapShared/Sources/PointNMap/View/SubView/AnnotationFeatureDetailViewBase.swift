@@ -42,7 +42,9 @@ public enum AnnotationFeatureDetailViewConstants {
  */
 public struct AnnotationFeatureDetailViewBase<
     Feature: EditableAccessibilityFeatureProtocol,
-    LocationSection: View
+    LocationSection: View,
+    CorrectedLocationSection: View,
+    AmbiguitySection: View
     >: View {
     
     public enum AnnotationFeatureDetailViewError: Error, LocalizedError {
@@ -94,6 +96,9 @@ public struct AnnotationFeatureDetailViewBase<
     public var accessibilityFeature: Feature
     public let title: String
     private let locationSection: (Feature) -> LocationSection
+    private let correctedLocationSection: (Feature) -> CorrectedLocationSection
+    private let ambiguitySection: (Feature) -> AmbiguitySection
+    
     private let locationFormatter = AnnotationFeatureDetailLocationFormatter()
     
     @StateObject private var statusViewModel = AnnotationFeatureDetailViewBase.StatusViewModel()
@@ -104,11 +109,15 @@ public struct AnnotationFeatureDetailViewBase<
     public init(
         accessibilityFeature: Feature,
         title: String,
-        @ViewBuilder locationSection: @escaping (Feature) -> LocationSection
+        @ViewBuilder locationSection: @escaping (Feature) -> LocationSection,
+        @ViewBuilder correctedLocationSection: @escaping (Feature) -> CorrectedLocationSection,
+        @ViewBuilder ambiguitySection: @escaping (Feature) -> AmbiguitySection
     ) {
         self.accessibilityFeature = accessibilityFeature
         self.title = title
         self.locationSection = locationSection
+        self.correctedLocationSection = correctedLocationSection
+        self.ambiguitySection = ambiguitySection
     }
     
     public var body: some View {
@@ -127,6 +136,16 @@ public struct AnnotationFeatureDetailViewBase<
                  Location Section
                  */
                 locationSection(accessibilityFeature)
+                
+                /**
+                Location Section 2
+                 */
+                correctedLocationSection(accessibilityFeature)
+                
+                /**
+                Ambiguity Section
+                 */
+                ambiguitySection(accessibilityFeature)
                 
                 /**
                  The Attributes Section
@@ -485,5 +504,27 @@ public struct AnnotationFeatureDetailViewBase<
                 print("Failed to reset attribute error status: \(error.localizedDescription)")
             }
         }
+    }
+}
+
+public extension AnnotationFeatureDetailViewBase
+where CorrectedLocationSection == EmptyView, AmbiguitySection == EmptyView {
+
+    init(
+        accessibilityFeature: Feature,
+        title: String,
+        @ViewBuilder locationSection: @escaping (Feature) -> LocationSection
+    ) {
+        self.init(
+            accessibilityFeature: accessibilityFeature,
+            title: title,
+            locationSection: locationSection,
+            correctedLocationSection: { _ in
+                EmptyView()
+            },
+            ambiguitySection: { _ in
+                EmptyView()
+            }
+        )
     }
 }
