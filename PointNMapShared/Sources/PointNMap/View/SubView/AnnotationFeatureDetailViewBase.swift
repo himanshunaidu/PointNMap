@@ -42,7 +42,9 @@ public enum AnnotationFeatureDetailViewConstants {
  */
 public struct AnnotationFeatureDetailViewBase<
     Feature: EditableAccessibilityFeatureProtocol,
-    LocationSection: View
+    LocationSection: View,
+    CorrectedLocationSection: View,
+    AmbiguitySection: View
     >: View {
     
     public enum AnnotationFeatureDetailViewError: Error, LocalizedError {
@@ -93,22 +95,29 @@ public struct AnnotationFeatureDetailViewBase<
     
     public var accessibilityFeature: Feature
     public let title: String
-    private let locationSection: (Feature) -> LocationSection
+    private let locationSection: (Feature, Binding<Int>) -> LocationSection
+    private let correctedLocationSection: (Feature, Binding<Int>) -> CorrectedLocationSection
+    private let ambiguitySection: (Feature, Binding<Int>) -> AmbiguitySection
+    
     private let locationFormatter = AnnotationFeatureDetailLocationFormatter()
     
     @StateObject private var statusViewModel = AnnotationFeatureDetailViewBase.StatusViewModel()
     @FocusState private var focusedField: AccessibilityFeatureAttribute?
     /// Note: Fields such as pickers don't have built-in ways to update their UI based on user input. Hence we need to trigger a refresh manually when their value changes.
-    @State private var refreshTrigger: Int = 0
+    @State public var refreshTrigger: Int = 0
     
     public init(
         accessibilityFeature: Feature,
         title: String,
-        @ViewBuilder locationSection: @escaping (Feature) -> LocationSection
+        @ViewBuilder locationSection: @escaping (Feature, Binding<Int>) -> LocationSection,
+        @ViewBuilder correctedLocationSection: @escaping (Feature, Binding<Int>) -> CorrectedLocationSection,
+        @ViewBuilder ambiguitySection: @escaping (Feature, Binding<Int>) -> AmbiguitySection
     ) {
         self.accessibilityFeature = accessibilityFeature
         self.title = title
         self.locationSection = locationSection
+        self.correctedLocationSection = correctedLocationSection
+        self.ambiguitySection = ambiguitySection
     }
     
     public var body: some View {
@@ -126,7 +135,20 @@ public struct AnnotationFeatureDetailViewBase<
                 /**
                  Location Section
                  */
-                locationSection(accessibilityFeature)
+                locationSection(accessibilityFeature, $refreshTrigger)
+                    .id(refreshTrigger) // Refresh the Location section when refreshTrigger changes
+                
+                /**
+                Location Section 2
+                 */
+                correctedLocationSection(accessibilityFeature, $refreshTrigger)
+                    .id(refreshTrigger) // Refresh the Location section when refreshTrigger changes
+                
+                /**
+                Ambiguity Section
+                 */
+                ambiguitySection(accessibilityFeature, $refreshTrigger)
+                    .id(refreshTrigger) // Refresh the Location section when refreshTrigger changes
                 
                 /**
                  The Attributes Section
@@ -159,176 +181,176 @@ public struct AnnotationFeatureDetailViewBase<
                     }
                 }
                 
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceIntegrity))
-                {
-                    Section(header: Text(AccessibilityFeatureAttribute.surfaceIntegrity.displayName)) {
-                        pickerView(attribute: .surfaceIntegrity)
-                            .focused($focusedField, equals: .surfaceIntegrity)
-                            .id(refreshTrigger) // Refresh the Picker view when refreshTrigger changes
-                    }
-                }
-                
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceDisruption)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruption.displayName)) {
-                        numberTextFieldView(attribute: .surfaceDisruption)
-                            .focused($focusedField, equals: .surfaceDisruption)
-                            .id(refreshTrigger) // Refresh the Picker view when refreshTrigger changes
-                    }
-                }
-                
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.heightFromGround)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.heightFromGround.displayName)) {
-                        numberTextFieldView(attribute: .heightFromGround)
-                            .focused($focusedField, equals: .heightFromGround)
-                    }
-                }
-                
-                /// Experimental Attributes Section
-                if (accessibilityFeature.accessibilityFeatureClass.kind.experimentalAttributes.contains(.lidarDepth)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.lidarDepth.displayName)) {
-                        numberTextView(attribute: .lidarDepth)
-                    }
-                }
-                
-                if (accessibilityFeature.accessibilityFeatureClass.kind.experimentalAttributes.contains(.latitudeDelta)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.latitudeDelta.displayName)) {
-                        numberTextView(attribute: .latitudeDelta)
-                    }
-                }
-                
-                if (accessibilityFeature.accessibilityFeatureClass.kind.experimentalAttributes.contains(.longitudeDelta)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.longitudeDelta.displayName)) {
-                        numberTextView(attribute: .longitudeDelta)
-                    }
-                }
-                
-                /// Legacy Attributes Section
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.widthLegacy))
-                {
-                    Section(header: Text(AccessibilityFeatureAttribute.widthLegacy.displayName)) {
-                        numberTextFieldView(attribute: .widthLegacy)
-                            .focused($focusedField, equals: .widthLegacy)
-                    }
-                }
-                
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.runningSlopeLegacy))
-                {
-                    Section(header: Text(AccessibilityFeatureAttribute.runningSlopeLegacy.displayName)) {
-                        numberTextFieldView(attribute: .runningSlopeLegacy)
-                            .focused($focusedField, equals: .runningSlopeLegacy)
-                    }
-                }
-                
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.crossSlopeLegacy))
-                {
-                    Section(header: Text(AccessibilityFeatureAttribute.crossSlopeLegacy.displayName)) {
-                        numberTextFieldView(attribute: .crossSlopeLegacy)
-                            .focused($focusedField, equals: .crossSlopeLegacy)
-                    }
-                }
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.widthFromImage))
-                {
-                    Section(header: Text(AccessibilityFeatureAttribute.widthFromImage.displayName)) {
-                        numberTextFieldView(attribute: .widthFromImage)
-                            .focused($focusedField, equals: .widthFromImage)
-                    }
-                }
-                
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.runningSlopeFromImage))
-                {
-                    Section(header: Text(AccessibilityFeatureAttribute.runningSlopeFromImage.displayName)) {
-                        numberTextFieldView(attribute: .runningSlopeFromImage)
-                            .focused($focusedField, equals: .runningSlopeFromImage)
-                    }
-                }
-                
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.crossSlopeFromImage))
-                {
-                    Section(header: Text(AccessibilityFeatureAttribute.crossSlopeFromImage.displayName)) {
-                        numberTextFieldView(attribute: .crossSlopeFromImage)
-                            .focused($focusedField, equals: .crossSlopeFromImage)
-                    }
-                }
-                
-                /// Curb Ramp Section
-                /// TODO: Find a more generic way to handle this in the future.
-                // ramp width
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampWidth)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.rampWidth.displayName)) {
-                        numberTextFieldView(attribute: .rampWidth)
-                            .focused($focusedField, equals: .rampWidth)
-                    }
-                }
-                // ramp length
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampLength)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.rampLength.displayName)) {
-                        numberTextFieldView(attribute: .rampLength)
-                            .focused($focusedField, equals: .rampLength)
-                    }
-                }
-                // ramp running slope
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampRunningSlope)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.rampRunningSlope.displayName)) {
-                        numberTextFieldView(attribute: .rampRunningSlope)
-                            .focused($focusedField, equals: .rampRunningSlope)
-                    }
-                }
-                // ramp cross slope
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampCrossSlope)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.rampCrossSlope.displayName)) {
-                        numberTextFieldView(attribute: .rampCrossSlope)
-                            .focused($focusedField, equals: .rampCrossSlope)
-                    }
-                }
-                // left flare slope
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.leftFlareSlope)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.leftFlareSlope.displayName)) {
-                        numberTextFieldView(attribute: .leftFlareSlope)
-                            .focused($focusedField, equals: .leftFlareSlope)
-                    }
-                }
-                // right flare slope
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rightFlareSlope)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.rightFlareSlope.displayName)) {
-                        numberTextFieldView(attribute: .rightFlareSlope)
-                            .focused($focusedField, equals: .rightFlareSlope)
-                    }
-                }
-                // counter slope
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.counterSlope)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.counterSlope.displayName)) {
-                        numberTextFieldView(attribute: .counterSlope)
-                            .focused($focusedField, equals: .counterSlope)
-                    }
-                }
-                // turning space width
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceWidth)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceWidth.displayName)) {
-                        numberTextFieldView(attribute: .turningSpaceWidth)
-                            .focused($focusedField, equals: .turningSpaceWidth)
-                    }
-                }
-                // turning space length
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceLength)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceLength.displayName)) {
-                        numberTextFieldView(attribute: .turningSpaceLength)
-                            .focused($focusedField, equals: .turningSpaceLength)
-                    }
-                }
-                // turning space running slope
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceRunningSlope)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceRunningSlope.displayName)) {
-                        numberTextFieldView(attribute: .turningSpaceRunningSlope)
-                            .focused($focusedField, equals: .turningSpaceRunningSlope)
-                    }
-                }
-                // turning space cross slope
-                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceCrossSlope)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceCrossSlope.displayName)) {
-                        numberTextFieldView(attribute: .turningSpaceCrossSlope)
-                            .focused($focusedField, equals: .turningSpaceCrossSlope)
-                    }
-                }
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceIntegrity))
+//                {
+//                    Section(header: Text(AccessibilityFeatureAttribute.surfaceIntegrity.displayName)) {
+//                        pickerView(attribute: .surfaceIntegrity)
+//                            .focused($focusedField, equals: .surfaceIntegrity)
+//                            .id(refreshTrigger) // Refresh the Picker view when refreshTrigger changes
+//                    }
+//                }
+//                
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceDisruption)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruption.displayName)) {
+//                        numberTextFieldView(attribute: .surfaceDisruption)
+//                            .focused($focusedField, equals: .surfaceDisruption)
+//                            .id(refreshTrigger) // Refresh the Picker view when refreshTrigger changes
+//                    }
+//                }
+//                
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.heightFromGround)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.heightFromGround.displayName)) {
+//                        numberTextFieldView(attribute: .heightFromGround)
+//                            .focused($focusedField, equals: .heightFromGround)
+//                    }
+//                }
+//                
+//                /// Experimental Attributes Section
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.experimentalAttributes.contains(.lidarDepth)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.lidarDepth.displayName)) {
+//                        numberTextView(attribute: .lidarDepth)
+//                    }
+//                }
+//                
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.experimentalAttributes.contains(.latitudeDelta)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.latitudeDelta.displayName)) {
+//                        numberTextView(attribute: .latitudeDelta)
+//                    }
+//                }
+//                
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.experimentalAttributes.contains(.longitudeDelta)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.longitudeDelta.displayName)) {
+//                        numberTextView(attribute: .longitudeDelta)
+//                    }
+//                }
+//                
+//                /// Legacy Attributes Section
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.widthLegacy))
+//                {
+//                    Section(header: Text(AccessibilityFeatureAttribute.widthLegacy.displayName)) {
+//                        numberTextFieldView(attribute: .widthLegacy)
+//                            .focused($focusedField, equals: .widthLegacy)
+//                    }
+//                }
+//                
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.runningSlopeLegacy))
+//                {
+//                    Section(header: Text(AccessibilityFeatureAttribute.runningSlopeLegacy.displayName)) {
+//                        numberTextFieldView(attribute: .runningSlopeLegacy)
+//                            .focused($focusedField, equals: .runningSlopeLegacy)
+//                    }
+//                }
+//                
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.crossSlopeLegacy))
+//                {
+//                    Section(header: Text(AccessibilityFeatureAttribute.crossSlopeLegacy.displayName)) {
+//                        numberTextFieldView(attribute: .crossSlopeLegacy)
+//                            .focused($focusedField, equals: .crossSlopeLegacy)
+//                    }
+//                }
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.widthFromImage))
+//                {
+//                    Section(header: Text(AccessibilityFeatureAttribute.widthFromImage.displayName)) {
+//                        numberTextFieldView(attribute: .widthFromImage)
+//                            .focused($focusedField, equals: .widthFromImage)
+//                    }
+//                }
+//                
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.runningSlopeFromImage))
+//                {
+//                    Section(header: Text(AccessibilityFeatureAttribute.runningSlopeFromImage.displayName)) {
+//                        numberTextFieldView(attribute: .runningSlopeFromImage)
+//                            .focused($focusedField, equals: .runningSlopeFromImage)
+//                    }
+//                }
+//                
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.crossSlopeFromImage))
+//                {
+//                    Section(header: Text(AccessibilityFeatureAttribute.crossSlopeFromImage.displayName)) {
+//                        numberTextFieldView(attribute: .crossSlopeFromImage)
+//                            .focused($focusedField, equals: .crossSlopeFromImage)
+//                    }
+//                }
+//                
+//                /// Curb Ramp Section
+//                /// TODO: Find a more generic way to handle this in the future.
+//                // ramp width
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampWidth)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.rampWidth.displayName)) {
+//                        numberTextFieldView(attribute: .rampWidth)
+//                            .focused($focusedField, equals: .rampWidth)
+//                    }
+//                }
+//                // ramp length
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampLength)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.rampLength.displayName)) {
+//                        numberTextFieldView(attribute: .rampLength)
+//                            .focused($focusedField, equals: .rampLength)
+//                    }
+//                }
+//                // ramp running slope
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampRunningSlope)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.rampRunningSlope.displayName)) {
+//                        numberTextFieldView(attribute: .rampRunningSlope)
+//                            .focused($focusedField, equals: .rampRunningSlope)
+//                    }
+//                }
+//                // ramp cross slope
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampCrossSlope)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.rampCrossSlope.displayName)) {
+//                        numberTextFieldView(attribute: .rampCrossSlope)
+//                            .focused($focusedField, equals: .rampCrossSlope)
+//                    }
+//                }
+//                // left flare slope
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.leftFlareSlope)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.leftFlareSlope.displayName)) {
+//                        numberTextFieldView(attribute: .leftFlareSlope)
+//                            .focused($focusedField, equals: .leftFlareSlope)
+//                    }
+//                }
+//                // right flare slope
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rightFlareSlope)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.rightFlareSlope.displayName)) {
+//                        numberTextFieldView(attribute: .rightFlareSlope)
+//                            .focused($focusedField, equals: .rightFlareSlope)
+//                    }
+//                }
+//                // counter slope
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.counterSlope)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.counterSlope.displayName)) {
+//                        numberTextFieldView(attribute: .counterSlope)
+//                            .focused($focusedField, equals: .counterSlope)
+//                    }
+//                }
+//                // turning space width
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceWidth)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceWidth.displayName)) {
+//                        numberTextFieldView(attribute: .turningSpaceWidth)
+//                            .focused($focusedField, equals: .turningSpaceWidth)
+//                    }
+//                }
+//                // turning space length
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceLength)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceLength.displayName)) {
+//                        numberTextFieldView(attribute: .turningSpaceLength)
+//                            .focused($focusedField, equals: .turningSpaceLength)
+//                    }
+//                }
+//                // turning space running slope
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceRunningSlope)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceRunningSlope.displayName)) {
+//                        numberTextFieldView(attribute: .turningSpaceRunningSlope)
+//                            .focused($focusedField, equals: .turningSpaceRunningSlope)
+//                    }
+//                }
+//                // turning space cross slope
+//                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceCrossSlope)) {
+//                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceCrossSlope.displayName)) {
+//                        numberTextFieldView(attribute: .turningSpaceCrossSlope)
+//                            .focused($focusedField, equals: .turningSpaceCrossSlope)
+//                    }
+//                }
             }
         }
         .onAppear {
@@ -485,5 +507,27 @@ public struct AnnotationFeatureDetailViewBase<
                 print("Failed to reset attribute error status: \(error.localizedDescription)")
             }
         }
+    }
+}
+
+public extension AnnotationFeatureDetailViewBase
+where CorrectedLocationSection == EmptyView, AmbiguitySection == EmptyView {
+
+    init(
+        accessibilityFeature: Feature,
+        title: String,
+        @ViewBuilder locationSection: @escaping (Feature, Binding<Int>) -> LocationSection
+    ) {
+        self.init(
+            accessibilityFeature: accessibilityFeature,
+            title: title,
+            locationSection: locationSection,
+            correctedLocationSection: { _, _ in
+                EmptyView()
+            },
+            ambiguitySection: { _, _ in
+                EmptyView()
+            }
+        )
     }
 }

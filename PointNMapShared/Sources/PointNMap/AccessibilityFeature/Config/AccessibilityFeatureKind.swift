@@ -36,18 +36,18 @@ public enum AccessibilityFeatureKind: String, Identifiable, Codable, CaseIterabl
     {
         switch self {
         case .sidewalk: return [
-            .width, .runningSlope, .crossSlope,
+//            .width, .runningSlope, .crossSlope,
 //            .surfaceIntegrity,
-            .surfaceDisruption, .heightFromGround,
-            .widthLegacy, .runningSlopeLegacy, .crossSlopeLegacy,
-            .widthFromImage, .runningSlopeFromImage, .crossSlopeFromImage
+//            .surfaceDisruption, .heightFromGround,
+//            .widthLegacy, .runningSlopeLegacy, .crossSlopeLegacy,
+//            .widthFromImage, .runningSlopeFromImage, .crossSlopeFromImage
         ]
         case .curbRamp: return [
-            .rampWidth, .rampLength,
-            .rampRunningSlope, .rampCrossSlope,
+//            .rampWidth, .rampLength,
+//            .rampRunningSlope, .rampCrossSlope,
 //            .leftFlareSlope, .rightFlareSlope,
 //            .counterSlope,
-            .turningSpaceWidth, .turningSpaceLength,
+//            .turningSpaceWidth, .turningSpaceLength,
 //            .turningSpaceRunningSlope, .turningSpaceCrossSlope
         ]
         default : return []

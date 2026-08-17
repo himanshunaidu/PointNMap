@@ -66,6 +66,8 @@ public struct SegmentationARPipelineResults {
     TODO: Rename this to `SegmentationImagePipeline` since AR is not a necessary component here.
  */
 public final class SegmentationARPipeline: ObservableObject {
+    public var telemetryEncoder: TelemetryEncoder? = nil
+    
     private var isProcessing = false
     private var currentTask: Task<SegmentationARPipelineResults, Error>?
     private var timeoutInSeconds: Double = 1.0
@@ -88,7 +90,9 @@ public final class SegmentationARPipeline: ObservableObject {
     
     public init() {}
     
-    public func configure() throws {
+    public func configure(
+        telemetryEncoder: TelemetryEncoder? = nil
+    ) throws {
         self.segmentationModelRequestProcessor = try SegmentationModelRequestProcessor(
             selectedClasses: self.selectedClasses)
         self.contourRequestProcessor = try ContourRequestProcessor(
@@ -97,6 +101,7 @@ public final class SegmentationARPipeline: ObservableObject {
             selectedClasses: self.selectedClasses)
         self.grayscaleToColorFilter = try GrayscaleToColorFilter()
         self.depthFilter = try DepthFilter()
+        self.telemetryEncoder = telemetryEncoder
     }
     
     public func reset() {
@@ -136,7 +141,12 @@ public final class SegmentationARPipeline: ObservableObject {
             }
             try Task.checkCancellation()
             
+            let segmentationInferenceLatencyTimer = MetricTimer(
+                metric: .segmentationInferenceLatency,
+                telemetryEncoder: self.telemetryEncoder
+            )
             let results = try await self.processImageWithTimeout(cIImage, depthImage: depthImage)
+            await segmentationInferenceLatencyTimer.stop()
             try Task.checkCancellation()
             return results
         }
