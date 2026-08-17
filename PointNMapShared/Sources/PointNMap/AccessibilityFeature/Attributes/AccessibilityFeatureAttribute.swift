@@ -16,6 +16,9 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
     case width
     case runningSlope
     case crossSlope
+    /**
+     Surface integrity-related attributes
+     */
     case surfaceIntegrity
     case surfaceDisruption
     case heightFromGround
@@ -36,6 +39,20 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
     case widthFromImage
     case runningSlopeFromImage
     case crossSlopeFromImage
+    /**
+     Curb-ramp related attributes
+     */
+    case rampWidth
+    case rampLength
+    case rampRunningSlope
+    case rampCrossSlope
+    case leftFlareSlope
+    case rightFlareSlope
+    case counterSlope
+    case turningSpaceWidth
+    case turningSpaceLength
+    case turningSpaceRunningSlope
+    case turningSpaceCrossSlope
     
     public enum ValueType: Sendable, Codable, Equatable {
         case length
@@ -167,6 +184,61 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
         case .crossSlopeFromImage:
             return Metadata(
                 id: 36, name: "Cross Slope from Image", unit: UnitAngle.degrees,
+                valueType: .angle,
+            )
+        case .rampWidth:
+            return Metadata(
+                id: 110, name: "Ramp Width", unit: UnitLength.meters,
+                valueType: .length,
+            )
+        case .rampLength:
+            return Metadata(
+                id: 120, name: "Ramp Length", unit: UnitLength.meters,
+                valueType: .length,
+            )
+        case .rampRunningSlope:
+            return Metadata(
+                id: 130, name: "Ramp Running Slope", unit: UnitAngle.degrees,
+                valueType: .angle,
+            )
+        case .rampCrossSlope:
+            return Metadata(
+                id: 140, name: "Ramp Cross Slope", unit: UnitAngle.degrees,
+                valueType: .angle,
+            )
+        case .leftFlareSlope:
+            return Metadata(
+                id: 141, name: "Left Flare Slope", unit: UnitAngle.degrees,
+                valueType: .angle,
+            )
+        case .rightFlareSlope:
+            return Metadata(
+                id: 142, name: "Right Flare Slope", unit: UnitAngle.degrees,
+                valueType: .angle,
+            )
+        case .counterSlope:
+            return Metadata(
+                id: 150, name: "Counter Slope", unit: UnitAngle.degrees,
+                valueType: .angle,
+            )
+        case .turningSpaceWidth:
+            return Metadata(
+                id: 160, name: "Turning Space Width", unit: UnitLength.meters,
+                valueType: .length,
+            )
+        case .turningSpaceLength:
+            return Metadata(
+                id: 170, name: "Turning Space Length", unit: UnitLength.meters,
+                valueType: .length,
+            )
+        case .turningSpaceRunningSlope:
+            return Metadata(
+                id: 180, name: "Turning Space Running Slope", unit: UnitAngle.degrees,
+                valueType: .angle,
+            )
+        case .turningSpaceCrossSlope:
+            return Metadata(
+                id: 190, name: "Turning Space Cross Slope", unit: UnitAngle.degrees,
                 valueType: .angle,
             )
         }
@@ -353,42 +425,77 @@ public extension AccessibilityFeatureAttribute {
         return options
     }
     
+//    func getValueDescription(attributeValue: Value?) -> String? {
+//        guard let attributeValue = attributeValue else {
+//            return nil
+//        }
+//        switch (self, attributeValue) {
+//        case (.width, .length(let measurement)):
+//            return String(format: "%.2f", measurement.converted(to: .meters).value)
+//        case (.runningSlope, .angle(let measurement)):
+//            return String(format: "%.2f", measurement.converted(to: .degrees).value)
+//        case (.crossSlope, .angle(let measurement)):
+//            return String(format: "%.2f", measurement.converted(to: .degrees).value)
+//        case (.surfaceIntegrity, .categorical(let categoricalValue)):
+//            return categoricalValue.rawValue
+//        case (.surfaceDisruption, .number(let value)):
+//            return String(format: "%.2f", value)
+//        case (.heightFromGround, .length(let measurement)):
+//            return String(format: "%.2f", measurement.converted(to: .meters).value)
+//        case (.lidarDepth, .length(let measurement)):
+//            return String(format: "%.2f", measurement.converted(to: .meters).value)
+//        case (.latitudeDelta, .length(let measurement)):
+//            return String(format: "%.2f", measurement.converted(to: .meters).value)
+//        case (.longitudeDelta, .length(let measurement)):
+//            return String(format: "%.2f", measurement.converted(to: .meters).value)
+//        case (.widthLegacy, .length(let measurement)):
+//            return String(format: "%.2f", measurement.converted(to: .meters).value)
+//        case (.runningSlopeLegacy, .angle(let measurement)):
+//            return String(format: "%.2f", measurement.converted(to: .degrees).value)
+//        case (.crossSlopeLegacy, .angle(let measurement)):
+//            return String(format: "%.2f", measurement.converted(to: .degrees).value)
+//        case (.widthFromImage, .length(let measurement)):
+//            return String(format: "%.2f", measurement.converted(to: .meters).value)
+//        case (.runningSlopeFromImage, .angle(let measurement)):
+//            return String(format: "%.2f", measurement.converted(to: .degrees).value)
+//        case (.crossSlopeFromImage, .angle(let measurement)):
+//            return String(format: "%.2f", measurement.converted(to: .degrees).value)
+//        case (.rampWidth, .length(let measurement)):
+//            return String(format: "%.2f", measurement.converted(to: .meters).value)
+//        default:
+//            return nil
+//        }
+//    }
+    /// Generalize the getValueDescription to handle attribute values depending on their associated value types. (We can add exceptions before the switch if needed)
     func getValueDescription(attributeValue: Value?) -> String? {
         guard let attributeValue = attributeValue else {
             return nil
         }
-        switch (self, attributeValue) {
-        case (.width, .length(let measurement)):
+        switch attributeValue {
+        case .length(let measurement):
             return String(format: "%.2f", measurement.converted(to: .meters).value)
-        case (.runningSlope, .angle(let measurement)):
+        case .angle(let measurement):
             return String(format: "%.2f", measurement.converted(to: .degrees).value)
-        case (.crossSlope, .angle(let measurement)):
-            return String(format: "%.2f", measurement.converted(to: .degrees).value)
-        case (.surfaceIntegrity, .categorical(let categoricalValue)):
-            return categoricalValue.rawValue
-        case (.surfaceDisruption, .number(let value)):
+        case .number(let value):
             return String(format: "%.2f", value)
-        case (.heightFromGround, .length(let measurement)):
-            return String(format: "%.2f", measurement.converted(to: .meters).value)
-        case (.lidarDepth, .length(let measurement)):
-            return String(format: "%.2f", measurement.converted(to: .meters).value)
-        case (.latitudeDelta, .length(let measurement)):
-            return String(format: "%.2f", measurement.converted(to: .meters).value)
-        case (.longitudeDelta, .length(let measurement)):
-            return String(format: "%.2f", measurement.converted(to: .meters).value)
-        case (.widthLegacy, .length(let measurement)):
-            return String(format: "%.2f", measurement.converted(to: .meters).value)
-        case (.runningSlopeLegacy, .angle(let measurement)):
-            return String(format: "%.2f", measurement.converted(to: .degrees).value)
-        case (.crossSlopeLegacy, .angle(let measurement)):
-            return String(format: "%.2f", measurement.converted(to: .degrees).value)
-        case (.widthFromImage, .length(let measurement)):
-            return String(format: "%.2f", measurement.converted(to: .meters).value)
-        case (.runningSlopeFromImage, .angle(let measurement)):
-            return String(format: "%.2f", measurement.converted(to: .degrees).value)
-        case (.crossSlopeFromImage, .angle(let measurement)):
-            return String(format: "%.2f", measurement.converted(to: .degrees).value)
-        default:
+        case .flag(let value):
+            return value ? "yes" : "no"
+        case .categorical(let categoricalValue):
+            return categoricalValue.rawValue
+        }
+    }
+    
+    func defaultValue() -> Value? {
+        switch self.valueType {
+        case .length:
+            return .length(Measurement(value: 0.0, unit: .meters))
+        case .angle:
+            return .angle(Measurement(value: 0.0, unit: .degrees))
+        case .number:
+            return .number(0.0)
+        case .flag:
+            return .flag(false)
+        case .categorical(let typeID):
             return nil
         }
     }

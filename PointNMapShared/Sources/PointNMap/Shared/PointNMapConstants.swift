@@ -8,7 +8,7 @@ import SwiftUI
 
 public struct PointNMapConstants {
     // Supported Classes
-    public static let SelectedAccessibilityFeatureConfig: AccessibilityFeatureClassConfig = AccessibilityFeatureConfig.mapillaryCustom11Config
+    public static let SelectedAccessibilityFeatureConfig: AccessibilityFeatureClassConfig = AccessibilityFeatureConfig.mapillaryCustom12Config
     
     public struct DepthConstants {
         /// Model-specific SharedAppConstants
@@ -22,7 +22,7 @@ public struct PointNMapConstants {
     public struct DamageDetectionConstants {
         /// Model-specific SharedAppConstants
         public static let damageDetectionModelURL: URL? = PointNMapSharedResources.bundle.url(
-            forResource: "v8n_175_16_960", withExtension: "mlmodelc"
+            forResource: "yolov8x_batch_16_A_full_soft", withExtension: "mlmodelc"
         )
         public static let inputSize: CGSize = CGSize(width: 640, height: 640)
     }

@@ -459,9 +459,9 @@ public extension AnnotationImageManager {
         }
         guard let raterizedFeaturesImage = ContourFeatureRasterizer.rasterizeFeatures(
             detectedFeatures: accessibilityFeatures, size: captureImageData.originalSize,
-            polygonConfig: RasterizeConfig(draw: true, color: nil, width: 5),
+            polygonConfig: RasterizeConfig(draw: true, color: nil, width: 10),
             boundsConfig: RasterizeConfig(draw: false, color: nil, width: 0),
-            centroidConfig: RasterizeConfig(draw: true, color: nil, width: 10)
+            centroidConfig: RasterizeConfig(draw: true, color: nil, width: 20)
         ) else {
             throw AnnotationImageManagerError.featureRasterizationFailed
         }
@@ -489,9 +489,9 @@ public extension AnnotationImageManager {
         guard let updatedImageWithNotSelectedFeatures = ContourFeatureRasterizer.updateRasterizedFeatures(
             baseImage: sourceCGImage,
             detectedFeature: notSelectedFeatures, size: size,
-            polygonConfig: RasterizeConfig(draw: true, color: isNotSelectedColor, width: 5),
+            polygonConfig: RasterizeConfig(draw: true, color: isNotSelectedColor, width: 10),
             boundsConfig: RasterizeConfig(draw: false, color: isNotSelectedColor, width: 0),
-            centroidConfig: RasterizeConfig(draw: true, color: isNotSelectedColor, width: 10)
+            centroidConfig: RasterizeConfig(draw: true, color: isNotSelectedColor, width: 20)
         ) else {
             throw AnnotationImageManagerError.featureRasterizationFailed
         }
@@ -502,9 +502,9 @@ public extension AnnotationImageManager {
         guard let updatedImageWithSelectedFeatures = ContourFeatureRasterizer.updateRasterizedFeatures(
             baseImage: updatedImageWithNotSelectedFeatures,
             detectedFeature: selectedFeatures, size: size,
-            polygonConfig: RasterizeConfig(draw: true, color: isSelectedColor, width: 5),
+            polygonConfig: RasterizeConfig(draw: true, color: isSelectedColor, width: 10),
             boundsConfig: RasterizeConfig(draw: false, color: isSelectedColor, width: 0),
-            centroidConfig: RasterizeConfig(draw: true, color: isSelectedColor, width: 10)
+            centroidConfig: RasterizeConfig(draw: true, color: isSelectedColor, width: 20)
         ) else {
             throw AnnotationImageManagerError.featureRasterizationFailed
         }
