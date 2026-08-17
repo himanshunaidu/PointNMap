@@ -98,6 +98,7 @@ enum AnnotationViewBaseError: Error, LocalizedError {
     }
 }
 
+@available(iOS 17.0, *)
 struct SelectFeatureInfoTipBase: Tip {
     
     var title: Text {
@@ -261,13 +262,13 @@ public struct AnnotationViewBase: View {
         .task {
             await handleOnAppear()
         }
-        .onChange(of: featureClassSelectionViewModel.currentClass) { oldClass, newClass in
+        .onChange(of: featureClassSelectionViewModel.currentClass) { newClass in
             handleOnClassChange()
         }
         /// We are using index to track change in instance, instead of the instance itself, because we want to use the index for naming the instance in the picker.
         /// To use the instance directly would require AccessibilityFeature to conform to Hashable, which is possible, by just using id.
         /// But while rendering the picker, we would need to create a new Array of enumerated instances, which would be less efficient.
-        .onChange(of: featureSelectionViewModel.currentIndex) { oldIndex, newIndex in
+        .onChange(of: featureSelectionViewModel.currentIndex) { [oldIndex = featureSelectionViewModel.currentIndex] newIndex in
             handleOnInstanceChange(oldIndex: oldIndex, newIndex: newIndex)
         }
         .sheet(isPresented: $isShowingAnnotationFeatureDetailView) {

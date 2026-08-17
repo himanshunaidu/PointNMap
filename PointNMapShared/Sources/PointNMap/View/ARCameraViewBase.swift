@@ -290,10 +290,10 @@ public struct ARCameraViewBase: View {
                 )
             }
         }
-        .onChange(of: showAnnotationView, initial: false) { oldValue, newValue in
+        .onChange(of: showAnnotationView) { newValue in
             // If the AnnotationView is dismissed, clear capture history and reconfigure the manager for a new session
             Task {
-                if (oldValue == true && newValue == false) {
+                if !newValue {
                     do {
                         locationManager.startLocationUpdates()
                         await sharedAppData.refreshQueue()
@@ -304,10 +304,10 @@ public struct ARCameraViewBase: View {
                 }
             }
         }
-        .onChange(of: manager.interfaceOrientation) { oldOrientation, newOrientation in
+        .onChange(of: manager.interfaceOrientation) { newOrientation in
             locationManager.updateOrientation(newOrientation)
         }
-        .onChange(of: locationManager.currentLocation) { oldLocation, newLocation in
+        .onChange(of: locationManager.currentLocation) { [oldLocation = locationManager.currentLocation] newLocation in
             handleLocationUpdate(oldLocation: oldLocation, newLocation: newLocation)
         }
         .sheet(isPresented: $showARCameraLearnMoreSheet) {
