@@ -35,15 +35,13 @@ public protocol SegmentationMeshBackend: AnyObject {
 }
 
 public struct LegacyMeshResourceResult {
-
     let meshResource: MeshResource
     let vertexCount: Int
     let indexCount: Int
 }
 
 @MainActor
-public final class LegacySegmentationMeshBackend:
-    SegmentationMeshBackend {
+public final class LegacySegmentationMeshBackend: SegmentationMeshBackend {
 
     public let entity: ModelEntity
 
@@ -290,8 +288,7 @@ public final class LegacySegmentationMeshBackend:
 
 @available(iOS 18.0, *)
 @MainActor
-public final class ModernSegmentationMeshBackend:
-    SegmentationMeshBackend {
+public final class ModernSegmentationMeshBackend: SegmentationMeshBackend {
 
     public let entity: ModelEntity
 
@@ -303,6 +300,9 @@ public final class ModernSegmentationMeshBackend:
     public let processor: SegmentationMeshProcessor
 
     public var mesh: LowLevelMesh
+    
+    private let name: String
+    private static let capacityMultiplier: Int = 10
 
     init(
         processor: SegmentationMeshProcessor,
@@ -316,33 +316,22 @@ public final class ModernSegmentationMeshBackend:
     ) throws {
 
         self.processor = processor
+        self.name = name
 
-        let descriptor =
-            Self.createDescriptor(
-                meshGPUSnapshot: meshGPUSnapshot
-            )
+        let descriptor = Self.createDescriptor(meshGPUSnapshot: meshGPUSnapshot)
+        self.mesh = try LowLevelMesh(descriptor: descriptor)
 
-        self.mesh =
-            try LowLevelMesh(descriptor: descriptor)
+        let resource = try MeshResource(from: mesh)
 
-        let resource =
-            try MeshResource(from: mesh)
+        var material = UnlitMaterial(color: color.withAlphaComponent(CGFloat(opacity)))
+        material.triangleFillMode = .fill
 
-        var material = UnlitMaterial(
-            color: color.withAlphaComponent(
-                CGFloat(opacity)
-            )
-        )
-
-        // Optional.
-        // material.triangleFillMode = .fill
-
-        self.entity = ModelEntity(
+        let entity = ModelEntity(
             mesh: resource,
             materials: [material]
         )
-
-        self.entity.name = name
+        entity.name = name
+        self.entity = entity
 
         try replace(
             meshGPUSnapshot: meshGPUSnapshot,
@@ -358,7 +347,6 @@ public final class ModernSegmentationMeshBackend:
         cameraTransform: simd_float4x4,
         cameraIntrinsics: simd_float3x3
     ) throws {
-
         try update(
             meshGPUSnapshot: meshGPUSnapshot,
             segmentationImage: segmentationImage,
@@ -373,52 +361,27 @@ public final class ModernSegmentationMeshBackend:
         cameraTransform: simd_float4x4,
         cameraIntrinsics: simd_float3x3
     ) throws {
-
-        let totalFaceCount =
-            meshGPUSnapshot.anchors.reduce(0) {
-                $0 + $1.value.faceCount
-            }
-
-        let maxTriangles = max(totalFaceCount, 1)
-        let maxVertices = maxTriangles * 3
-        let maxIndices = maxTriangles * 3
+        let requiredCapacity = Self.requiredCapacity(meshGPUSnapshot: meshGPUSnapshot)
 
         // Preserve your existing LowLevelMesh capacity logic.
-        if mesh.descriptor.vertexCapacity < maxVertices ||
-            mesh.descriptor.indexCapacity < maxIndices {
-
-            let descriptor =
-                Self.createDescriptor(
-                    meshGPUSnapshot: meshGPUSnapshot
-                )
-
-            mesh = try LowLevelMesh(
-                descriptor: descriptor
-            )
-
-            entity.model?.mesh =
-                try MeshResource(from: mesh)
+        if mesh.descriptor.vertexCapacity < requiredCapacity.vertexCount ||
+            mesh.descriptor.indexCapacity < requiredCapacity.indexCount {
+            let meshName = self.name.replacingOccurrences(of: " ", with: "_")
+            print("SegmentationMeshRecord '\(meshName)' capacity exceeded. Reallocating mesh.")
+            let descriptor = Self.createDescriptor(meshGPUSnapshot: meshGPUSnapshot)
+            let newMesh = try LowLevelMesh(descriptor: descriptor)
+            self.mesh = newMesh
+            entity.model?.mesh = try MeshResource(from: mesh)
         }
 
-        guard let commandBuffer =
-            processor.context.commandQueue.makeCommandBuffer()
-        else {
-            throw SegmentationMeshRecordError
-                .metalPipelineCreationError
+        guard let commandBuffer = processor.context.commandQueue.makeCommandBuffer() else {
+            throw SegmentationMeshRecordError.metalPipelineCreationError
         }
 
         // This is the only backend that obtains output buffers
         // directly from RealityKit.
-        let outputVertexBuffer =
-            mesh.replace(
-                bufferIndex: 0,
-                using: commandBuffer
-            )
-
-        let outputIndexBuffer =
-            mesh.replaceIndices(
-                using: commandBuffer
-            )
+        let outputVertexBuffer = mesh.replace(bufferIndex: 0, using: commandBuffer)
+        let outputIndexBuffer = mesh.replaceIndices(using: commandBuffer)
 
         let result = try processor.process(
             meshGPUSnapshot: meshGPUSnapshot,
@@ -429,62 +392,79 @@ public final class ModernSegmentationMeshBackend:
             outputVertexBuffer: outputVertexBuffer,
             outputIndexBuffer: outputIndexBuffer
         )
+        try updateMeshParts(result: result)
 
+        vertexCount = result.vertexCount
+        indexCount = result.indexCount
+    }
+    
+    private func updateMeshParts(
+        result: SegmentationMeshProcessingResult
+    ) throws {
+        guard result.indexCount > 0 else {
+            mesh.parts.replaceAll([])
+            return
+        }
+        let bounds = BoundingBox(
+            min: result.aabbMin,
+            max: result.aabbMax
+        )
         mesh.parts.replaceAll([
             LowLevelMesh.Part(
                 indexOffset: 0,
                 indexCount: result.indexCount,
                 topology: .triangle,
                 materialIndex: 0,
-                bounds: result.bounds
+                bounds: bounds
             )
         ])
-
-        vertexCount = result.vertexCount
-        indexCount = result.indexCount
+    }
+    
+    private struct RequiredCapacity {
+        let vertexCount: Int
+        let indexCount: Int
+    }
+    
+    private static func requiredCapacity(
+        meshGPUSnapshot: MeshGPUSnapshot
+    ) -> RequiredCapacity {
+        let totalFaceCount = meshGPUSnapshot.anchors.values.reduce(0) { $0 + $1.faceCount }
+        /// A nonzero minimum avoids creating zero-capacity LowLevelMesh buffers.
+        /// The actual result may still contain zero triangles.
+        let maximumTriangleCount = max(totalFaceCount, 1)
+        return RequiredCapacity(
+            vertexCount: maximumTriangleCount * 3,
+            indexCount: maximumTriangleCount * 3
+        )
     }
 
     private static func createDescriptor(
         meshGPUSnapshot: MeshGPUSnapshot
     ) -> LowLevelMesh.Descriptor {
+        let requiredCapacity = self.requiredCapacity(
+            meshGPUSnapshot: meshGPUSnapshot
+        )
+        var descriptor = LowLevelMesh.Descriptor()
 
-        let vertexCount =
-            meshGPUSnapshot.anchors.values.reduce(0) {
-                $0 + $1.vertexCount
-            }
-
-        let indexCount =
-            meshGPUSnapshot.anchors.values.reduce(0) {
-                $0 + $1.indexCount
-            }
-
-        var descriptor =
-            LowLevelMesh.Descriptor()
-
+        /*
+         MARK: This describes the OUTPUT of processMesh:
+         device packed_float3* outVertices
+         It does NOT describe the original ARKit vertex layout.
+         processMesh writes tightly packed packed_float3 values beginning at byte offset 0.
+         */
         descriptor.vertexAttributes = [
-            .init(
-                semantic: .position,
-                format: .float3,
-                offset: meshGPUSnapshot.vertexOffset
-            )
+            .init(semantic: .position, format: .float3, offset: MeshGPUCanonicalLayout.vertexOffset)
         ]
-
         descriptor.vertexLayouts = [
-            .init(
-                bufferIndex: 0,
-                bufferStride:
-                    meshGPUSnapshot.vertexStride
-            )
+            .init(bufferIndex: 0, bufferStride: MeshGPUCanonicalLayout.vertexStride)
         ]
-
         descriptor.indexType = .uint32
 
-        descriptor.vertexCapacity =
-            vertexCount * 10
-
-        descriptor.indexCapacity =
-            indexCount * 10
-
+        // Preserve the original overallocation strategy to reduce
+        // reallocation frequency during live updates.
+        descriptor.vertexCapacity = requiredCapacity.vertexCount * capacityMultiplier
+        descriptor.indexCapacity = requiredCapacity.indexCount * capacityMultiplier
+        
         return descriptor
     }
 }

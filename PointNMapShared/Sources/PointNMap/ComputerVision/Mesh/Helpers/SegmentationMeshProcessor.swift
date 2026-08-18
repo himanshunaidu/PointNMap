@@ -64,57 +64,6 @@ public final class SegmentationMeshProcessor {
         outputVertexBuffer: MTLBuffer,
         outputIndexBuffer: MTLBuffer
     ) throws -> SegmentationMeshProcessingResult {
-
-        /*
-         MOVE MOST OF THE EXISTING update() IMPLEMENTATION HERE.
-
-         In particular:
-
-         1. Calculate:
-              totalFaceCount
-              maxTriangles
-              maxVerts
-              maxIndices
-
-         2. Allocate:
-              outTriCount
-              debugCounter
-              aabbMinU
-              aabbMaxU
-
-         3. Create segmentationTexture.
-
-         4. Loop over meshGPUSnapshot.anchors.
-
-         5. Configure processMesh compute encoder.
-
-         Existing:
-              commandEncoder.setBuffer(outVertexBuf, index: 5)
-              commandEncoder.setBuffer(outIndexBuf,  index: 6)
-
-         Becomes:
-              commandEncoder.setBuffer(
-                  outputVertexBuffer,
-                  offset: 0,
-                  index: 5
-              )
-
-              commandEncoder.setBuffer(
-                  outputIndexBuffer,
-                  offset: 0,
-                  index: 6
-              )
-
-         6. Commit/wait.
-
-         7. Read:
-              triangleCount
-              vertexCount
-              indexCount
-              bounds
-
-         8. Return SegmentationMeshProcessingResult.
-         */
         let meshGPUAnchors = meshGPUSnapshot.anchors
         
         let totalFaceCount = meshGPUAnchors.reduce(0) { $0 + $1.value.faceCount }
@@ -253,22 +202,6 @@ public final class SegmentationMeshProcessor {
             aabbMax: aabbMax,
             debugCounts: debugCountValue
         )
-
-        
-//        mesh.parts.replaceAll([
-//            LowLevelMesh.Part(
-//                indexOffset: 0,
-//                indexCount: indexCount,
-//                topology: .triangle,
-//                materialIndex: 0,
-//                bounds: bounds
-//            )
-//        ])
-//        self.mesh = mesh
-//        self.vertexCount = vertexCount
-//        self.indexCount = indexCount
-//
-//        fatalError("Move existing shared Metal processing here")
     }
     
     @inline(__always)
