@@ -201,14 +201,18 @@ struct SetupView: View {
     }
     
     public func configure() {
-        // For demonstration purposes, we select only sidewalk class by default
+        // For demonstration purposes, we select only sidewalk and pole classes by default
         guard let sidewalkClass = PointNMapConstants.SelectedAccessibilityFeatureConfig.classes.first(where: { $0.kind == .sidewalk }) else {
             return
         }
+        guard let poleClass = PointNMapConstants.SelectedAccessibilityFeatureConfig.classes.first(where: { $0.kind == .pole }) else {
+            return
+        }
         self.sharedBaseSettings.isEnhancedAnalysisEnabled = self.isEnhancedAnalysisEnabled
-        self.selectedClasses = [sidewalkClass]
+        self.selectedClasses = [sidewalkClass, poleClass]
         // We add all the attributes for the sidewalk class
         self.selectedAttributesByClass[sidewalkClass] = Set(sidewalkClass.kind.attributes)
+        self.selectedAttributesByClass[poleClass] = Set(poleClass.kind.attributes)
         do {
             try self.sharedAppContext.configure()
             try segmentationPipeline.configure()

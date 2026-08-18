@@ -6,6 +6,16 @@
 //
 import ARKit
 import RealityKit
+import PointNMapShaderTypes
+
+enum MeshGPUCanonicalLayout {
+    static let vertexOffset = 0
+    static let vertexStride = MemoryLayout<packed_float3>.stride // MemoryLayout<Float>.stride * 3
+
+    static let indexStride = MemoryLayout<UInt32>.stride
+
+    static let classificationStride = MemoryLayout<UInt8>.stride
+}
 
 /**
  Functionality to capture ARMeshAnchor data as a GPU-friendly snapshot
@@ -14,10 +24,10 @@ public final class MeshGPUSnapshotGenerator: NSObject {
     // MARK: These constants can be made configurable later
     // But make sure that the snapshot from MeshContents extension continues to use the original constants.
     private let defaultBufferSize: Int = 1024
-    private let vertexElemSize: Int = MemoryLayout<Float>.stride * 3
-    private let vertexOffset: Int = 0
-    private let indexElemSize: Int = MemoryLayout<UInt32>.stride
-    private let classificationElemSize: Int = MemoryLayout<UInt8>.stride
+    private let vertexElemSize: Int = MeshGPUCanonicalLayout.vertexStride // MemoryLayout<Float>.stride * 3
+    private let vertexOffset: Int = MeshGPUCanonicalLayout.vertexOffset // 0
+    private let indexElemSize: Int = MeshGPUCanonicalLayout.indexStride // MemoryLayout<UInt32>.stride
+    private let classificationElemSize: Int = MeshGPUCanonicalLayout.classificationStride // MemoryLayout<UInt8>.stride
     /**
      Number of generations to keep missing anchors
      
@@ -115,6 +125,9 @@ public final class MeshGPUSnapshotGenerator: NSObject {
         
         // Assign vertex buffer
         // MARK: This code assumes the vertex format will always be only Float3
+        guard vertices.format == .float3 else {
+            throw NSError(domain: "MeshGPUSnapshotGenerator", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unsupported vertex format \(vertices.format). Only .float3 is supported."])
+        }
         let vertexElemSize = MemoryLayout<Float>.stride * 3
         let vertexByteCount = vertices.count * vertexElemSize
         try MetalBufferUtils.ensureCapacity(device: device, buf: &meshGPUAnchor.vertexBuffer, requiredBytes: vertexByteCount)
@@ -123,6 +136,7 @@ public final class MeshGPUSnapshotGenerator: NSObject {
         if (vertices.stride == vertexElemSize) {
             try MetalBufferUtils.copyContiguous(srcPtr: vertexSrcPtr, dst: meshGPUAnchor.vertexBuffer, byteCount: vertexByteCount)
         } else {
+            // MARK: This is not actually sufficient to handle all cases
             try MetalBufferUtils.copyStrided(count: vertices.count, srcPtr: vertexSrcPtr, srcStride: vertices.stride,
                             dst: meshGPUAnchor.vertexBuffer, elemSize: vertexElemSize)
         }
