@@ -204,12 +204,16 @@ public extension CIImage {
             print("CIImage is not backed by a CGImage")
         }
         
-        if let mtl = self.metalTexture {
-            print("CIImage is backed by metal texture")
-            print("    Format: \(mtl.pixelFormat) \(mtl.pixelFormatName())")
-            print("    Size: \(mtl.width)x\(mtl.height)")
+        if #available(iOS 18.0, *) {
+            if let mtl = self.metalTexture {
+                print("CIImage is backed by metal texture")
+                print("    Format: \(mtl.pixelFormat) \(mtl.pixelFormatName())")
+                print("    Size: \(mtl.width)x\(mtl.height)")
+            } else {
+                print("CIImage is not backed by a metal texture")
+            }
         } else {
-            print("CIImage is not backed by a metal texture")
+            print("Metal texture backing inspection is only available in iOS 18.0 and above")
         }
     }
 }
