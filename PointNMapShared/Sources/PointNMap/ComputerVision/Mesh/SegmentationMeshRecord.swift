@@ -145,7 +145,7 @@ public final class SegmentationMeshRecord {
         segmentationImage: CIImage,
         cameraTransform: simd_float4x4, cameraIntrinsics: simd_float3x3
     ) throws {
-        try backend.update(
+        try backend.replace(
             meshGPUSnapshot: meshGPUSnapshot,
             segmentationImage: segmentationImage,
             cameraTransform: cameraTransform, cameraIntrinsics: cameraIntrinsics
@@ -165,12 +165,12 @@ public final class SegmentationMeshRecord {
             segmentationImage: segmentationImage,
             cameraTransform: cameraTransform, cameraIntrinsics: cameraIntrinsics
         )
-        let meshGPUAnchors = meshGPUSnapshot.anchors
+//        let meshGPUAnchors = meshGPUSnapshot.anchors
         
-        let totalFaceCount = meshGPUAnchors.reduce(0) { $0 + $1.value.faceCount }
-        let maxTriangles   = max(totalFaceCount, 1)     // avoid 0-sized buffers
-        let maxVerts       = maxTriangles * 3
-        let maxIndices     = maxTriangles * 3
+//        let totalFaceCount = meshGPUAnchors.reduce(0) { $0 + $1.value.faceCount }
+//        let maxTriangles   = max(totalFaceCount, 1)     // avoid 0-sized buffers
+//        let maxVerts       = maxTriangles * 3
+//        let maxIndices     = maxTriangles * 3
         
 //        // Potential replacement of mesh if capacity exceeded
 //        var mesh = self.mesh

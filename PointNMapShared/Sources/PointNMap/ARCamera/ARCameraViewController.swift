@@ -30,7 +30,8 @@ public protocol ARSessionCameraProcessingOutputConsumer: AnyObject {
         cameraTransform: simd_float4x4,
         cameraIntrinsics: simd_float3x3,
         segmentationLabelImage: CIImage,
-        accessibilityFeatureClasses: [AccessibilityFeatureClass]
+        accessibilityFeatureClasses: [AccessibilityFeatureClass],
+        shouldReplace: Bool
     )
     func getMeshRecordDetails() -> (
         records: [AccessibilityFeatureClass: SegmentationMeshRecord],
@@ -390,7 +391,8 @@ public final class ARCameraViewController: UIViewController, ARSessionCameraProc
         cameraTransform: simd_float4x4,
         cameraIntrinsics: simd_float3x3,
         segmentationLabelImage: CIImage,
-        accessibilityFeatureClasses: [AccessibilityFeatureClass]
+        accessibilityFeatureClasses: [AccessibilityFeatureClass],
+        shouldReplace: Bool = false
     ) {
         var totalVertexCount = 0
         for accessibilityFeatureClass in accessibilityFeatureClasses {
@@ -401,12 +403,21 @@ public final class ARCameraViewController: UIViewController, ARSessionCameraProc
             if let existingMeshRecord = meshRecords[accessibilityFeatureClass] {
                 // Update existing mesh entity
                 do {
-                    try existingMeshRecord.replace(
-                        meshGPUSnapshot: meshGPUSnapshot,
-                        segmentationImage: segmentationLabelImage,
-                        cameraTransform: cameraTransform,
-                        cameraIntrinsics: cameraIntrinsics
-                    )
+                    if shouldReplace {
+                        try existingMeshRecord.replace(
+                            meshGPUSnapshot: meshGPUSnapshot,
+                            segmentationImage: segmentationLabelImage,
+                            cameraTransform: cameraTransform,
+                            cameraIntrinsics: cameraIntrinsics
+                        )
+                    } else {
+                        try existingMeshRecord.update(
+                            meshGPUSnapshot: meshGPUSnapshot,
+                            segmentationImage: segmentationLabelImage,
+                            cameraTransform: cameraTransform,
+                            cameraIntrinsics: cameraIntrinsics
+                        )
+                    }
                     totalVertexCount += existingMeshRecord.vertexCount
                 } catch {
                     print("Error updating mesh entity: \(error.localizedDescription)")

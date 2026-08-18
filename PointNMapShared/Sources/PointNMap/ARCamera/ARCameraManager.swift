@@ -573,7 +573,8 @@ public extension ARCameraManager {
 //                        cameraTransform: cameraMeshResults.cameraTransform,
 //                        cameraIntrinsics: cameraMeshResults.cameraIntrinsics,
 //                        segmentationLabelImage: cameraMeshResults.segmentationLabelImage,
-//                        accessibilityFeatureClasses: self.selectedClasses
+//                        accessibilityFeatureClasses: self.selectedClasses,
+//                        shouldReplace: false
 //                    )
                 }
             } catch {
@@ -881,7 +882,8 @@ public extension ARCameraManager {
             cameraTransform: captureImageData.cameraTransform,
             cameraIntrinsics: captureImageData.cameraIntrinsics,
             segmentationLabelImage: segmentationLabelImage,
-            accessibilityFeatureClasses: self.selectedClasses
+            accessibilityFeatureClasses: self.selectedClasses,
+            shouldReplace: true
         )
         guard let cameraMeshRecordDetails = outputConsumer?.getMeshRecordDetails() else {
             throw ARCameraManagerError.finalSessionNoSegmentationMesh
