@@ -440,4 +440,8 @@ public final class SegmentationMeshRecord {
 //        entity.name = name
 //        return entity
 //    }
+    
+    public func createBufferSnapshot() throws -> SegmentationMeshBufferSnapshot {
+        try backend.createBufferSnapshot()
+    }
 }

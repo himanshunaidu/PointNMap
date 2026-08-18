@@ -62,42 +62,14 @@ public final class CapturedMeshSnapshotGenerator {
     public func createSnapshot(
         segmentationRecord: SegmentationMeshRecord
     ) throws -> CapturedMeshAnchorSnapshot {
-        let lowLevelMesh = segmentationRecord.mesh
-        guard let vertexData = getVertexData(from: lowLevelMesh) else {
-            throw CapturedMeshSnapshotError.invalidVertexData
-        }
-        guard let indexData = getIndexData(from: lowLevelMesh) else {
-            throw CapturedMeshSnapshotError.invalidIndexData
-        }
+        let snapshot = try segmentationRecord.createBufferSnapshot()
         
         return CapturedMeshAnchorSnapshot(
-            vertexData: vertexData,
-            indexData: indexData,
-            vertexCount: segmentationRecord.vertexCount,
-            indexCount: segmentationRecord.indexCount
+            vertexData: snapshot.vertexData,
+            indexData: snapshot.indexData,
+            vertexCount: snapshot.vertexCount,
+            indexCount: snapshot.indexCount
         )
-    }
-    
-    private func getVertexData(from mesh: LowLevelMesh) -> Data? {
-        var vertexData: Data?
-        mesh.withUnsafeBytes(bufferIndex: 0) { ptr in
-            guard let baseAddress = ptr.baseAddress else {
-                return
-            }
-            vertexData = Data(bytes: baseAddress, count: ptr.count)
-        }
-        return vertexData
-    }
-    
-    private func getIndexData(from mesh: LowLevelMesh) -> Data? {
-        var indexData: Data?
-        mesh.withUnsafeIndices { ptr in
-            guard let baseAddress = ptr.baseAddress else {
-                return
-            }
-            indexData = Data(bytes: baseAddress, count: ptr.count)
-        }
-        return indexData
     }
 }
 

@@ -10,6 +10,26 @@ import CoreImage
 import UIKit
 import PointNMapShaderTypes
 
+public struct SegmentationMeshBufferSnapshot: Sendable {
+    public let vertexData: Data
+    public let indexData: Data
+
+    public let vertexCount: Int
+    public let indexCount: Int
+
+    public init(
+        vertexData: Data,
+        indexData: Data,
+        vertexCount: Int,
+        indexCount: Int
+    ) {
+        self.vertexData = vertexData
+        self.indexData = indexData
+        self.vertexCount = vertexCount
+        self.indexCount = indexCount
+    }
+}
+
 @MainActor
 public protocol SegmentationMeshBackend: AnyObject {
 
@@ -33,12 +53,17 @@ public protocol SegmentationMeshBackend: AnyObject {
         cameraTransform: simd_float4x4,
         cameraIntrinsics: simd_float3x3
     ) throws
+    
+    func createBufferSnapshot() throws -> SegmentationMeshBufferSnapshot
 }
 
 public struct LegacyMeshResourceResult {
     let meshResource: MeshResource?
     let vertexCount: Int
     let indexCount: Int
+    
+    let vertexData: Data
+    let indexData: Data
 }
 
 @MainActor
@@ -54,6 +79,10 @@ public final class LegacySegmentationMeshBackend: SegmentationMeshBackend {
     
     private let material: UnlitMaterial
     private let name: String
+    
+    /// For snapshotting, we capture the vertex and index data into these buffers.
+    private var capturedVertexData = Data()
+    private var capturedIndexData = Data()
     
     init(
         processor: SegmentationMeshProcessor,
@@ -98,6 +127,9 @@ public final class LegacySegmentationMeshBackend: SegmentationMeshBackend {
         )
         vertexCount = result.vertexCount
         indexCount = result.indexCount
+        
+        self.capturedVertexData = result.vertexData
+        self.capturedIndexData = result.indexData
         
         guard let meshResource = result.meshResource else {
             entity.model = nil
@@ -156,11 +188,15 @@ public final class LegacySegmentationMeshBackend: SegmentationMeshBackend {
             outputVertexBuffer: outputVertexBuffer,
             outputIndexBuffer: outputIndexBuffer
         )
+        
+        
         guard result.triangleCount > 0 else {
             return LegacyMeshResourceResult(
                 meshResource: nil,
                 vertexCount: 0,
-                indexCount: 0
+                indexCount: 0,
+                vertexData: Data(),
+                indexData: Data()
             )
         }
         
@@ -180,10 +216,28 @@ public final class LegacySegmentationMeshBackend: SegmentationMeshBackend {
         
         let meshResource = try MeshResource.generate(from: [descriptor])
         
+        /// Copy the vertex and index data into Data buffers for snapshotting.
+        let vertexByteCount = result.vertexCount * MeshGPUCanonicalLayout.vertexStride
+        let indexByteCount = result.indexCount * MeshGPUCanonicalLayout.indexStride
+        let vertexData: Data
+        if vertexByteCount > 0 {
+            vertexData = Data(bytes: outputVertexBuffer.contents(), count: vertexByteCount)
+        } else {
+            vertexData = Data()
+        }
+        let indexData: Data
+        if indexByteCount > 0 {
+            indexData = Data(bytes: outputIndexBuffer.contents(), count: indexByteCount)
+        } else {
+            indexData = Data()
+        }
+        
         return LegacyMeshResourceResult(
             meshResource: meshResource,
             vertexCount: result.vertexCount,
-            indexCount: result.indexCount
+            indexCount: result.indexCount,
+            vertexData: vertexData,
+            indexData: indexData
         )
     }
     
@@ -230,6 +284,15 @@ public final class LegacySegmentationMeshBackend: SegmentationMeshBackend {
         return RequiredCapacity(
             vertexCount: maximumTriangleCount * 3,
             indexCount: maximumTriangleCount * 3
+        )
+    }
+    
+    public func createBufferSnapshot() throws -> SegmentationMeshBufferSnapshot {
+        return SegmentationMeshBufferSnapshot(
+            vertexData: capturedVertexData,
+            indexData: capturedIndexData,
+            vertexCount: vertexCount,
+            indexCount: indexCount
         )
     }
 }
@@ -413,5 +476,45 @@ public final class ModernSegmentationMeshBackend: SegmentationMeshBackend {
         descriptor.indexCapacity = requiredCapacity.indexCount * capacityMultiplier
         
         return descriptor
+    }
+    
+    public func createBufferSnapshot() throws -> SegmentationMeshBufferSnapshot {
+        guard let vertexData = getVertexData(from: mesh) else {
+            throw CapturedMeshSnapshotError.invalidVertexData
+        }
+        guard let indexData = getIndexData(from: mesh) else {
+            throw CapturedMeshSnapshotError.invalidIndexData
+        }
+        
+        return SegmentationMeshBufferSnapshot(
+            vertexData: vertexData,
+            indexData: indexData,
+            vertexCount: vertexCount,
+            indexCount: indexCount
+        )
+    }
+    
+    private func getVertexData(from mesh: LowLevelMesh) -> Data? {
+//        let vertexByteCount = vertexCount * MeshGPUCanonicalLayout.vertexStride
+        var vertexData: Data?
+        mesh.withUnsafeBytes(bufferIndex: 0) { ptr in
+            guard let baseAddress = ptr.baseAddress else {
+                return
+            }
+            vertexData = Data(bytes: baseAddress, count: ptr.count)
+        }
+        return vertexData
+    }
+    
+    private func getIndexData(from mesh: LowLevelMesh) -> Data? {
+//        let indexByteCount = indexCount * MeshGPUCanonicalLayout.indexStride
+        var indexData: Data?
+        mesh.withUnsafeIndices { ptr in
+            guard let baseAddress = ptr.baseAddress else {
+                return
+            }
+            indexData = Data(bytes: baseAddress, count: ptr.count)
+        }
+        return indexData
     }
 }
