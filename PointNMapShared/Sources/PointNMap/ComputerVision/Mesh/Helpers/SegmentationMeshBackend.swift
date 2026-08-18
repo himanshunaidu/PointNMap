@@ -8,6 +8,7 @@ import Foundation
 import RealityKit
 import CoreImage
 import UIKit
+import PointNMapShaderTypes
 
 @MainActor
 public protocol SegmentationMeshBackend: AnyObject {
@@ -35,23 +36,25 @@ public protocol SegmentationMeshBackend: AnyObject {
 }
 
 public struct LegacyMeshResourceResult {
-    let meshResource: MeshResource
+    let meshResource: MeshResource?
     let vertexCount: Int
     let indexCount: Int
 }
 
 @MainActor
 public final class LegacySegmentationMeshBackend: SegmentationMeshBackend {
-
     public let entity: ModelEntity
-
-    public var vertexCount: Int = 0
-    public var indexCount: Int = 0
-
-    public let supportsLiveUpdates = false
-
+    
+    public private(set) var vertexCount: Int = 0
+    public private(set) var indexCount: Int = 0
+    
+    public let supportsLiveUpdates: Bool = false
+    
     public let processor: SegmentationMeshProcessor
-
+    
+    private let material: UnlitMaterial
+    private let name: String
+    
     init(
         processor: SegmentationMeshProcessor,
         meshGPUSnapshot: MeshGPUSnapshot,
@@ -62,114 +65,89 @@ public final class LegacySegmentationMeshBackend: SegmentationMeshBackend {
         opacity: Float,
         name: String
     ) throws {
-
         self.processor = processor
-
-        let resource = try Self.generateMeshResource(
-            processor: processor,
+        self.name = name
+        
+        self.material = UnlitMaterial(color: color.withAlphaComponent(CGFloat(opacity)))
+        
+        let entity = ModelEntity()
+        entity.name = name
+        self.entity = entity
+        
+        try replace(
             meshGPUSnapshot: meshGPUSnapshot,
             segmentationImage: segmentationImage,
             cameraTransform: cameraTransform,
             cameraIntrinsics: cameraIntrinsics
         )
-
-        self.vertexCount = resource.vertexCount
-        self.indexCount = resource.indexCount
-
-        self.entity = Self.generateEntity(
-            meshResource: resource.meshResource,
-            color: color,
-            opacity: opacity,
-            name: name
-        )
     }
-
+    
     public func replace(
         meshGPUSnapshot: MeshGPUSnapshot,
         segmentationImage: CIImage,
         cameraTransform: simd_float4x4,
         cameraIntrinsics: simd_float3x3
     ) throws {
-
-        let resource = try Self.generateMeshResource(
+        let result = try Self.generateMeshResource(
             processor: processor,
             meshGPUSnapshot: meshGPUSnapshot,
             segmentationImage: segmentationImage,
             cameraTransform: cameraTransform,
-            cameraIntrinsics: cameraIntrinsics
+            cameraIntrinsics: cameraIntrinsics,
+            name: name
         )
-
-        vertexCount = resource.vertexCount
-        indexCount = resource.indexCount
-
-        entity.model?.mesh = resource.meshResource
+        vertexCount = result.vertexCount
+        indexCount = result.indexCount
+        
+        guard let meshResource = result.meshResource else {
+            entity.model = nil
+            return
+        }
+        entity.model = ModelComponent(
+            mesh: meshResource,
+            materials: [material]
+        )
     }
-
+    
+    /// - Warning: This method is intentionally unsupported for the legacy backend.
     public func update(
         meshGPUSnapshot: MeshGPUSnapshot,
         segmentationImage: CIImage,
         cameraTransform: simd_float4x4,
         cameraIntrinsics: simd_float3x3
     ) throws {
-
         // Intentionally unsupported.
         //
         // SegmentationMeshRecord.update() should prevent this
         // from being called on the legacy backend.
     }
-
+    
     private static func generateMeshResource(
         processor: SegmentationMeshProcessor,
         meshGPUSnapshot: MeshGPUSnapshot,
         segmentationImage: CIImage,
         cameraTransform: simd_float4x4,
-        cameraIntrinsics: simd_float3x3
+        cameraIntrinsics: simd_float3x3,
+        name: String
     ) throws -> LegacyMeshResourceResult {
-
-        let totalFaceCount =
-            meshGPUSnapshot.anchors.reduce(0) {
-                $0 + $1.value.faceCount
-            }
-
-        let maxTriangles = max(totalFaceCount, 1)
-        let maxVertices = maxTriangles * 3
-        let maxIndices = maxTriangles * 3
-
-        /*
-         Ordinary Metal buffers replace LowLevelMesh-owned buffers.
-
-         storageModeShared is convenient initially because after the
-         compute pass we need CPU access to construct MeshDescriptor.
-        */
-
-        let outputVertexBuffer =
-            try MetalBufferUtils.makeBuffer(
-                device: processor.context.device,
-                length: max(
-                    maxVertices * meshGPUSnapshot.vertexStride,
-                    1
-                ),
-                options: .storageModeShared
-            )
-
-        let outputIndexBuffer =
-            try MetalBufferUtils.makeBuffer(
-                device: processor.context.device,
-                length: max(
-                    maxIndices * MemoryLayout<UInt32>.stride,
-                    MemoryLayout<UInt32>.stride
-                ),
-                options: .storageModeShared
-            )
-
-        guard let commandBuffer =
-            processor.context.commandQueue.makeCommandBuffer()
-        else {
-            throw SegmentationMeshRecordError
-                .metalPipelineCreationError
+        let capacity = requiredCapacity(meshGPUSnapshot: meshGPUSnapshot)
+        
+        let outputVertexBuffer = try MetalBufferUtils.makeBuffer(
+            device: processor.context.device,
+            length: capacity.vertexCount * MeshGPUCanonicalLayout.vertexStride,
+            options: .storageModeShared
+        )
+        let outputIndexBuffer = try MetalBufferUtils.makeBuffer(
+            device: processor.context.device,
+            length: capacity.indexCount * MeshGPUCanonicalLayout.indexStride,
+            options: .storageModeShared
+        )
+        
+        guard let commandBuffer = processor.context.commandQueue.makeCommandBuffer() else {
+            throw SegmentationMeshRecordError.metalPipelineCreationError
         }
-
-        let processingResult = try processor.process(
+        
+        let result = try processor.process(
             meshGPUSnapshot: meshGPUSnapshot,
             segmentationImage: segmentationImage,
             cameraTransform: cameraTransform,
@@ -178,111 +156,81 @@ public final class LegacySegmentationMeshBackend: SegmentationMeshBackend {
             outputVertexBuffer: outputVertexBuffer,
             outputIndexBuffer: outputIndexBuffer
         )
-
-        /*
-         Convert the GPU output into the representation expected
-         by MeshDescriptor.
-
-         IMPORTANT:
-         These extraction functions depend on the exact format your
-         processMesh kernel currently writes.
-        */
-
+        guard result.triangleCount > 0 else {
+            return LegacyMeshResourceResult(
+                meshResource: nil,
+                vertexCount: 0,
+                indexCount: 0
+            )
+        }
+        
         let positions = extractPositions(
             from: outputVertexBuffer,
-            count: processingResult.vertexCount,
-            stride: meshGPUSnapshot.vertexStride,
-            offset: meshGPUSnapshot.vertexOffset
+            count: result.vertexCount,
         )
-
         let indices = extractIndices(
             from: outputIndexBuffer,
-            count: processingResult.indexCount
+            count: result.indexCount
         )
-
-        var descriptor = MeshDescriptor(name: "SegmentationMesh")
-
+        
+        var descriptor = MeshDescriptor(name: name)
+        
         descriptor.positions = MeshBuffers.Positions(positions)
         descriptor.primitives = .triangles(indices)
-
-        let meshResource =
-            try MeshResource.generate(from: [descriptor])
-
+        
+        let meshResource = try MeshResource.generate(from: [descriptor])
+        
         return LegacyMeshResourceResult(
             meshResource: meshResource,
-            vertexCount: processingResult.vertexCount,
-            indexCount: processingResult.indexCount
+            vertexCount: result.vertexCount,
+            indexCount: result.indexCount
         )
     }
-
+    
     private static func extractPositions(
         from buffer: MTLBuffer,
-        count: Int,
-        stride: Int,
-        offset: Int
+        count: Int
     ) -> [SIMD3<Float>] {
+        guard count > 0 else {
+            return []
+        }
+        let pointer = buffer.contents().bindMemory(to: packed_float3.self, capacity: count)
+        let packedPositions = UnsafeBufferPointer(start: pointer, count: count)
+        var positions: [SIMD3<Float>] = []
+        positions.reserveCapacity(count)
 
-        /*
-         Skeleton only.
-
-         Read position i from:
-
-             buffer.contents()
-                 + i * stride
-                 + offset
-
-         and convert it to SIMD3<Float>.
-
-         We should implement this after inspecting the exact
-         processMesh vertex-output layout.
-        */
-
-        fatalError("Implement based on processMesh output layout")
+        for position in packedPositions {
+            positions.append(SIMD3<Float>(position.x, position.y, position.z))
+        }
+        return positions
     }
-
+    
     private static func extractIndices(
         from buffer: MTLBuffer,
         count: Int
     ) -> [UInt32] {
-
-        let pointer = buffer.contents()
-            .bindMemory(
-                to: UInt32.self,
-                capacity: count
-            )
-
-        return Array(
-            UnsafeBufferPointer(
-                start: pointer,
-                count: count
-            )
-        )
+        guard count > 0 else {
+            return []
+        }
+        let pointer = buffer.contents().bindMemory(to: UInt32.self, capacity: count)
+        return Array(UnsafeBufferPointer(start: pointer, count: count))
+    }
+    
+    private struct RequiredCapacity {
+        let vertexCount: Int
+        let indexCount: Int
     }
 
-    private static func generateEntity(
-        meshResource: MeshResource,
-        color: UIColor,
-        opacity: Float,
-        name: String
-    ) -> ModelEntity {
 
-        var material = UnlitMaterial(
-            color: color.withAlphaComponent(
-                CGFloat(opacity)
-            )
+    private static func requiredCapacity(meshGPUSnapshot: MeshGPUSnapshot) -> RequiredCapacity {
+        let totalFaceCount = meshGPUSnapshot.anchors.values.reduce(0) { $0 + $1.faceCount }
+        /// processMesh creates three independent vertices for every accepted triangle.
+        /// Use a minimum of one triangle so that zero-sized Metal buffers are never requested.
+        let maximumTriangleCount = max(totalFaceCount, 1)
+        return RequiredCapacity(
+            vertexCount: maximumTriangleCount * 3,
+            indexCount: maximumTriangleCount * 3
         )
-
-        // No triangleFillMode here.
-        // Normal filled rendering is sufficient.
-
-        let entity = ModelEntity(
-            mesh: meshResource,
-            materials: [material]
-        )
-
-        entity.name = name
-
-        return entity
     }
 }
 
@@ -314,7 +262,6 @@ public final class ModernSegmentationMeshBackend: SegmentationMeshBackend {
         opacity: Float,
         name: String
     ) throws {
-
         self.processor = processor
         self.name = name
 
