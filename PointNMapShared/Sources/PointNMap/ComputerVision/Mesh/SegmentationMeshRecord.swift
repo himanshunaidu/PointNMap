@@ -51,8 +51,15 @@ public final class SegmentationMeshRecord {
     public let color: UIColor
     public let opacity: Float
     
-    public var vertexCount: Int
-    public var indexCount: Int
+    public var vertexCount: Int {
+        backend.vertexCount
+    }
+    public var indexCount: Int {
+        backend.indexCount
+    }
+    public var supportsLiveUpdates: Bool {
+        backend.supportsLiveUpdates
+    }
     
     public let accessibilityFeatureClass: AccessibilityFeatureClass
     public let accessibilityFeatureMeshClassificationParams: AccessibilityFeatureMeshClassificationParams
@@ -81,13 +88,32 @@ public final class SegmentationMeshRecord {
         )
         
         self.processor = try SegmentationMeshProcessor(
-            context: context, classificationParams: self.accessibilityFeatureMeshClassificationParams
+            context: context, accessibilityFeatureMeshClassificationParams: self.accessibilityFeatureMeshClassificationParams
         )
         
         let backend: any SegmentationMeshBackend
         if #available(iOS 18.0, *) {
+            backend = try ModernSegmentationMeshBackend(
+                processor: processor,
+                meshGPUSnapshot: meshGPUSnapshot,
+                segmentationImage: segmentationImage,
+                cameraTransform: cameraTransform,
+                cameraIntrinsics: cameraIntrinsics,
+                color: color,
+                opacity: opacity,
+                name: name
+            )
         } else {
-            
+            backend = try LegacySegmentationMeshBackend(
+                processor: processor,
+                meshGPUSnapshot: meshGPUSnapshot,
+                segmentationImage: segmentationImage,
+                cameraTransform: cameraTransform,
+                cameraIntrinsics: cameraIntrinsics,
+                color: color,
+                opacity: opacity,
+                name: name
+            )
         }
         self.backend = backend
         self.entity = backend.entity
@@ -139,163 +165,163 @@ public final class SegmentationMeshRecord {
             segmentationImage: segmentationImage,
             cameraTransform: cameraTransform, cameraIntrinsics: cameraIntrinsics
         )
-//        let meshGPUAnchors = meshGPUSnapshot.anchors
-//        
-//        let totalFaceCount = meshGPUAnchors.reduce(0) { $0 + $1.value.faceCount }
-//        let maxTriangles   = max(totalFaceCount, 1)     // avoid 0-sized buffers
-//        let maxVerts       = maxTriangles * 3
-//        let maxIndices     = maxTriangles * 3
-//        
-//        // Potential replacement of mesh if capacity exceeded
-//        var mesh = self.mesh
-//        // TODO: Optimize reallocation strategy to reduce overallocation
-//        if (mesh.descriptor.vertexCapacity < maxVerts) ||
-//            (mesh.descriptor.indexCapacity < maxIndices) {
-//            let meshName = self.name.replacingOccurrences(of: " ", with: "_")
-//            print("SegmentationMeshRecord '\(meshName)' capacity exceeded. Reallocating mesh.")
-//            let newDescriptor = SegmentationMeshRecord.createDescriptor(meshGPUSnapshot: meshGPUSnapshot)
-//            mesh = try LowLevelMesh(descriptor: newDescriptor)
-//            let resource = try MeshResource(from: mesh)
-//            self.entity.model?.mesh = resource
-//        }
-//        
-//        let outTriCount: MTLBuffer = try MetalBufferUtils.makeBuffer(
-//            device: self.context.device, length: MemoryLayout<UInt32>.stride, options: .storageModeShared
-//        )
-//        // For debugging
-//        let debugSlots = Int(3) // MARK: Hard-coded
-//        let debugBytes = debugSlots * MemoryLayout<UInt32>.stride
-//        let debugCounter: MTLBuffer = try MetalBufferUtils.makeBuffer(
-//            device: self.context.device, length: debugBytes, options: .storageModeShared
-//        )
-//        
-//        let aabbMinU = try MetalBufferUtils.makeBuffer(
-//            device: self.context.device, length: 3 * MemoryLayout<UInt32>.stride, options: .storageModeShared
-//        )
-//        let aabbMaxU = try MetalBufferUtils.makeBuffer(
-//            device: self.context.device, length: 3 * MemoryLayout<UInt32>.stride, options: .storageModeShared
-//        )
-//        do {
-//            let minPtr = aabbMinU.contents().bindMemory(to: UInt32.self, capacity: 3)
-//            let maxPtr = aabbMaxU.contents().bindMemory(to: UInt32.self, capacity: 3)
-//            let fMax: Float = .greatestFiniteMagnitude
-//            let fMin: Float = -Float.greatestFiniteMagnitude
-//            let initMin = floatToOrderedUInt(fMax)
-//            let initMax = floatToOrderedUInt(fMin)
-//            minPtr[0] = initMin; minPtr[1] = initMin; minPtr[2] = initMin
-//            maxPtr[0] = initMax; maxPtr[1] = initMax; maxPtr[2] = initMax
-//        }
-//        
-//        // Set up additional parameters
-//        let viewMatrix = simd_inverse(cameraTransform)
-//        let imageSize = simd_uint2(UInt32(segmentationImage.extent.width), UInt32(segmentationImage.extent.height))
-//        // Set up the Metal command buffer
-//        guard let commandBuffer = self.context.commandQueue.makeCommandBuffer() else {
-//            throw SegmentationMeshRecordError.metalPipelineCreationError
-//        }
-//        guard let blit = commandBuffer.makeBlitCommandEncoder() else {
-//            throw SegmentationMeshRecordError.meshPipelineBlitEncoderError
-//        }
-//        blit.fill(buffer: outTriCount, range: 0..<MemoryLayout<UInt32>.stride, value: 0)
-//        blit.fill(buffer: debugCounter, range: 0..<debugBytes, value: 0)
-//        blit.endEncoding()
-//        let threadGroupSizeWidth = min(self.pipelineState.maxTotalThreadsPerThreadgroup, 256)
-//        
-//        let outVertexBuf = mesh.replace(bufferIndex: 0, using: commandBuffer)
-//        let outIndexBuf = mesh.replaceIndices(using: commandBuffer)
-//        
+        let meshGPUAnchors = meshGPUSnapshot.anchors
+        
+        let totalFaceCount = meshGPUAnchors.reduce(0) { $0 + $1.value.faceCount }
+        let maxTriangles   = max(totalFaceCount, 1)     // avoid 0-sized buffers
+        let maxVerts       = maxTriangles * 3
+        let maxIndices     = maxTriangles * 3
+        
+        // Potential replacement of mesh if capacity exceeded
+        var mesh = self.mesh
+        // TODO: Optimize reallocation strategy to reduce overallocation
+        if (mesh.descriptor.vertexCapacity < maxVerts) ||
+            (mesh.descriptor.indexCapacity < maxIndices) {
+            let meshName = self.name.replacingOccurrences(of: " ", with: "_")
+            print("SegmentationMeshRecord '\(meshName)' capacity exceeded. Reallocating mesh.")
+            let newDescriptor = SegmentationMeshRecord.createDescriptor(meshGPUSnapshot: meshGPUSnapshot)
+            mesh = try LowLevelMesh(descriptor: newDescriptor)
+            let resource = try MeshResource(from: mesh)
+            self.entity.model?.mesh = resource
+        }
+        
+        let outTriCount: MTLBuffer = try MetalBufferUtils.makeBuffer(
+            device: self.context.device, length: MemoryLayout<UInt32>.stride, options: .storageModeShared
+        )
+        // For debugging
+        let debugSlots = Int(3) // MARK: Hard-coded
+        let debugBytes = debugSlots * MemoryLayout<UInt32>.stride
+        let debugCounter: MTLBuffer = try MetalBufferUtils.makeBuffer(
+            device: self.context.device, length: debugBytes, options: .storageModeShared
+        )
+        
+        let aabbMinU = try MetalBufferUtils.makeBuffer(
+            device: self.context.device, length: 3 * MemoryLayout<UInt32>.stride, options: .storageModeShared
+        )
+        let aabbMaxU = try MetalBufferUtils.makeBuffer(
+            device: self.context.device, length: 3 * MemoryLayout<UInt32>.stride, options: .storageModeShared
+        )
+        do {
+            let minPtr = aabbMinU.contents().bindMemory(to: UInt32.self, capacity: 3)
+            let maxPtr = aabbMaxU.contents().bindMemory(to: UInt32.self, capacity: 3)
+            let fMax: Float = .greatestFiniteMagnitude
+            let fMin: Float = -Float.greatestFiniteMagnitude
+            let initMin = floatToOrderedUInt(fMax)
+            let initMax = floatToOrderedUInt(fMin)
+            minPtr[0] = initMin; minPtr[1] = initMin; minPtr[2] = initMin
+            maxPtr[0] = initMax; maxPtr[1] = initMax; maxPtr[2] = initMax
+        }
+        
+        // Set up additional parameters
+        let viewMatrix = simd_inverse(cameraTransform)
+        let imageSize = simd_uint2(UInt32(segmentationImage.extent.width), UInt32(segmentationImage.extent.height))
+        // Set up the Metal command buffer
+        guard let commandBuffer = self.context.commandQueue.makeCommandBuffer() else {
+            throw SegmentationMeshRecordError.metalPipelineCreationError
+        }
+        guard let blit = commandBuffer.makeBlitCommandEncoder() else {
+            throw SegmentationMeshRecordError.meshPipelineBlitEncoderError
+        }
+        blit.fill(buffer: outTriCount, range: 0..<MemoryLayout<UInt32>.stride, value: 0)
+        blit.fill(buffer: debugCounter, range: 0..<debugBytes, value: 0)
+        blit.endEncoding()
+        let threadGroupSizeWidth = min(self.pipelineState.maxTotalThreadsPerThreadgroup, 256)
+        
+        let outVertexBuf = mesh.replace(bufferIndex: 0, using: commandBuffer)
+        let outIndexBuf = mesh.replaceIndices(using: commandBuffer)
+        
+        let segmentationTexture = try segmentationImage.toMTLTexture(
+            device: self.context.device, commandBuffer: commandBuffer, pixelFormat: .r8Unorm,
+            context: self.context.ciContextNoColorSpace,
+            colorSpace: CGColorSpaceCreateDeviceRGB(), /// Dummy color space to avoid warnings
+            cIImageToMTLTextureOrientation: .metalTopLeft
+        )
 //        let segmentationTexture = try segmentationImage.toMTLTexture(
-//            device: self.context.device, commandBuffer: commandBuffer, pixelFormat: .r8Unorm,
-//            context: self.context.ciContextNoColorSpace,
-//            colorSpace: CGColorSpaceCreateDeviceRGB(), /// Dummy color space to avoid warnings
-//            cIImageToMTLTextureOrientation: .metalTopLeft
+//            textureLoader: self.context.textureLoader, context: self.context.ciContextNoColorSpace
 //        )
-////        let segmentationTexture = try segmentationImage.toMTLTexture(
-////            textureLoader: self.context.textureLoader, context: self.context.ciContextNoColorSpace
-////        )
-//        
-//        var accessibilityFeatureMeshClassificationParams = self.accessibilityFeatureMeshClassificationParams
-//        
-//        for (_, anchor) in meshGPUSnapshot.anchors {
-//            guard anchor.faceCount > 0 else { continue }
-//            
-//            let hasClass: UInt32 = anchor.classificationBuffer != nil ? 1 : 0
-//            var params = MeshParams(
-//                faceCount: UInt32(anchor.faceCount), totalCount: UInt32(totalFaceCount),
-//                indicesPerFace: 3, hasClass: hasClass,
-//                anchorTransform: anchor.anchorTransform, cameraTransform: cameraTransform,
-//                viewMatrix: viewMatrix, intrinsics: cameraIntrinsics, imageSize: imageSize
-//            )
-//            guard let commandEncoder = commandBuffer.makeComputeCommandEncoder() else {
-//                throw SegmentationMeshRecordError.metalPipelineCreationError
-//            }
-//            commandEncoder.setComputePipelineState(self.pipelineState)
-//            // Main inputs
-//            commandEncoder.setBuffer(anchor.vertexBuffer, offset: 0, index: 0)
-//            commandEncoder.setBuffer(anchor.indexBuffer, offset: 0, index: 1)
-//            commandEncoder.setBuffer(anchor.classificationBuffer ?? nil, offset: 0, index: 2)
-//            commandEncoder.setBytes(&params, length: MemoryLayout<MeshParams>.stride, index: 3)
-//            commandEncoder.setBytes(&accessibilityFeatureMeshClassificationParams,
-//                                    length: MemoryLayout<AccessibilityFeatureMeshClassificationParams>.stride, index: 4)
-//            commandEncoder.setTexture(segmentationTexture, index: 0)
-//            // Main outputs
-//            commandEncoder.setBuffer(outVertexBuf, offset: 0, index: 5)
-//            commandEncoder.setBuffer(outIndexBuf,  offset: 0, index: 6)
-//            commandEncoder.setBuffer(outTriCount,  offset: 0, index: 7)
-//            
-//            commandEncoder.setBuffer(aabbMinU, offset: 0, index: 8)
-//            commandEncoder.setBuffer(aabbMaxU, offset: 0, index: 9)
-//            commandEncoder.setBuffer(debugCounter, offset: 0, index: 10)
-//            
-//            let threadGroupSize = MTLSize(width: threadGroupSizeWidth, height: 1, depth: 1)
-//            let threadGroups = MTLSize(
-//                width: (anchor.faceCount + threadGroupSize.width - 1) / threadGroupSize.width, height: 1, depth: 1
-//            )
-//            commandEncoder.dispatchThreadgroups(threadGroups, threadsPerThreadgroup: threadGroupSize)
-//            commandEncoder.endEncoding()
-//        }
-//        commandBuffer.commit()
-//        commandBuffer.waitUntilCompleted()
-//        
-//        let triCount = outTriCount.contents().bindMemory(to: UInt32.self, capacity: 1).pointee
-//        // Clamp to capacity (defensive)
-//        let triangleCount = min(Int(triCount), maxTriangles)
-//        let vertexCount   = triangleCount * 3
-//        let indexCount    = triangleCount * 3
-//
-//        let minU = aabbMinU.contents().bindMemory(to: UInt32.self, capacity: 3)
-//        let maxU = aabbMaxU.contents().bindMemory(to: UInt32.self, capacity: 3)
-//        let aabbMin = SIMD3<Float>(
-//            orderedUIntToFloat(minU[0]),
-//            orderedUIntToFloat(minU[1]),
-//            orderedUIntToFloat(minU[2])
-//        )
-//        let aabbMax = SIMD3<Float>(
-//            orderedUIntToFloat(maxU[0]),
-//            orderedUIntToFloat(maxU[1]),
-//            orderedUIntToFloat(maxU[2])
-//        )
-//        let bounds: BoundingBox = BoundingBox(min: aabbMin, max: aabbMax)
-//        
-//        let debugCountPointer = debugCounter.contents().bindMemory(to: UInt32.self, capacity: debugSlots)
-//        var debugCountValue: [UInt32] = []
-//        for i in 0..<debugSlots {
-//            debugCountValue.append(debugCountPointer.advanced(by: i).pointee)
-//        }
-//
-//        
-//        mesh.parts.replaceAll([
-//            LowLevelMesh.Part(
-//                indexOffset: 0,
-//                indexCount: indexCount,
-//                topology: .triangle,
-//                materialIndex: 0,
-//                bounds: bounds
-//            )
-//        ])
-//        self.mesh = mesh
-//        self.vertexCount = vertexCount
-//        self.indexCount = indexCount
+        
+        var accessibilityFeatureMeshClassificationParams = self.accessibilityFeatureMeshClassificationParams
+        
+        for (_, anchor) in meshGPUSnapshot.anchors {
+            guard anchor.faceCount > 0 else { continue }
+            
+            let hasClass: UInt32 = anchor.classificationBuffer != nil ? 1 : 0
+            var params = MeshParams(
+                faceCount: UInt32(anchor.faceCount), totalCount: UInt32(totalFaceCount),
+                indicesPerFace: 3, hasClass: hasClass,
+                anchorTransform: anchor.anchorTransform, cameraTransform: cameraTransform,
+                viewMatrix: viewMatrix, intrinsics: cameraIntrinsics, imageSize: imageSize
+            )
+            guard let commandEncoder = commandBuffer.makeComputeCommandEncoder() else {
+                throw SegmentationMeshRecordError.metalPipelineCreationError
+            }
+            commandEncoder.setComputePipelineState(self.pipelineState)
+            // Main inputs
+            commandEncoder.setBuffer(anchor.vertexBuffer, offset: 0, index: 0)
+            commandEncoder.setBuffer(anchor.indexBuffer, offset: 0, index: 1)
+            commandEncoder.setBuffer(anchor.classificationBuffer ?? nil, offset: 0, index: 2)
+            commandEncoder.setBytes(&params, length: MemoryLayout<MeshParams>.stride, index: 3)
+            commandEncoder.setBytes(&accessibilityFeatureMeshClassificationParams,
+                                    length: MemoryLayout<AccessibilityFeatureMeshClassificationParams>.stride, index: 4)
+            commandEncoder.setTexture(segmentationTexture, index: 0)
+            // Main outputs
+            commandEncoder.setBuffer(outVertexBuf, offset: 0, index: 5)
+            commandEncoder.setBuffer(outIndexBuf,  offset: 0, index: 6)
+            commandEncoder.setBuffer(outTriCount,  offset: 0, index: 7)
+            
+            commandEncoder.setBuffer(aabbMinU, offset: 0, index: 8)
+            commandEncoder.setBuffer(aabbMaxU, offset: 0, index: 9)
+            commandEncoder.setBuffer(debugCounter, offset: 0, index: 10)
+            
+            let threadGroupSize = MTLSize(width: threadGroupSizeWidth, height: 1, depth: 1)
+            let threadGroups = MTLSize(
+                width: (anchor.faceCount + threadGroupSize.width - 1) / threadGroupSize.width, height: 1, depth: 1
+            )
+            commandEncoder.dispatchThreadgroups(threadGroups, threadsPerThreadgroup: threadGroupSize)
+            commandEncoder.endEncoding()
+        }
+        commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
+        
+        let triCount = outTriCount.contents().bindMemory(to: UInt32.self, capacity: 1).pointee
+        // Clamp to capacity (defensive)
+        let triangleCount = min(Int(triCount), maxTriangles)
+        let vertexCount   = triangleCount * 3
+        let indexCount    = triangleCount * 3
+
+        let minU = aabbMinU.contents().bindMemory(to: UInt32.self, capacity: 3)
+        let maxU = aabbMaxU.contents().bindMemory(to: UInt32.self, capacity: 3)
+        let aabbMin = SIMD3<Float>(
+            orderedUIntToFloat(minU[0]),
+            orderedUIntToFloat(minU[1]),
+            orderedUIntToFloat(minU[2])
+        )
+        let aabbMax = SIMD3<Float>(
+            orderedUIntToFloat(maxU[0]),
+            orderedUIntToFloat(maxU[1]),
+            orderedUIntToFloat(maxU[2])
+        )
+        let bounds: BoundingBox = BoundingBox(min: aabbMin, max: aabbMax)
+        
+        let debugCountPointer = debugCounter.contents().bindMemory(to: UInt32.self, capacity: debugSlots)
+        var debugCountValue: [UInt32] = []
+        for i in 0..<debugSlots {
+            debugCountValue.append(debugCountPointer.advanced(by: i).pointee)
+        }
+
+        
+        mesh.parts.replaceAll([
+            LowLevelMesh.Part(
+                indexOffset: 0,
+                indexCount: indexCount,
+                topology: .triangle,
+                materialIndex: 0,
+                bounds: bounds
+            )
+        ])
+        self.mesh = mesh
+        self.vertexCount = vertexCount
+        self.indexCount = indexCount
     }
     
 //    @inline(__always)

@@ -196,20 +196,20 @@ public extension CIImage {
             print("CIImage is not backed by a pixel buffer")
         }
         
-        if let mtl = self.metalTexture {
-            print("CIImage is backed by metal texture")
-            print("    Format: \(mtl.pixelFormat) \(mtl.pixelFormatName())")
-            print("    Size: \(mtl.width)x\(mtl.height)")
-        } else {
-            print("CIImage is not backed by a metal texture")
-        }
-        
         if let cg = self.cgImage {
             print("CIImage is backed by CGImage")
             print("    Format: \(String(cg.colorSpace?.name ?? "Unknown"))")
             print("    Size: \(cg.width)x\(cg.height)")
         } else {
             print("CIImage is not backed by a CGImage")
+        }
+        
+        if let mtl = self.metalTexture {
+            print("CIImage is backed by metal texture")
+            print("    Format: \(mtl.pixelFormat) \(mtl.pixelFormatName())")
+            print("    Size: \(mtl.width)x\(mtl.height)")
+        } else {
+            print("CIImage is not backed by a metal texture")
         }
     }
 }
