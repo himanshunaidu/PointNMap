@@ -129,6 +129,10 @@ public final class SegmentationARPipeline: ObservableObject {
             }
         }
         
+        #if STRESS_MODE
+            print("Stress mode")
+            try await Task.sleep(for: .milliseconds(20))
+        #endif
         let newTask = Task { [weak self] () throws -> SegmentationARPipelineResults in
             guard let self = self else { throw SegmentationARPipelineError.unexpectedError }
             defer {

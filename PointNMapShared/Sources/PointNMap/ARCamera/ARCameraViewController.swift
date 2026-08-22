@@ -39,6 +39,7 @@ public protocol ARSessionCameraProcessingOutputConsumer: AnyObject {
     )
     func resumeSession()
     func pauseSession()
+    func getCurrentARFrame() -> ARFrame?
 }
 
 public protocol ARSessionCameraProcessingDelegate: ARSessionDelegate {
@@ -456,6 +457,10 @@ public final class ARCameraViewController: UIViewController, ARSessionCameraProc
         otherDetails: MeshOtherDetails?
     ) {
         return (meshRecords, meshOtherDetails)
+    }
+    
+    public func getCurrentARFrame() -> ARFrame? {
+        return arView.session.currentFrame
     }
 }
 

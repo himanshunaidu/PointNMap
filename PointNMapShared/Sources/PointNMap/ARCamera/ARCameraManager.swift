@@ -23,6 +23,7 @@ public enum ARCameraManagerError: Error, LocalizedError {
     case meshSnapshotGeneratorUnavailable
     case meshSnapshotProcessingFailed
     case anchorEntityNotCreated
+    case finalSessionFrameUnavailable
     case finalSessionNotConfigured
     case finalSessionMeshUnavailable
     case finalSessionNoSegmentationClass
@@ -56,6 +57,8 @@ public enum ARCameraManagerError: Error, LocalizedError {
             return "Mesh snapshot processing failed."
         case .anchorEntityNotCreated:
             return "Anchor Entity has not been created."
+        case .finalSessionFrameUnavailable:
+            return "Final session frame unavailable."
         case .finalSessionNotConfigured:
             return "Final session update not configured."
         case .finalSessionMeshUnavailable:
@@ -196,9 +199,9 @@ public final class ARCameraManager: NSObject, ObservableObject, ARSessionCameraP
     public var meshGPUSnapshotGenerator: MeshGPUSnapshotGenerator? = nil
     public var capturedMeshSnapshotGenerator: CapturedMeshSnapshotGenerator? = nil
     
-    public var frameRate: Int = 15
+    public var frameRate: Int = 60
     public var lastFrameTime: TimeInterval = 0
-    public var meshFrameRate: Int = 15
+    public var meshFrameRate: Int = 60
     public var lastMeshFrameTime: TimeInterval = 0
     
     // Contexts depending on type of color space processing required
@@ -253,6 +256,7 @@ public final class ARCameraManager: NSObject, ObservableObject, ARSessionCameraP
         try setUpPreAllocatedPixelBufferPools(size: pixelBufferPoolSize)
         self.cameraOutputImageCallback = cameraOutputImageCallback
         self.isConfigured = true
+        self.isCaptureReady = false
         
         Task { @MainActor in
             
@@ -557,30 +561,46 @@ public extension ARCameraManager {
         guard checkMeshWithinMeshFrameRate(currentTime: Date().timeIntervalSince1970) else {
             return
         }
-        guard let metalContext = metalContext else {
+        let meshAnchors = anchors.compactMap { $0 as? ARMeshAnchor }
+        guard !meshAnchors.isEmpty else {
             return
         }
-        Task {
-            do {
-                let cameraMeshResults = try await self.processMeshAnchors(anchors, shouldRemove: shouldRemove)
-                await MainActor.run {
-                    self.cameraMeshResults = cameraMeshResults
-                    self.isCaptureReady = true
-//                    self.outputConsumer?.cameraOutputMesh(
-//                        self, metalContext: metalContext,
-//                        meshGPUSnapshot: cameraMeshResults.meshGPUSnapshot,
-//                        for: cameraMeshResults.meshAnchors,
-//                        cameraTransform: cameraMeshResults.cameraTransform,
-//                        cameraIntrinsics: cameraMeshResults.cameraIntrinsics,
-//                        segmentationLabelImage: cameraMeshResults.segmentationLabelImage,
-//                        accessibilityFeatureClasses: self.selectedClasses,
-//                        shouldReplace: false
-//                    )
-                }
-            } catch {
-                print("Error processing anchors: \(error.localizedDescription)")
-            }
-        }
+        self.isCaptureReady = true
+        /**
+         Real-time mesh snapshot generation is intentionally disabled.
+
+         If real-time segmented mesh processing is reintroduced, mesh-anchor updates must be coordinated/serialized rather
+         than independently processed from ARSessionDelegate callbacks.
+
+         Recommended design:
+         - actor-based coordinator
+         - latest pending update per anchor
+         - immutable published GPU buffers, etc.
+         */
+//        guard let metalContext = metalContext else {
+//            return
+//        }
+//        Task {
+//            do {
+//                let cameraMeshResults = try await self.processMeshAnchors(anchors, shouldRemove: shouldRemove)
+//                await MainActor.run {
+//                    self.cameraMeshResults = cameraMeshResults
+//                    self.isCaptureReady = true
+////                    self.outputConsumer?.cameraOutputMesh(
+////                        self, metalContext: metalContext,
+////                        meshGPUSnapshot: cameraMeshResults.meshGPUSnapshot,
+////                        for: cameraMeshResults.meshAnchors,
+////                        cameraTransform: cameraMeshResults.cameraTransform,
+////                        cameraIntrinsics: cameraMeshResults.cameraIntrinsics,
+////                        segmentationLabelImage: cameraMeshResults.segmentationLabelImage,
+////                        accessibilityFeatureClasses: self.selectedClasses,
+////                        shouldReplace: false
+////                    )
+//                }
+//            } catch {
+//                print("Error processing anchors: \(error.localizedDescription)")
+//            }
+//        }
     }
     
     private func processMeshAnchors(_ anchors: [ARAnchor], shouldRemove: Bool = false) async throws -> ARCameraMeshResults {
@@ -766,17 +786,17 @@ public extension ARCameraManager {
     @MainActor
     func performFinalSessionUpdateIfPossible(
     ) async throws -> CaptureData {
-        if isEnhancedAnalysisEnabled {
-            let _ = try getFinalSessionUpdateDependencies()
-            let captureImageData = try await performFinalSessionFrameUpdate()
-            let captureData = try await performFinalSessionMeshUpdate(
-                captureImageData: captureImageData
-            )
-            return .imageAndMeshData(captureData)
-        } else {
-            let captureData = try await performFinalSessionFrameUpdate()
-            return .imageData(captureData)
+        guard let finalFrame = outputConsumer?.getCurrentARFrame() else {
+            throw ARCameraManagerError.finalSessionFrameUnavailable
         }
+        let captureImageData = try await performFinalSessionFrameUpdate(frame: finalFrame)
+        guard isEnhancedAnalysisEnabled else {
+            return .imageData(captureImageData)
+        }
+        let captureData = try await performFinalSessionMeshUpdate(
+            frame: finalFrame, captureImageData: captureImageData
+        )
+        return .imageAndMeshData(captureData)
     }
     
     @MainActor
@@ -805,15 +825,23 @@ public extension ARCameraManager {
      */
     @MainActor
     private func performFinalSessionFrameUpdate(
+        frame: ARFrame
     ) async throws -> CaptureImageData {
         /// Process the latest camera image with high priority
-        guard let cameraImage = self.cameraImageResults?.cameraImage,
-              let cameraTransform = self.cameraImageResults?.cameraTransform,
-              let cameraIntrinsics = self.cameraImageResults?.cameraIntrinsics
-        else {
-            throw ARCameraManagerError.cameraImageResultsUnavailable
-        }
-        let depthImage = self.cameraImageResults?.depthImage
+//        guard let cameraImage = self.cameraImageResults?.cameraImage,
+//              let cameraTransform = self.cameraImageResults?.cameraTransform,
+//              let cameraIntrinsics = self.cameraImageResults?.cameraIntrinsics
+//        else {
+//            throw ARCameraManagerError.cameraImageResultsUnavailable
+//        }
+//        let depthImage = self.cameraImageResults?.depthImage
+        let cameraImage = CIImage(cvPixelBuffer: frame.capturedImage)
+        let cameraTransform = frame.camera.transform
+        let cameraIntrinsics = frame.camera.intrinsics
+        let depthBuffer = frame.smoothedSceneDepth?.depthMap ?? frame.sceneDepth?.depthMap
+        let confidenceBuffer = frame.smoothedSceneDepth?.confidenceMap ?? frame.sceneDepth?.confidenceMap
+        let depthImage: CIImage? = depthBuffer.map { CIImage(cvPixelBuffer: $0) }
+        let confidenceImage: CIImage? = confidenceBuffer.map { CIImage(cvPixelBuffer: $0) }
         var cameraImageResults = try await self.processCameraImage(
             image: cameraImage, depthImage: depthImage,
             interfaceOrientation: self.interfaceOrientation,
@@ -857,18 +885,28 @@ public extension ARCameraManager {
      */
     @MainActor
     private func performFinalSessionMeshUpdate(
+        frame: ARFrame,
         captureImageData: CaptureImageData
     ) async throws -> CaptureImageAndMeshData {
         /// NOTE: The redundancy is intentional to keep the two methods separate for now.
         guard let capturedMeshSnapshotGenerator = self.capturedMeshSnapshotGenerator,
-              let metalContext = self.metalContext,
-              let meshGPUSnapshotGenerator = self.meshGPUSnapshotGenerator else {
+              let metalContext = self.metalContext
+//              let meshGPUSnapshotGenerator = self.meshGPUSnapshotGenerator
+        else {
             throw ARCameraManagerError.finalSessionNotConfigured
         }
+//        guard let meshGPUSnapshot = meshGPUSnapshotGenerator.currentSnapshot else {
+//            throw ARCameraManagerError.finalSessionMeshUnavailable
+//        }
+        let meshAnchors = frame.anchors.compactMap { $0 as? ARMeshAnchor }
+        guard meshAnchors.count > 0 else {
+            throw ARCameraManagerError.finalSessionNoSegmentationMesh
+        }
+        let meshGPUSnapshotGenerator = MeshGPUSnapshotGenerator(device: metalContext.device)
+        try meshGPUSnapshotGenerator.snapshotAnchors(meshAnchors)
         guard let meshGPUSnapshot = meshGPUSnapshotGenerator.currentSnapshot else {
             throw ARCameraManagerError.finalSessionMeshUnavailable
         }
-        
         /// Process the latest mesh anchors
         let segmentationLabelImage = captureImageData.captureImageDataResults.segmentationLabelImage
 //        let backedSegmentationLabelImage = try self.backCIImageWithPixelBuffer(
@@ -925,6 +963,7 @@ public extension ARCameraManager {
         
     @MainActor
     func resume() throws {
+        self.isCaptureReady = false
         self.outputConsumer?.resumeSession()
     }
 }
