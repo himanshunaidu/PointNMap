@@ -196,12 +196,12 @@ public final class ARCameraManager: NSObject, ObservableObject, ARSessionCameraP
     public var imageResolution: CGSize = .zero
     @Published public var interfaceOrientation: UIInterfaceOrientation = .portrait
     
-    public var meshGPUSnapshotGenerator: MeshGPUSnapshotGenerator? = nil
+//    public var meshGPUSnapshotGenerator: MeshGPUSnapshotGenerator? = nil
     public var capturedMeshSnapshotGenerator: CapturedMeshSnapshotGenerator? = nil
     
-    public var frameRate: Int = 60
+    public var frameRate: Int = 15
     public var lastFrameTime: TimeInterval = 0
-    public var meshFrameRate: Int = 60
+    public var meshFrameRate: Int = 15
     public var lastMeshFrameTime: TimeInterval = 0
     
     // Contexts depending on type of color space processing required
@@ -230,7 +230,7 @@ public final class ARCameraManager: NSObject, ObservableObject, ARSessionCameraP
     
     // Latest processed results
     public var cameraImageResults: ARCameraImageResults?
-    public var cameraMeshResults: ARCameraMeshResults?
+//    public var cameraMeshResults: ARCameraMeshResults?
     public var cameraCache: ARCameraCache = ARCameraCache()
     
     public override init() {
@@ -252,7 +252,7 @@ public final class ARCameraManager: NSObject, ObservableObject, ARSessionCameraP
         }
         self.metalContext = metalContext
         self.isEnhancedAnalysisEnabled = isEnhancedAnalysisEnabled
-        self.meshGPUSnapshotGenerator = MeshGPUSnapshotGenerator(device: metalContext.device)
+//        self.meshGPUSnapshotGenerator = MeshGPUSnapshotGenerator(device: metalContext.device)
         try setUpPreAllocatedPixelBufferPools(size: pixelBufferPoolSize)
         self.cameraOutputImageCallback = cameraOutputImageCallback
         self.isConfigured = true
@@ -332,8 +332,8 @@ public extension ARCameraManager {
         let depthConfidenceBuffer = frame.smoothedSceneDepth?.confidenceMap ?? frame.sceneDepth?.confidenceMap
         
         let cameraImage = CIImage(cvPixelBuffer: pixelBuffer)
-        let depthImage: CIImage? = depthBuffer != nil ? CIImage(cvPixelBuffer: depthBuffer!) : nil
-        let confidenceImage: CIImage? = depthConfidenceBuffer != nil ? CIImage(cvPixelBuffer: depthConfidenceBuffer!) : nil
+        let depthImage: CIImage? = depthBuffer.map { CIImage(cvPixelBuffer: $0) }
+        let confidenceImage: CIImage? = depthConfidenceBuffer.map { CIImage(cvPixelBuffer: $0) }
         
         /// Perform async processing in a Task. Read the consumer-provided orientation on the MainActor
         Task {
@@ -391,8 +391,8 @@ public extension ARCameraManager {
         highPriority: Bool = false,
         croppedSize: CGSize = PointNMapConstants.SelectedAccessibilityFeatureConfig.inputSize
     ) async throws -> ARCameraImageResults {
-        guard let cameraCroppedPixelBufferPool = cameraCroppedPixelBufferPool,
-              let segmentationPixelBufferPool = segmentationMaskPixelBufferPool
+        guard let cameraCroppedPixelBufferPool = cameraCroppedPixelBufferPool
+//              let segmentationPixelBufferPool = segmentationMaskPixelBufferPool
         else {
             throw ARCameraManagerError.pixelBufferPoolCreationFailed
         }
@@ -554,7 +554,6 @@ public extension ARCameraManager {
         guard isEnhancedAnalysisEnabled else {
             return
         }
-        let shouldRemove = (updateType == .remove)
         guard isConfigured else {
             return
         }
@@ -565,7 +564,12 @@ public extension ARCameraManager {
         guard !meshAnchors.isEmpty else {
             return
         }
-        self.isCaptureReady = true
+        let shouldRemove = (updateType == .remove)
+        if !shouldRemove {
+            Task { @MainActor in
+                self.isCaptureReady = true
+            }
+        }
         /**
          Real-time mesh snapshot generation is intentionally disabled.
 
@@ -603,41 +607,41 @@ public extension ARCameraManager {
 //        }
     }
     
-    private func processMeshAnchors(_ anchors: [ARAnchor], shouldRemove: Bool = false) async throws -> ARCameraMeshResults {
-        guard let meshGPUSnapshotGenerator = meshGPUSnapshotGenerator else {
-            throw ARCameraManagerError.meshSnapshotGeneratorUnavailable
-        }
-        guard let cameraImageResults = cameraImageResults else {
-            throw ARCameraManagerError.cameraImageResultsUnavailable
-        }
-        
-        let segmentationLabelImage = cameraImageResults.segmentationLabelImage
-//        let backedSegmentationLabelImage = try self.backCIImageWithPixelBuffer(
-//            segmentationLabelImage, context: rawContext, pixelFormatType: segmentationMaskPixelFormatType,
-//            colorSpace: segmentationMaskColorSpace
+//    private func processMeshAnchors(_ anchors: [ARAnchor], shouldRemove: Bool = false) async throws -> ARCameraMeshResults {
+//        guard let meshGPUSnapshotGenerator = meshGPUSnapshotGenerator else {
+//            throw ARCameraManagerError.meshSnapshotGeneratorUnavailable
+//        }
+//        guard let cameraImageResults = cameraImageResults else {
+//            throw ARCameraManagerError.cameraImageResultsUnavailable
+//        }
+//        
+//        let segmentationLabelImage = cameraImageResults.segmentationLabelImage
+////        let backedSegmentationLabelImage = try self.backCIImageWithPixelBuffer(
+////            segmentationLabelImage, context: rawContext, pixelFormatType: segmentationMaskPixelFormatType,
+////            colorSpace: segmentationMaskColorSpace
+////        )
+//        
+//        let cameraTransform = cameraImageResults.cameraTransform
+//        let cameraIntrinsics = cameraImageResults.cameraIntrinsics
+//        
+//        // Generate mesh snapshot
+//        if (shouldRemove) {
+//            meshGPUSnapshotGenerator.removeAnchors(anchors)
+//        } else {
+//            try meshGPUSnapshotGenerator.snapshotAnchors(anchors)
+//        }
+//        guard let meshGPUSnapshot = meshGPUSnapshotGenerator.currentSnapshot else {
+//            throw ARCameraManagerError.meshSnapshotProcessingFailed
+//        }
+//        return ARCameraMeshResults(
+//            meshGPUSnapshot: meshGPUSnapshot,
+//            meshAnchors: anchors.compactMap { $0 as? ARMeshAnchor },
+//            segmentationLabelImage: segmentationLabelImage,
+//            cameraTransform: cameraTransform,
+//            cameraIntrinsics: cameraIntrinsics,
+//            lastUpdated: Date().timeIntervalSince1970
 //        )
-        
-        let cameraTransform = cameraImageResults.cameraTransform
-        let cameraIntrinsics = cameraImageResults.cameraIntrinsics
-        
-        // Generate mesh snapshot
-        if (shouldRemove) {
-            meshGPUSnapshotGenerator.removeAnchors(anchors)
-        } else {
-            try meshGPUSnapshotGenerator.snapshotAnchors(anchors)
-        }
-        guard let meshGPUSnapshot = meshGPUSnapshotGenerator.currentSnapshot else {
-            throw ARCameraManagerError.meshSnapshotProcessingFailed
-        }
-        return ARCameraMeshResults(
-            meshGPUSnapshot: meshGPUSnapshot,
-            meshAnchors: anchors.compactMap { $0 as? ARMeshAnchor },
-            segmentationLabelImage: segmentationLabelImage,
-            cameraTransform: cameraTransform,
-            cameraIntrinsics: cameraIntrinsics,
-            lastUpdated: Date().timeIntervalSince1970
-        )
-    }
+//    }
     
     private func checkMeshWithinMeshFrameRate(currentTime: TimeInterval) -> Bool {
         let withinFrameRate = currentTime - lastMeshFrameTime >= (1.0 / Double(meshFrameRate))
@@ -799,24 +803,6 @@ public extension ARCameraManager {
         return .imageAndMeshData(captureData)
     }
     
-    @MainActor
-    private func getFinalSessionUpdateDependencies(
-    ) throws -> CapturedMeshDependencies {
-        guard let capturedMeshSnapshotGenerator = self.capturedMeshSnapshotGenerator,
-              let metalContext = self.metalContext,
-              let meshGPUSnapshotGenerator = self.meshGPUSnapshotGenerator else {
-            throw ARCameraManagerError.finalSessionNotConfigured
-        }
-        guard let meshGPUSnapshot = meshGPUSnapshotGenerator.currentSnapshot else {
-            throw ARCameraManagerError.finalSessionMeshUnavailable
-        }
-        return CapturedMeshDependencies(
-            capturedMeshSnapshotGenerator: capturedMeshSnapshotGenerator,
-            metalContext: metalContext,
-            meshGPUSnapshot: meshGPUSnapshot
-        )
-    }
-    
     /**
      Perform any final updates to the AR session configuration that will be required by the caller.
      Method copy that does not perform mesh processing for now.
@@ -852,7 +838,7 @@ public extension ARCameraManager {
             throw ARCameraManagerError.finalSessionNoSegmentationClass
         }
         cameraImageResults.depthImage = depthImage
-        cameraImageResults.confidenceImage = self.cameraImageResults?.confidenceImage
+        cameraImageResults.confidenceImage = confidenceImage
         
         let captureImageDataResults = CaptureImageDataResults(
             segmentationLabelImage: cameraImageResults.segmentationLabelImage,
@@ -916,7 +902,7 @@ public extension ARCameraManager {
         outputConsumer?.cameraOutputMesh(
             self, metalContext: metalContext,
             meshGPUSnapshot: meshGPUSnapshot,
-            for: cameraMeshResults?.meshAnchors,
+            for: meshAnchors,
             cameraTransform: captureImageData.cameraTransform,
             cameraIntrinsics: captureImageData.cameraIntrinsics,
             segmentationLabelImage: segmentationLabelImage,
@@ -942,7 +928,7 @@ public extension ARCameraManager {
         )
         let captureMeshDataResults = CaptureMeshDataResults(
             segmentedMesh: cameraMeshSnapshot,
-            meshAnchors: cameraMeshResults?.meshAnchors,
+            meshAnchors: meshAnchors,
         )
         
         let captureData = CaptureImageAndMeshData(
@@ -956,8 +942,8 @@ public extension ARCameraManager {
     func pause() throws {
         self.outputConsumer?.pauseSession()
         self.cameraImageResults = nil
-        self.cameraMeshResults = nil
-        self.meshGPUSnapshotGenerator?.reset()
+//        self.cameraMeshResults = nil
+//        self.meshGPUSnapshotGenerator?.reset()
         self.cameraCache = ARCameraCache()
     }
         
