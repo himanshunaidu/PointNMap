@@ -55,6 +55,7 @@ public final class MeshGPUSnapshotGenerator: NSObject {
     }
     
     public func snapshotAnchors(_ anchors: [ARAnchor]) throws {
+        
         let meshAnchors = anchors.compactMap { $0 as? ARMeshAnchor }
         let meshAnchorIds: Set<UUID> = Set(meshAnchors.map { $0.identifier })
         var meshGPUAnchors: [UUID: MeshGPUAnchor] = [:]

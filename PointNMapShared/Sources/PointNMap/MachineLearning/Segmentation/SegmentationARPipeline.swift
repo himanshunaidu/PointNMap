@@ -66,9 +66,15 @@ public struct SegmentationARPipelineResults {
     TODO: Rename this to `SegmentationImagePipeline` since AR is not a necessary component here.
  */
 public final class SegmentationARPipeline: ObservableObject {
-    private var isProcessing = false
-    private var currentTask: Task<SegmentationARPipelineResults, Error>?
-    private var timeoutInSeconds: Double = 1.0
+//    private var isProcessing = false
+    private typealias SegmentationTask = Task<SegmentationARPipelineResults, Error>
+    private var currentTask: SegmentationTask?
+    private let currentTaskLock = NSLock()
+    private var currentTaskId: UUID?
+    /// Prevents new processing from beginning while reset() is
+    /// waiting for an existing request to finish.
+    private var isResetting = false
+    private let timeoutInSeconds: Double = 1.0
     
     private var selectedClasses: [AccessibilityFeatureClass] = []
     private var selectedClassLabels: [UInt8] = []
@@ -99,12 +105,58 @@ public final class SegmentationARPipeline: ObservableObject {
         self.depthFilter = try DepthFilter()
     }
     
-    public func reset() {
-        self.isProcessing = false
-        self.setSelectedClasses([])
+    public func reset() async throws {
+//        self.isProcessing = false
+//        self.setSelectedClasses([])
+        let resetState = beginReset()
+        guard resetState.started else {
+            return
+        }
+        defer {
+            finishReset()
+        }
+        if let task = resetState.task {
+            _ = try? await task.value
+        }
+        /*
+         No segmentation request can begin while
+         isResetting == true.
+         */
+        try setSelectedClasses([])
     }
     
-    public func setSelectedClasses(_ selectedClasses: [AccessibilityFeatureClass]) {
+    private func beginReset() -> (started: Bool, task: SegmentationTask?) {
+        currentTaskLock.lock()
+        defer {
+            currentTaskLock.unlock()
+        }
+        guard !isResetting else {
+            return (false, nil)
+        }
+        isResetting = true
+        let task = currentTask
+        task?.cancel()
+        return (true, task)
+    }
+    
+    private func finishReset() {
+        currentTaskLock.lock()
+        isResetting = false
+        currentTaskLock.unlock()
+    }
+    
+    public func setSelectedClasses(_ selectedClasses: [AccessibilityFeatureClass]) throws {
+        currentTaskLock.lock()
+        defer {
+            currentTaskLock.unlock()
+        }
+        guard currentTask == nil && !isResetting else {
+            throw SegmentationARPipelineError.isProcessingTrue
+        }
+        applySelectedClasses(selectedClasses)
+    }
+    
+    private func applySelectedClasses(_ selectedClasses: [AccessibilityFeatureClass]) {
         self.selectedClasses = selectedClasses
         self.selectedClassLabels = selectedClasses.map { $0.labelValue }
         self.selectedClassGrayscaleValues = selectedClasses.map { $0.grayscaleValue }
@@ -121,43 +173,96 @@ public final class SegmentationARPipeline: ObservableObject {
         with cIImage: CIImage, depthImage: CIImage? = nil,
         highPriority: Bool = false
     ) async throws -> SegmentationARPipelineResults {
+        let task = try makeProcessingTask(cIImage: cIImage, depthImage: depthImage, highPriority: highPriority)
+        /*
+         Propagate cancellation of the CALLER into the internal
+         segmentation task.
+
+         Awaiting task.value by itself does not give us the
+         cancellation semantics we want here.
+         */
+        return try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
+        }
+    }
+    
+    private func makeProcessingTask(cIImage: CIImage, depthImage: CIImage?, highPriority: Bool) throws -> SegmentationTask {
+        currentTaskLock.lock()
+        defer {
+            currentTaskLock.unlock()
+        }
+        guard !isResetting else {
+            throw SegmentationARPipelineError.isProcessingTrue
+        }
+        let previousTask: SegmentationTask?
         if (highPriority) {
-            self.currentTask?.cancel()
+            previousTask = currentTask
+            // Cancellation is cooperative.
+            // The replacement task will wait for this task below.
+            previousTask?.cancel()
         } else {
-            if ((currentTask != nil) && !currentTask!.isCancelled) {
+            // A cancelled task is STILL considered active
+            // until it actually completes.
+            guard currentTask == nil else {
                 throw SegmentationARPipelineError.isProcessingTrue
             }
+            previousTask = nil
         }
-        
+        let taskId = UUID()
         let newTask = Task { [weak self] () throws -> SegmentationARPipelineResults in
             guard let self = self else { throw SegmentationARPipelineError.unexpectedError }
             defer {
-                self.currentTask = nil
+                self.clearCurrentTask(ifMatching: taskId)
+            }
+            /*
+             If this is a high-priority replacement, do not begin
+             segmentation merely because the previous task was cancelled.
+
+             Wait until the previous task has ACTUALLY finished.
+             */
+            if let previousTask {
+                _ = try? await previousTask.value
             }
             try Task.checkCancellation()
-            
             let results = try await self.processImageWithTimeout(cIImage, depthImage: depthImage)
             try Task.checkCancellation()
             return results
         }
-        
         self.currentTask = newTask
-        return try await newTask.value
+        self.currentTaskId = taskId
+        return newTask
+    }
+    
+    private func clearCurrentTask(
+        ifMatching taskId: UUID
+    ) {
+        currentTaskLock.lock()
+        defer { currentTaskLock.unlock() }
+        guard currentTaskId == taskId else { return }
+        currentTask = nil
+        currentTaskId = nil
     }
     
     private func processImageWithTimeout(
         _ cIImage: CIImage, depthImage: CIImage? = nil
     ) async throws -> SegmentationARPipelineResults {
-        try await withThrowingTaskGroup(of: SegmentationARPipelineResults.self) { group in
+        let timeout = timeoutInSeconds
+        return try await withThrowingTaskGroup(
+                of: SegmentationARPipelineResults.self
+        ) { group in
             group.addTask {
                 return try self.processImage(cIImage, depthImage: depthImage)
             }
             group.addTask {
-                try await Task.sleep(for: .seconds(self.timeoutInSeconds))
+                try await Task.sleep(for: .seconds(timeout))
                 throw SegmentationARPipelineError.unexpectedError
             }
-            let result = try await group.next()!
-            group.cancelAll()
+            defer { group.cancelAll() }
+            guard let result = try await group.next() else {
+                throw SegmentationARPipelineError.unexpectedError
+            }
             return result
         }
     }
@@ -183,6 +288,8 @@ public final class SegmentationARPipeline: ObservableObject {
               let grayscaleToColorFilter = self.grayscaleToColorFilter else {
             throw SegmentationARPipelineError.segmentationResourcesNotConfigured
         }
+        try Task.checkCancellation()
+        
         let segmentationResults = try segmentationModelRequestProcessor.processSegmentationRequest(with: cIImage)
         let segmentationImage = segmentationResults.segmentationImage
         
@@ -200,6 +307,8 @@ public final class SegmentationARPipeline: ObservableObject {
         }
         let finalSegmentationImage = depthFilteredSegmentationImage ?? segmentationImage
         
+        try Task.checkCancellation()
+        
         // MARK: Ignoring the object tracking for now
         // Get the objects from the segmentation image
         let detectedFeatures: [DetectedAccessibilityFeature] = try contourRequestProcessor.processRequest(
@@ -216,6 +325,8 @@ public final class SegmentationARPipeline: ObservableObject {
             to: finalSegmentationImage,
             grayscaleValues: self.selectedClassGrayscaleValues, colorValues: self.selectedClassColors
         )
+        
+        try Task.checkCancellation()
         
         return SegmentationARPipelineResults(
             segmentationImage: finalSegmentationImage,
