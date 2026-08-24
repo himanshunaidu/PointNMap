@@ -371,6 +371,9 @@ public extension ARCameraManager {
         defer {
             imageProcessingStateLock.unlock()
         }
+        guard acceptsRealtimeImageProcessing, !isFinalSessionFrameUpdateInProgress, currentRealtimeImageTask == nil else {
+            return false
+        }
         let taskId = UUID()
         let generation = imageProcessingGeneration
         let task = Task { [weak self] in
@@ -385,8 +388,8 @@ public extension ARCameraManager {
                     self.interfaceOrientation
                 }
                 let results = try await self.processCameraImage(
-                    image: cameraImage, depthImage: depthImage,
-                    interfaceOrientation: interfaceOrientation,
+                    image: cameraImage, depthImage: depthImage, confidenceImage: confidenceImage,
+                    interfaceOrientation: orientation,
                     cameraTransform: cameraTransform, cameraIntrinsics: cameraIntrinsics
                 )
                 try Task.checkCancellation()
@@ -465,6 +468,7 @@ public extension ARCameraManager {
     private func processCameraImage(
         image: CIImage,
         depthImage: CIImage? = nil,
+        confidenceImage: CIImage? = nil,
         interfaceOrientation: UIInterfaceOrientation,
         cameraTransform: simd_float4x4, cameraIntrinsics: simd_float3x3,
         highPriority: Bool = false,
@@ -535,7 +539,6 @@ public extension ARCameraManager {
             segmentationResults.detectedFeatureMap,
             orientation: imageOrientation, imageSize: croppedSize, originalSize: originalSize
         )
-        
         // Create segmentation frame
         var segmentationBoundingFrameImage: CIImage? = nil
         if (cameraCache.cameraImageSize == nil || cameraCache.cameraImageSize?.width != originalSize.width ||
@@ -552,6 +555,7 @@ public extension ARCameraManager {
         let cameraImageResults = ARCameraImageResults(
             cameraImage: image,
             depthImage: depthImage,
+            confidenceImage: confidenceImage,
             segmentationLabelImage: segmentationImage,
             segmentedClasses: segmentationResults.segmentedClasses,
             detectedFeatureMap: detectedFeatureMap,
@@ -852,17 +856,17 @@ public extension ARCameraManager {
     }
 }
 
-//public struct CapturedMeshDependencies {
-//    public let capturedMeshSnapshotGenerator: CapturedMeshSnapshotGenerator
-//    public let metalContext: MetalContext
-//    public let meshGPUSnapshot: MeshGPUSnapshot
-//    
-//    public init(capturedMeshSnapshotGenerator: CapturedMeshSnapshotGenerator, metalContext: MetalContext, meshGPUSnapshot: MeshGPUSnapshot) {
-//        self.capturedMeshSnapshotGenerator = capturedMeshSnapshotGenerator
-//        self.metalContext = metalContext
-//        self.meshGPUSnapshot = meshGPUSnapshot
-//    }
-//}
+public struct CapturedMeshDependencies {
+    public let capturedMeshSnapshotGenerator: CapturedMeshSnapshotGenerator
+    public let metalContext: MetalContext
+    public let meshGPUSnapshot: MeshGPUSnapshot
+    
+    public init(capturedMeshSnapshotGenerator: CapturedMeshSnapshotGenerator, metalContext: MetalContext, meshGPUSnapshot: MeshGPUSnapshot) {
+        self.capturedMeshSnapshotGenerator = capturedMeshSnapshotGenerator
+        self.metalContext = metalContext
+        self.meshGPUSnapshot = meshGPUSnapshot
+    }
+}
 
 // Functions to perform final session update
 public extension ARCameraManager {
@@ -890,6 +894,9 @@ public extension ARCameraManager {
             throw ARCameraManagerError.finalSessionFrameUnavailable
         }
         let captureImageData = try await performFinalSessionFrameUpdate(frame: finalFrame)
+        guard isCurrentImageProcessingGeneration(finalState.generation) else {
+            throw CancellationError()
+        }
         guard isEnhancedAnalysisEnabled else {
             return .imageData(captureImageData)
         }
@@ -928,7 +935,7 @@ public extension ARCameraManager {
         let depthImage: CIImage? = depthBuffer.map { CIImage(cvPixelBuffer: $0) }
         let confidenceImage: CIImage? = confidenceBuffer.map { CIImage(cvPixelBuffer: $0) }
         var cameraImageResults = try await self.processCameraImage(
-            image: cameraImage, depthImage: depthImage,
+            image: cameraImage, depthImage: depthImage, confidenceImage: confidenceImage,
             interfaceOrientation: self.interfaceOrientation,
             cameraTransform: cameraTransform, cameraIntrinsics: cameraIntrinsics,
             highPriority: true
@@ -1063,17 +1070,41 @@ public extension ARCameraManager {
         return captureData
     }
     
+    private func suspendImageProcessing() -> RealtimeImageTask? {
+        imageProcessingStateLock.lock()
+        defer {
+            imageProcessingStateLock.unlock()
+        }
+        acceptsRealtimeImageProcessing = false
+        /// Invalidate any result currently being produced.
+        imageProcessingGeneration &+= 1
+        let task = currentRealtimeImageTask
+        task?.cancel()
+        return task
+    }
+    
     @MainActor
-    func pause() throws {
+    func pause() async throws {
+        let realtimeTask = suspendImageProcessing()
         self.outputConsumer?.pauseSession()
+        if let realtimeTask {
+            await realtimeTask.value
+        }
         self.cameraImageResults = nil
 //        self.cameraMeshResults = nil
 //        self.meshGPUSnapshotGenerator?.reset()
         self.cameraCache = ARCameraCache()
     }
+    
+    private func enableRealtimeImageProcessing() {
+        imageProcessingStateLock.lock()
+        acceptsRealtimeImageProcessing = true
+        imageProcessingStateLock.unlock()
+    }
         
     @MainActor
     func resume() throws {
+        enableRealtimeImageProcessing()
         self.isCaptureReady = false
         self.outputConsumer?.resumeSession()
     }
