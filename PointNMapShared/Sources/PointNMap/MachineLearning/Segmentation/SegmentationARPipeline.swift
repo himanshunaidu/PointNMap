@@ -69,12 +69,12 @@ public final class SegmentationARPipeline: ObservableObject {
 //    private var isProcessing = false
     private typealias SegmentationTask = Task<SegmentationARPipelineResults, Error>
     private var currentTask: SegmentationTask?
-    private var currentTaskLock = NSLock()
+    private let currentTaskLock = NSLock()
     private var currentTaskId: UUID?
     /// Prevents new processing from beginning while reset() is
     /// waiting for an existing request to finish.
     private var isResetting = false
-    private var timeoutInSeconds: Double = 1.0
+    private let timeoutInSeconds: Double = 1.0
     
     private var selectedClasses: [AccessibilityFeatureClass] = []
     private var selectedClassLabels: [UInt8] = []
@@ -105,7 +105,7 @@ public final class SegmentationARPipeline: ObservableObject {
         self.depthFilter = try DepthFilter()
     }
     
-    public func reset() async {
+    public func reset() async throws {
 //        self.isProcessing = false
 //        self.setSelectedClasses([])
         let resetState = beginReset()
@@ -122,7 +122,7 @@ public final class SegmentationARPipeline: ObservableObject {
          No segmentation request can begin while
          isResetting == true.
          */
-        setSelectedClasses([])
+        try setSelectedClasses([])
     }
     
     private func beginReset() -> (started: Bool, task: SegmentationTask?) {
@@ -145,7 +145,18 @@ public final class SegmentationARPipeline: ObservableObject {
         currentTaskLock.unlock()
     }
     
-    public func setSelectedClasses(_ selectedClasses: [AccessibilityFeatureClass]) {
+    public func setSelectedClasses(_ selectedClasses: [AccessibilityFeatureClass]) throws {
+        currentTaskLock.lock()
+        defer {
+            currentTaskLock.unlock()
+        }
+        guard currentTask == nil && !isResetting else {
+            throw SegmentationARPipelineError.isProcessingTrue
+        }
+        applySelectedClasses(selectedClasses)
+    }
+    
+    private func applySelectedClasses(_ selectedClasses: [AccessibilityFeatureClass]) {
         self.selectedClasses = selectedClasses
         self.selectedClassLabels = selectedClasses.map { $0.labelValue }
         self.selectedClassGrayscaleValues = selectedClasses.map { $0.grayscaleValue }
@@ -314,6 +325,8 @@ public final class SegmentationARPipeline: ObservableObject {
             to: finalSegmentationImage,
             grayscaleValues: self.selectedClassGrayscaleValues, colorValues: self.selectedClassColors
         )
+        
+        try Task.checkCancellation()
         
         return SegmentationARPipelineResults(
             segmentationImage: finalSegmentationImage,

@@ -214,8 +214,8 @@ public struct ARCameraViewBase: View {
         .onAppear {
             locationManager.startLocationUpdates()
             showAnnotationView = false
-            segmentationPipeline.setSelectedClasses(selectedClasses)
             do {
+                try segmentationPipeline.setSelectedClasses(selectedClasses)
                 try manager.configure(
                     selectedClasses: selectedClasses, segmentationPipeline: segmentationPipeline,
                     metalContext: sharedAppContext.metalContext,
