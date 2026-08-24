@@ -24,6 +24,7 @@ public enum ARCameraManagerError: Error, LocalizedError {
     case meshSnapshotProcessingFailed
     case anchorEntityNotCreated
     case finalSessionFrameUnavailable
+    case finalSessionFrameUpdateInProgress
     case finalSessionNotConfigured
     case finalSessionMeshUnavailable
     case finalSessionNoSegmentationClass
@@ -57,6 +58,8 @@ public enum ARCameraManagerError: Error, LocalizedError {
             return "Mesh snapshot processing failed."
         case .anchorEntityNotCreated:
             return "Anchor Entity has not been created."
+        case .finalSessionFrameUpdateInProgress:
+            return "Final session frame update is already in progress."
         case .finalSessionFrameUnavailable:
             return "Final session frame unavailable."
         case .finalSessionNotConfigured:
@@ -228,6 +231,21 @@ public final class ARCameraManager: NSObject, ObservableObject, ARSessionCameraP
     @Published public var isConfigured: Bool = false
     @Published public var isCaptureReady: Bool = false
     
+    /// Synchronization for the real-time image processing
+    private typealias RealtimeImageTask = Task<Void, Never>
+    private let imageProcessingStateLock = NSLock()
+    private var currentRealtimeImageTask: RealtimeImageTask?
+    private var currentRealtimeImageTaskId: UUID?
+    /// Whether normal ARSession frame callbacks are allowed
+    /// to begin image processing.
+    private var acceptsRealtimeImageProcessing: Bool = true
+    /// Prevents realtime image processing while a final capture
+    /// is being performed.
+    private var isFinalSessionFrameUpdateInProgress: Bool = false
+    /// Invalidates results from work belonging to an older
+    /// processing/session state.
+    private var imageProcessingGeneration: UInt64 = 0
+    
     // Latest processed results
     public var cameraImageResults: ARCameraImageResults?
 //    public var cameraMeshResults: ARCameraMeshResults?
@@ -383,6 +401,111 @@ public extension ARCameraManager {
          }
     }
     
+    @discardableResult
+    private func tryStartRealtimeImageProcessing(
+        cameraImage: CIImage,
+        depthImage: CIImage?,
+        confidenceImage: CIImage?,
+        cameraTransform: simd_float4x4,
+        cameraIntrinsics: simd_float3x3,
+        metalContext: MetalContext
+    ) -> Bool {
+        imageProcessingStateLock.lock()
+        defer {
+            imageProcessingStateLock.unlock()
+        }
+        let taskId = UUID()
+        let generation = imageProcessingGeneration
+        let task = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                self.clearRealtimeImageTask(ifMatching: taskId)
+            }
+            do {
+                try Task.checkCancellation()
+                ///interfaceOrientation is written from MainActor. Capture one stable value for this frame.
+                let orientation = await MainActor.run {
+                    self.interfaceOrientation
+                }
+                let results = try await self.processCameraImage(
+                    image: cameraImage, depthImage: depthImage,
+                    interfaceOrientation: interfaceOrientation,
+                    cameraTransform: cameraTransform, cameraIntrinsics: cameraIntrinsics
+                )
+                try Task.checkCancellation()
+//                results.depthImage = depthImage
+//                results.confidenceImage = confidenceImage
+                /// The session/final-capture state could have changed while the frame was processing.
+                guard self.isCurrentImageProcessingGeneration(generation) else {
+                    return
+                }
+                let captureImageDataResults = CaptureImageDataResults(
+                    segmentationLabelImage: results.segmentationLabelImage,
+                    segmentedClasses: results.segmentedClasses,
+                    detectedFeatureMap: results.detectedFeatureMap
+                )
+                let captureImageData = CaptureImageData(
+                    id: UUID(),
+                    timestamp: Date().timeIntervalSince1970,
+                    cameraImage: results.cameraImage,
+                    cameraTransform: results.cameraTransform,
+                    cameraIntrinsics: results.cameraIntrinsics,
+                    interfaceOrientation: orientation,
+                    originalSize: results.originalImageSize,
+                    depthImage: results.depthImage,
+                    confidenceImage: results.confidenceImage,
+                    captureImageDataResults: captureImageDataResults
+                )
+                await MainActor.run {
+                    /// Check again after hopping to MainActor.
+                    guard self.isCurrentImageProcessingGeneration(generation) else {
+                        return
+                    }
+                    self.cameraImageResults = results
+                    self.outputConsumer?.cameraOutputImage(
+                        self, metalContext: metalContext,
+                        segmentationImage: results.segmentationColorImage,
+                        segmentationBoundingFrameImage: results.segmentationBoundingFrameImage,
+                        for: nil
+                    )
+                    self.cameraOutputImageCallback?(captureImageData)
+                    if !self.isEnhancedAnalysisEnabled {
+                        self.isCaptureReady = true
+                    }
+                }
+            } catch is CancellationError {
+                /// Expected when final capture / pause preempts realtime processing.
+                print("Realtime image processing task was cancelled.")
+            } catch SegmentationARPipelineError.isProcessingTrue {
+                print("Error processing camera image: SegmentationARPipeline is already processing another request.")
+            } catch {
+               print("Error processing camera image: " + error.localizedDescription)
+           }
+        }
+        currentRealtimeImageTask = task
+        currentRealtimeImageTaskId = taskId
+        return true
+    }
+    
+    private func clearRealtimeImageTask(ifMatching taskId: UUID) {
+        imageProcessingStateLock.lock()
+        defer {
+            imageProcessingStateLock.unlock()
+        }
+        guard currentRealtimeImageTaskId == taskId else { return }
+        currentRealtimeImageTask = nil
+        currentRealtimeImageTaskId = nil
+    }
+    
+    private func isCurrentImageProcessingGeneration(_ generation: UInt64) -> Bool {
+        imageProcessingStateLock.lock()
+        defer {
+            imageProcessingStateLock.unlock()
+        }
+
+        return imageProcessingGeneration == generation
+    }
+    
     private func processCameraImage(
         image: CIImage,
         depthImage: CIImage? = nil,
@@ -399,6 +522,7 @@ public extension ARCameraManager {
         guard let segmentationPipeline = segmentationPipeline else {
             throw ARCameraManagerError.segmentationNotConfigured
         }
+        try Task.checkCancellation()
         /// Pre-process the image: orient, center-crop, and back to pixel buffer
         let originalSize: CGSize = image.extent.size
         let imageOrientation: CGImagePropertyOrientation = CameraOrientation.getCGImageOrientationForInterface(
@@ -411,7 +535,7 @@ public extension ARCameraManager {
         inputImage = try self.backCIImageWithPixelBuffer(
             inputImage, context: colorContext, pixelBufferPool: cameraCroppedPixelBufferPool, colorSpace: cameraColorSpace
         )
-        
+        try Task.checkCancellation()
         var inputDepthImage: CIImage? = nil
         if let depthImage = depthImage,
            let depthPixelBufferPool = depthPixelBufferPool {
@@ -423,11 +547,12 @@ public extension ARCameraManager {
                 croppedDepthImage, context: rawContext, pixelBufferPool: depthPixelBufferPool, colorSpace: depthColorSpace
             )
         }
+        try Task.checkCancellation()
         let segmentationResults: SegmentationARPipelineResults = try await segmentationPipeline.processRequest(
             with: inputImage, depthImage: inputDepthImage,
             highPriority: highPriority
         )
-        
+        try Task.checkCancellation()
         var segmentationImage = segmentationResults.segmentationImage
         segmentationImage = segmentationImage.oriented(inverseOrientation)
         segmentationImage = CenterCropTransformUtils.revertCenterCropAspectFit(segmentationImage, from: originalSize)
@@ -438,7 +563,7 @@ public extension ARCameraManager {
 //        segmentationImage = try self.backCIImageWithPixelBuffer(
 //            segmentationImage, context: rawContext, pixelBufferPool: segmentationPixelBufferPool, colorSpace: segmentationMaskColorSpace
 //        )
-        
+        try Task.checkCancellation()
         var segmentationColorCIImage = segmentationResults.segmentationColorImage
         segmentationColorCIImage = segmentationColorCIImage.oriented(inverseOrientation)
         segmentationColorCIImage = CenterCropTransformUtils.revertCenterCropAspectFit(
@@ -449,7 +574,7 @@ public extension ARCameraManager {
             segmentationColorCIImage, context: colorContext, pixelFormatType: segmentationColorPixelFormatType,
             colorSpace: segmentationColorColorSpace
         )
-        
+        try Task.checkCancellation()
         let detectedFeatureMap = alignDetectedFeatures(
             segmentationResults.detectedFeatureMap,
             orientation: imageOrientation, imageSize: croppedSize, originalSize: originalSize
@@ -467,7 +592,7 @@ public extension ARCameraManager {
             cameraCache.cameraImageSize = originalSize
             cameraCache.interfaceOrientation = interfaceOrientation
         }
-        
+        try Task.checkCancellation()
         let cameraImageResults = ARCameraImageResults(
             cameraImage: image,
             depthImage: depthImage,
@@ -481,6 +606,7 @@ public extension ARCameraManager {
             segmentationColorImage: segmentationColorImage,
             segmentationBoundingFrameImage: segmentationBoundingFrameImage
         )
+        try Task.checkCancellation()
         return cameraImageResults
     }
     
@@ -790,7 +916,21 @@ public extension ARCameraManager {
     @MainActor
     func performFinalSessionUpdateIfPossible(
     ) async throws -> CaptureData {
-        guard let finalFrame = outputConsumer?.getCurrentARFrame() else {
+        let finalState = try beginFinalSessionFrameUpdate()
+        defer {
+            endFinalSessionFrameUpdate()
+        }
+        /// Segmentation cancellation is cooperative. Wait until the entire previous ARCameraManager realtime pipeline has actually unwound.
+        if let realtimeTask = finalState.realtimeTask {
+            await realtimeTask.value
+        }
+        try Task.checkCancellation()
+        /*
+         Get the final frame AFTER the previous realtime work has stopped.
+         ARKit itself continues updating currentFrame while we were waiting, so this is actually a fresher final frame.
+         */
+        guard let finalFrame = outputConsumer?.getCurrentARFrame()
+        else {
             throw ARCameraManagerError.finalSessionFrameUnavailable
         }
         let captureImageData = try await performFinalSessionFrameUpdate(frame: finalFrame)
@@ -800,6 +940,9 @@ public extension ARCameraManager {
         let captureData = try await performFinalSessionMeshUpdate(
             frame: finalFrame, captureImageData: captureImageData
         )
+        guard isCurrentImageProcessingGeneration(finalState.generation) else {
+            throw CancellationError()
+        }
         return .imageAndMeshData(captureData)
     }
     
@@ -859,6 +1002,35 @@ public extension ARCameraManager {
             captureImageDataResults: captureImageDataResults
         )
         return captureImageData
+    }
+    
+    private func beginFinalSessionFrameUpdate() throws -> (
+        realtimeTask: RealtimeImageTask?,
+        generation: UInt64
+    ) {
+        imageProcessingStateLock.lock()
+        defer {
+            imageProcessingStateLock.unlock()
+        }
+        guard !isFinalSessionFrameUpdateInProgress else {
+            throw ARCameraManagerError.finalSessionFrameUpdateInProgress
+        }
+        isFinalSessionFrameUpdateInProgress = true
+        /*
+         Immediately invalidate the currently processing
+         realtime frame so it can never publish afterward.
+         */
+        imageProcessingGeneration &+= 1
+        let generation = imageProcessingGeneration
+        let realtimeTask = currentRealtimeImageTask
+        realtimeTask?.cancel()
+        return (realtimeTask, generation)
+    }
+    
+    private func endFinalSessionFrameUpdate() {
+        imageProcessingStateLock.lock()
+        isFinalSessionFrameUpdateInProgress = false
+        imageProcessingStateLock.unlock()
     }
     
     /**
