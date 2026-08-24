@@ -277,7 +277,6 @@ public final class ARCameraManager: NSObject, ObservableObject, ARSessionCameraP
         self.isCaptureReady = false
         
         Task { @MainActor in
-            
             self.capturedMeshSnapshotGenerator = CapturedMeshSnapshotGenerator()
         }
     }
@@ -352,53 +351,11 @@ public extension ARCameraManager {
         let cameraImage = CIImage(cvPixelBuffer: pixelBuffer)
         let depthImage: CIImage? = depthBuffer.map { CIImage(cvPixelBuffer: $0) }
         let confidenceImage: CIImage? = depthConfidenceBuffer.map { CIImage(cvPixelBuffer: $0) }
-        
-        /// Perform async processing in a Task. Read the consumer-provided orientation on the MainActor
-        Task {
-             do {
-                 let cameraImageResults = try await self.processCameraImage(
-                     image: cameraImage, depthImage: depthImage,
-                     interfaceOrientation: interfaceOrientation,
-                     cameraTransform: cameraTransform, cameraIntrinsics: cameraIntrinsics
-                 )
-                 let captureImageDataResults = CaptureImageDataResults(
-                     segmentationLabelImage: cameraImageResults.segmentationLabelImage,
-                     segmentedClasses: cameraImageResults.segmentedClasses,
-                     detectedFeatureMap: cameraImageResults.detectedFeatureMap
-                 )
-                 let captureImageData = CaptureImageData(
-                     id: UUID(),
-                     timestamp: Date().timeIntervalSince1970,
-                     cameraImage: cameraImageResults.cameraImage,
-                     cameraTransform: cameraImageResults.cameraTransform,
-                     cameraIntrinsics: cameraImageResults.cameraIntrinsics,
-                     interfaceOrientation: self.interfaceOrientation,
-                     originalSize: cameraImageResults.originalImageSize,
-                     depthImage: cameraImageResults.depthImage,
-                     confidenceImage: cameraImageResults.confidenceImage,
-                     captureImageDataResults: captureImageDataResults
-                 )
-                 await MainActor.run {
-                     var results = cameraImageResults
-                     results.depthImage = depthImage
-                     results.confidenceImage = confidenceImage
-                     self.cameraImageResults = results
-                     self.outputConsumer?.cameraOutputImage(
-                         self, metalContext: metalContext,
-                         segmentationImage: cameraImageResults.segmentationColorImage,
-                         segmentationBoundingFrameImage: cameraImageResults.segmentationBoundingFrameImage,
-                         for: frame
-                     )
-                     self.cameraOutputImageCallback?(captureImageData)
-                     /// If enhanced analysis is not enabled, then the capture is only dependent on the camera image results.
-                     if !isEnhancedAnalysisEnabled {
-                         self.isCaptureReady = true
-                     }
-                 }
-             } catch {
-                 print("Error processing camera image: \(error.localizedDescription)")
-             }
-         }
+        _ = tryStartRealtimeImageProcessing(
+            cameraImage: cameraImage, depthImage: depthImage, confidenceImage: confidenceImage,
+            cameraTransform: cameraTransform, cameraIntrinsics: cameraIntrinsics,
+            metalContext: metalContext
+        )
     }
     
     @discardableResult
@@ -502,7 +459,6 @@ public extension ARCameraManager {
         defer {
             imageProcessingStateLock.unlock()
         }
-
         return imageProcessingGeneration == generation
     }
     
@@ -896,17 +852,17 @@ public extension ARCameraManager {
     }
 }
 
-public struct CapturedMeshDependencies {
-    public let capturedMeshSnapshotGenerator: CapturedMeshSnapshotGenerator
-    public let metalContext: MetalContext
-    public let meshGPUSnapshot: MeshGPUSnapshot
-    
-    public init(capturedMeshSnapshotGenerator: CapturedMeshSnapshotGenerator, metalContext: MetalContext, meshGPUSnapshot: MeshGPUSnapshot) {
-        self.capturedMeshSnapshotGenerator = capturedMeshSnapshotGenerator
-        self.metalContext = metalContext
-        self.meshGPUSnapshot = meshGPUSnapshot
-    }
-}
+//public struct CapturedMeshDependencies {
+//    public let capturedMeshSnapshotGenerator: CapturedMeshSnapshotGenerator
+//    public let metalContext: MetalContext
+//    public let meshGPUSnapshot: MeshGPUSnapshot
+//    
+//    public init(capturedMeshSnapshotGenerator: CapturedMeshSnapshotGenerator, metalContext: MetalContext, meshGPUSnapshot: MeshGPUSnapshot) {
+//        self.capturedMeshSnapshotGenerator = capturedMeshSnapshotGenerator
+//        self.metalContext = metalContext
+//        self.meshGPUSnapshot = meshGPUSnapshot
+//    }
+//}
 
 // Functions to perform final session update
 public extension ARCameraManager {
@@ -1016,10 +972,7 @@ public extension ARCameraManager {
             throw ARCameraManagerError.finalSessionFrameUpdateInProgress
         }
         isFinalSessionFrameUpdateInProgress = true
-        /*
-         Immediately invalidate the currently processing
-         realtime frame so it can never publish afterward.
-         */
+        /// Immediately invalidate the currently processing realtime frame so it can never publish afterward.
         imageProcessingGeneration &+= 1
         let generation = imageProcessingGeneration
         let realtimeTask = currentRealtimeImageTask

@@ -495,7 +495,7 @@ public extension AccessibilityFeatureAttribute {
             return .number(0.0)
         case .flag:
             return .flag(false)
-        case .categorical(let typeID):
+        case .categorical(_):
             return nil
         }
     }
