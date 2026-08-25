@@ -186,7 +186,7 @@ public final class SegmentationMeshProcessor {
             orderedUIntToFloat(maxU[1]),
             orderedUIntToFloat(maxU[2])
         )
-        let bounds: BoundingBox = BoundingBox(min: aabbMin, max: aabbMax)
+        let _: BoundingBox = BoundingBox(min: aabbMin, max: aabbMax)
         
         let debugCountPointer = debugCounter.contents().bindMemory(to: UInt32.self, capacity: debugSlots)
         var debugCountValue: [UInt32] = []
