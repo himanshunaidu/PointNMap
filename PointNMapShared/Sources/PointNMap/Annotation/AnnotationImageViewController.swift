@@ -86,9 +86,11 @@ public class AnnotationImageViewController<Feature: EditableAccessibilityFeature
         subView.translatesAutoresizingMaskIntoConstraints = false
         let subViewBoundsConstraints: [NSLayoutConstraint] = [
             subView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor),
-            subView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor),
+//            subView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor),
             subView.topAnchor.constraint(greaterThanOrEqualTo: view.topAnchor),
-            subView.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor)
+//            subView.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor)
+            subView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            subView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ]
         NSLayoutConstraint.activate(subViewBoundsConstraints)
         
