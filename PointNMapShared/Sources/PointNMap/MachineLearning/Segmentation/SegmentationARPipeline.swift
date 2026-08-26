@@ -120,10 +120,7 @@ public final class SegmentationARPipeline: ObservableObject {
         if let task = resetState.task {
             _ = try? await task.value
         }
-        /*
-         No segmentation request can begin while
-         isResetting == true.
-         */
+        /// No segmentation request can begin while isResetting == true.
         try setSelectedClasses([])
     }
     

@@ -242,8 +242,7 @@ public final class ARCameraManager: NSObject, ObservableObject, ARSessionCameraP
     /// Whether normal ARSession frame callbacks are allowed
     /// to begin image processing.
     private var acceptsRealtimeImageProcessing: Bool = true
-    /// Prevents realtime image processing while a final capture
-    /// is being performed.
+    /// Prevents realtime image processing while a final capture is being performed.
     private var isFinalSessionFrameUpdateInProgress: Bool = false
     /// Invalidates results from work belonging to an older
     /// processing/session state.
@@ -361,6 +360,9 @@ public extension ARCameraManager {
         )
     }
     
+    /**
+        Attempts to start real-time image processing for the given camera frame.
+     */
     @discardableResult
     private func tryStartRealtimeImageProcessing(
         cameraImage: CIImage,
@@ -375,6 +377,7 @@ public extension ARCameraManager {
             imageProcessingStateLock.unlock()
         }
         guard acceptsRealtimeImageProcessing, !isFinalSessionFrameUpdateInProgress, currentRealtimeImageTask == nil else {
+            print("Skipping real-time image processing: either not accepting processing, final session update in progress, or another task is already running.")
             return false
         }
         let taskId = UUID()
@@ -542,7 +545,10 @@ public extension ARCameraManager {
         )
         try Task.checkCancellation()
         var detectedFeatureMap: [UUID: DetectedAccessibilityFeature]? = nil
-        if let featureMap = segmentationResults.detectedFeatureMap {
+        if processContours {
+            guard let featureMap = segmentationResults.detectedFeatureMap else {
+                throw ARCameraManagerError.finalSessionNoDetectedFeatures
+            }
             detectedFeatureMap = alignDetectedFeatures(
                 featureMap, orientation: imageOrientation, imageSize: croppedSize, originalSize: originalSize
             )
@@ -911,9 +917,9 @@ public extension ARCameraManager {
         let captureData = try await performFinalSessionMeshUpdate(
             frame: finalFrame, captureImageData: captureImageData
         )
-        guard isCurrentImageProcessingGeneration(finalState.generation) else {
-            throw CancellationError()
-        }
+//        guard isCurrentImageProcessingGeneration(finalState.generation) else {
+//            throw CancellationError()
+//        }
         return .imageAndMeshData(captureData)
     }
     
