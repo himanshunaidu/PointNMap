@@ -231,32 +231,45 @@ public struct AnnotationViewBase: View {
     @State private var showSelectFeatureLearnMoreSheet = false
     
     public var body: some View {
-        VStack {
-            HStack {
-                Spacer()
-                Text(AnnotationViewBaseConstants.Texts.annotationViewTitle)
-                    .font(.headline)
-                    .padding()
-                Spacer()
-            }
-            .overlay(
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Image(systemName: AnnotationViewBaseConstants.Images.closeIcon)
-                            .resizable()
-                            .frame(width: 20, height: 20)
-                    }
-                    .padding()
+        NavigationStack {
+            Group {
+//                HStack {
+//                    Spacer()
+//                    Text(AnnotationViewBaseConstants.Texts.annotationViewTitle)
+//                        .font(.headline)
+//                        .padding()
+//                    Spacer()
+//                }
+//                .overlay(
+//                    HStack {
+//                        Spacer()
+//                        Button(action: {
+//                            dismiss()
+//                        }) {
+//                            Image(systemName: AnnotationViewBaseConstants.Images.closeIcon)
+//                                .resizable()
+//                                .frame(width: 20, height: 20)
+//                        }
+//                        .padding()
+//                    }
+//                )
+                
+                if let currentClass = featureClassSelectionViewModel.currentClass {
+                    mainContent(currentClass: currentClass)
+                } else {
+                    loadingPageView()
                 }
-            )
-            
-            if let currentClass = featureClassSelectionViewModel.currentClass {
-                mainContent(currentClass: currentClass)
-            } else {
-                loadingPageView()
+            }
+            .navigationTitle(AnnotationViewBaseConstants.Texts.annotationViewTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: AnnotationViewBaseConstants.Images.closeIcon)
+                    }
+                }
             }
         }
         .task {
