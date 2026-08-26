@@ -121,4 +121,30 @@ public struct ContourRequestProcessor {
         }
         return detectedFeatures
     }
+    
+    /**
+     Process each selected class sequentially.
+
+     This is intentionally serialized to avoid concurrent access to
+     BinaryMaskFilter / Core Image / Vision resources.
+     */
+    public func processRequestSync(
+        from segmentationImage: CIImage,
+        orientation: CGImagePropertyOrientation = .up
+    ) throws -> [DetectedAccessibilityFeature] {
+        var detectedFeatures: [DetectedAccessibilityFeature] = []
+        for selectedClass in self.selectedClasses {
+            do {
+                let targetValue = selectedClass.labelValue
+                let mask = try self.binaryMaskFilter.apply(to: segmentationImage, targetValue: targetValue)
+                let detectedFeaturesFromBinaryImage = try self.getFeaturesFromBinaryImage(
+                    for: mask, targetClass: selectedClass, orientation: orientation
+                )
+                detectedFeatures.append(contentsOf: detectedFeaturesFromBinaryImage)
+            } catch {
+                print("Error processing contour for class \(selectedClass.name): \(error.localizedDescription)")
+            }
+        }
+        return detectedFeatures
+    }
 }

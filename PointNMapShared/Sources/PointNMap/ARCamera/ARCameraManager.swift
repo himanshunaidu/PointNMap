@@ -25,6 +25,7 @@ public enum ARCameraManagerError: Error, LocalizedError {
     case anchorEntityNotCreated
     case finalSessionFrameUnavailable
     case finalSessionFrameUpdateInProgress
+    case finalSessionNoDetectedFeatures
     case finalSessionNotConfigured
     case finalSessionMeshUnavailable
     case finalSessionNoSegmentationClass
@@ -60,6 +61,8 @@ public enum ARCameraManagerError: Error, LocalizedError {
             return "Anchor Entity has not been created."
         case .finalSessionFrameUpdateInProgress:
             return "Final session frame update is already in progress."
+        case .finalSessionNoDetectedFeatures:
+            return "No detected features available in final session."
         case .finalSessionFrameUnavailable:
             return "Final session frame unavailable."
         case .finalSessionNotConfigured:
@@ -100,7 +103,7 @@ public struct ARCameraImageResults {
     
     public let segmentationLabelImage: CIImage
     public let segmentedClasses: [AccessibilityFeatureClass]
-    public let detectedFeatureMap: [UUID: DetectedAccessibilityFeature]
+    public let detectedFeatureMap: [UUID: DetectedAccessibilityFeature]?
     public let cameraTransform: simd_float4x4
     public let cameraIntrinsics: simd_float3x3
     public let interfaceOrientation: UIInterfaceOrientation
@@ -112,7 +115,7 @@ public struct ARCameraImageResults {
     public init(
         cameraImage: CIImage, depthImage: CIImage? = nil, confidenceImage: CIImage? = nil,
         segmentationLabelImage: CIImage, segmentedClasses: [AccessibilityFeatureClass],
-        detectedFeatureMap: [UUID: DetectedAccessibilityFeature],
+        detectedFeatureMap: [UUID: DetectedAccessibilityFeature]?,
         cameraTransform: simd_float4x4, cameraIntrinsics: simd_float3x3,
         interfaceOrientation: UIInterfaceOrientation,
         originalImageSize: CGSize,
@@ -239,8 +242,7 @@ public final class ARCameraManager: NSObject, ObservableObject, ARSessionCameraP
     /// Whether normal ARSession frame callbacks are allowed
     /// to begin image processing.
     private var acceptsRealtimeImageProcessing: Bool = true
-    /// Prevents realtime image processing while a final capture
-    /// is being performed.
+    /// Prevents realtime image processing while a final capture is being performed.
     private var isFinalSessionFrameUpdateInProgress: Bool = false
     /// Invalidates results from work belonging to an older
     /// processing/session state.
@@ -358,6 +360,9 @@ public extension ARCameraManager {
         )
     }
     
+    /**
+        Attempts to start real-time image processing for the given camera frame.
+     */
     @discardableResult
     private func tryStartRealtimeImageProcessing(
         cameraImage: CIImage,
@@ -372,6 +377,7 @@ public extension ARCameraManager {
             imageProcessingStateLock.unlock()
         }
         guard acceptsRealtimeImageProcessing, !isFinalSessionFrameUpdateInProgress, currentRealtimeImageTask == nil else {
+            print("Skipping real-time image processing: either not accepting processing, final session update in progress, or another task is already running.")
             return false
         }
         let taskId = UUID()
@@ -399,10 +405,12 @@ public extension ARCameraManager {
                 guard self.isCurrentImageProcessingGeneration(generation) else {
                     return
                 }
+                /// MARK: For now, CaptureImageDataResults do not treat detectedFeatureMap as optional
+                /// Hence, we provide an empty dictionary if detectedFeatureMap is nil.
                 let captureImageDataResults = CaptureImageDataResults(
                     segmentationLabelImage: results.segmentationLabelImage,
                     segmentedClasses: results.segmentedClasses,
-                    detectedFeatureMap: results.detectedFeatureMap
+                    detectedFeatureMap: results.detectedFeatureMap ?? [:]
                 )
                 let captureImageData = CaptureImageData(
                     id: UUID(),
@@ -472,6 +480,7 @@ public extension ARCameraManager {
         interfaceOrientation: UIInterfaceOrientation,
         cameraTransform: simd_float4x4, cameraIntrinsics: simd_float3x3,
         highPriority: Bool = false,
+        processContours: Bool = false,
         croppedSize: CGSize = PointNMapConstants.SelectedAccessibilityFeatureConfig.inputSize
     ) async throws -> ARCameraImageResults {
         guard let cameraCroppedPixelBufferPool = cameraCroppedPixelBufferPool
@@ -510,7 +519,7 @@ public extension ARCameraManager {
         try Task.checkCancellation()
         let segmentationResults: SegmentationARPipelineResults = try await segmentationPipeline.processRequest(
             with: inputImage, depthImage: inputDepthImage,
-            highPriority: highPriority
+            highPriority: highPriority, processContours: processContours
         )
         try Task.checkCancellation()
         var segmentationImage = segmentationResults.segmentationImage
@@ -535,10 +544,15 @@ public extension ARCameraManager {
             colorSpace: segmentationColorColorSpace
         )
         try Task.checkCancellation()
-        let detectedFeatureMap = alignDetectedFeatures(
-            segmentationResults.detectedFeatureMap,
-            orientation: imageOrientation, imageSize: croppedSize, originalSize: originalSize
-        )
+        var detectedFeatureMap: [UUID: DetectedAccessibilityFeature]? = nil
+        if processContours {
+            guard let featureMap = segmentationResults.detectedFeatureMap else {
+                throw ARCameraManagerError.finalSessionNoDetectedFeatures
+            }
+            detectedFeatureMap = alignDetectedFeatures(
+                featureMap, orientation: imageOrientation, imageSize: croppedSize, originalSize: originalSize
+            )
+        }
         // Create segmentation frame
         var segmentationBoundingFrameImage: CIImage? = nil
         if (cameraCache.cameraImageSize == nil || cameraCache.cameraImageSize?.width != originalSize.width ||
@@ -903,9 +917,9 @@ public extension ARCameraManager {
         let captureData = try await performFinalSessionMeshUpdate(
             frame: finalFrame, captureImageData: captureImageData
         )
-        guard isCurrentImageProcessingGeneration(finalState.generation) else {
-            throw CancellationError()
-        }
+//        guard isCurrentImageProcessingGeneration(finalState.generation) else {
+//            throw CancellationError()
+//        }
         return .imageAndMeshData(captureData)
     }
     
@@ -938,7 +952,7 @@ public extension ARCameraManager {
             image: cameraImage, depthImage: depthImage, confidenceImage: confidenceImage,
             interfaceOrientation: self.interfaceOrientation,
             cameraTransform: cameraTransform, cameraIntrinsics: cameraIntrinsics,
-            highPriority: true
+            highPriority: true, processContours: true
         )
         guard cameraImageResults.segmentedClasses.count > 0 else {
             throw ARCameraManagerError.finalSessionNoSegmentationClass
@@ -946,10 +960,13 @@ public extension ARCameraManager {
         cameraImageResults.depthImage = depthImage
         cameraImageResults.confidenceImage = confidenceImage
         
+        guard let featureMap = cameraImageResults.detectedFeatureMap else {
+            throw ARCameraManagerError.finalSessionNoDetectedFeatures
+        }
         let captureImageDataResults = CaptureImageDataResults(
             segmentationLabelImage: cameraImageResults.segmentationLabelImage,
             segmentedClasses: cameraImageResults.segmentedClasses,
-            detectedFeatureMap: cameraImageResults.detectedFeatureMap
+            detectedFeatureMap: featureMap
         )
         
         let captureImageData = CaptureImageData(
