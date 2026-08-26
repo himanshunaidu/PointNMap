@@ -46,11 +46,13 @@ public struct SegmentationARPipelineResults {
     public var originalSegmentationImage: CIImage
     public var segmentationColorImage: CIImage
     public var segmentedClasses: [AccessibilityFeatureClass]
-    public var detectedFeatureMap: [UUID: DetectedAccessibilityFeature]
+    public var detectedFeatureMap: [UUID: DetectedAccessibilityFeature]?
     
-    public init(segmentationImage: CIImage, segmentationColorImage: CIImage,
-         segmentedClasses: [AccessibilityFeatureClass], detectedFeatureMap: [UUID: DetectedAccessibilityFeature],
-         originalSegmentationImage: CIImage
+    public init(
+        segmentationImage: CIImage, segmentationColorImage: CIImage,
+        segmentedClasses: [AccessibilityFeatureClass],
+        detectedFeatureMap: [UUID: DetectedAccessibilityFeature]?,
+        originalSegmentationImage: CIImage
     ) {
         self.segmentationImage = segmentationImage
         self.originalSegmentationImage = originalSegmentationImage
@@ -171,9 +173,13 @@ public final class SegmentationARPipeline: ObservableObject {
      */
     public func processRequest(
         with cIImage: CIImage, depthImage: CIImage? = nil,
-        highPriority: Bool = false
+        highPriority: Bool = false,
+        processContours: Bool = false
     ) async throws -> SegmentationARPipelineResults {
-        let task = try makeProcessingTask(cIImage: cIImage, depthImage: depthImage, highPriority: highPriority)
+        let task = try makeProcessingTask(
+            cIImage: cIImage, depthImage: depthImage,
+            highPriority: highPriority, processContours: processContours
+        )
         /*
          Propagate cancellation of the CALLER into the internal
          segmentation task.
@@ -188,7 +194,9 @@ public final class SegmentationARPipeline: ObservableObject {
         }
     }
     
-    private func makeProcessingTask(cIImage: CIImage, depthImage: CIImage?, highPriority: Bool) throws -> SegmentationTask {
+    private func makeProcessingTask(
+        cIImage: CIImage, depthImage: CIImage?, highPriority: Bool, processContours: Bool
+    ) throws -> SegmentationTask {
         currentTaskLock.lock()
         defer {
             currentTaskLock.unlock()
@@ -226,7 +234,7 @@ public final class SegmentationARPipeline: ObservableObject {
                 _ = try? await previousTask.value
             }
             try Task.checkCancellation()
-            let results = try await self.processImageWithTimeout(cIImage, depthImage: depthImage)
+            let results = try await self.processImageWithTimeout(cIImage, depthImage: depthImage, processContours: processContours)
             try Task.checkCancellation()
             return results
         }
@@ -246,14 +254,14 @@ public final class SegmentationARPipeline: ObservableObject {
     }
     
     private func processImageWithTimeout(
-        _ cIImage: CIImage, depthImage: CIImage? = nil
+        _ cIImage: CIImage, depthImage: CIImage? = nil, processContours: Bool = false
     ) async throws -> SegmentationARPipelineResults {
         let timeout = timeoutInSeconds
         return try await withThrowingTaskGroup(
                 of: SegmentationARPipelineResults.self
         ) { group in
             group.addTask {
-                return try self.processImage(cIImage, depthImage: depthImage)
+                return try self.processImage(cIImage, depthImage: depthImage, processContours: processContours)
             }
             group.addTask {
                 try await Task.sleep(for: .seconds(timeout))
@@ -281,10 +289,9 @@ public final class SegmentationARPipeline: ObservableObject {
      Since this function can be called within a Task, it checks for cancellation at various points to ensure that it can exit early if needed.
      */
     private func processImage(
-        _ cIImage: CIImage, depthImage: CIImage? = nil
+        _ cIImage: CIImage, depthImage: CIImage? = nil, processContours: Bool = false
     ) throws -> SegmentationARPipelineResults {
         guard let segmentationModelRequestProcessor = self.segmentationModelRequestProcessor,
-              let contourRequestProcessor = self.contourRequestProcessor,
               let grayscaleToColorFilter = self.grayscaleToColorFilter else {
             throw SegmentationARPipelineError.segmentationResourcesNotConfigured
         }
@@ -311,13 +318,19 @@ public final class SegmentationARPipeline: ObservableObject {
         
         // MARK: Ignoring the object tracking for now
         // Get the objects from the segmentation image
-        let detectedFeatures: [DetectedAccessibilityFeature] = try contourRequestProcessor.processRequest(
-            from: finalSegmentationImage
-        )
-        // MARK: The temporary UUIDs can be removed if we do not need to track objects across frames
-        let detectedFeatureMap: [UUID: DetectedAccessibilityFeature] = Dictionary(
-            uniqueKeysWithValues: detectedFeatures.map { (UUID(), $0) }
-        )
+        var detectedFeatureMap: [UUID: DetectedAccessibilityFeature]? = nil
+        if processContours {
+            guard let contourRequestProcessor = self.contourRequestProcessor else {
+                throw SegmentationARPipelineError.segmentationResourcesNotConfigured
+            }
+            let detectedFeatures: [DetectedAccessibilityFeature] = try contourRequestProcessor.processRequest(
+                from: finalSegmentationImage
+            )
+            // MARK: The temporary UUIDs can be removed if we do not need to track objects across frames
+            detectedFeatureMap = Dictionary(
+                uniqueKeysWithValues: detectedFeatures.map { (UUID(), $0) }
+            )
+        }
         
         try Task.checkCancellation()
         
