@@ -301,3 +301,121 @@ extension AttributeEstimationPipeline {
         return Double(abs(simd_dot(vectorFromPlaneToUser, planeNormal)))
     }
 }
+
+/// Sub-attribute: Surface Disruption Area
+extension AttributeEstimationPipeline {
+    func calculateSurfaceDisruptionArea(
+        accessibilityFeature: any EditableAccessibilityFeatureProtocol
+    ) throws -> AccessibilityFeatureAttribute.Value {
+        let isMeshEnabled: Bool = self.captureMeshData != nil
+        if isMeshEnabled {
+            return try calculateSurfaceDisruptionAreaFromMesh(accessibilityFeature: accessibilityFeature)
+        }
+        return try calculateSurfaceDisruptionAreaFromImage(accessibilityFeature: accessibilityFeature)
+    }
+    
+    func calculateSurfaceDisruptionAreaFromImage(
+        accessibilityFeature: any EditableAccessibilityFeatureProtocol
+    ) throws -> AccessibilityFeatureAttribute.Value {
+        guard let captureImageData = self.captureImageData else {
+            throw AttributeEstimationPipelineError.missingCaptureData
+        }
+        guard let surfaceIntegrityProcessor = self.surfaceIntegrityProcessor else {
+            throw AttributeEstimationPipelineError.missingPreprocessors
+        }
+        let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
+        let worldPoints: [WorldPoint] = try self.getCachedWorldPoints(
+            accessibilityFeature: accessibilityFeature
+        )
+        /// For now, return a placeholder value
+        let surfaceDisruptionArea: Double = 0.0
+        guard let surfaceDisruptionAreaAttributeValue = AccessibilityFeatureAttribute.surfaceDisruptionArea.value(
+            from: surfaceDisruptionArea
+        ) else {
+            throw AttributeEstimationPipelineError.attributeAssignmentError
+        }
+        return surfaceDisruptionAreaAttributeValue
+    }
+    
+    func calculateSurfaceDisruptionAreaFromMesh(
+        accessibilityFeature: any EditableAccessibilityFeatureProtocol
+    ) throws -> AccessibilityFeatureAttribute.Value {
+        guard let captureMeshData = self.captureMeshData else {
+            throw AttributeEstimationPipelineError.missingCaptureData
+        }
+        guard let surfaceIntegrityProcessor = self.surfaceIntegrityProcessor else {
+            throw AttributeEstimationPipelineError.missingPreprocessors
+        }
+        let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
+        let meshContents: MeshContents = try self.getCachedMeshContents(
+            accessibilityFeature: accessibilityFeature
+        )
+        /// For now, return a placeholder value
+        let surfaceDisruptionArea: Double = 0.0
+        guard let surfaceDisruptionAreaAttributeValue = AccessibilityFeatureAttribute.surfaceDisruptionArea.value(
+            from: surfaceDisruptionArea
+        ) else {
+            throw AttributeEstimationPipelineError.attributeAssignmentError
+        }
+        return surfaceDisruptionAreaAttributeValue
+    }
+}
+
+/// Sub-attribute: Surface Disruption Length
+extension AttributeEstimationPipeline {
+    func calculateSurfaceDisruptionLength(
+        accessibilityFeature: any EditableAccessibilityFeatureProtocol
+    ) throws -> AccessibilityFeatureAttribute.Value {
+        let isMeshEnabled: Bool = self.captureMeshData != nil
+        if isMeshEnabled {
+            return try calculateSurfaceDisruptionLengthFromMesh(accessibilityFeature: accessibilityFeature)
+        }
+        return try calculateSurfaceDisruptionLengthFromImage(accessibilityFeature: accessibilityFeature)
+    }
+    
+    func calculateSurfaceDisruptionLengthFromImage(
+        accessibilityFeature: any EditableAccessibilityFeatureProtocol
+    ) throws -> AccessibilityFeatureAttribute.Value {
+        guard let captureImageData = self.captureImageData else {
+            throw AttributeEstimationPipelineError.missingCaptureData
+        }
+        guard let surfaceIntegrityProcessor = self.surfaceIntegrityProcessor else {
+            throw AttributeEstimationPipelineError.missingPreprocessors
+        }
+        let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
+        let worldPoints: [WorldPoint] = try self.getCachedWorldPoints(
+            accessibilityFeature: accessibilityFeature
+        )
+        /// For now, return a placeholder value
+        let surfaceDisruptionLength: Double = 0.0
+        guard let surfaceDisruptionLengthAttributeValue = AccessibilityFeatureAttribute.surfaceDisruptionLength.value(
+            from: surfaceDisruptionLength
+        ) else {
+            throw AttributeEstimationPipelineError.attributeAssignmentError
+        }
+        return surfaceDisruptionLengthAttributeValue
+    }
+    
+    func calculateSurfaceDisruptionLengthFromMesh(
+        accessibilityFeature: any EditableAccessibilityFeatureProtocol
+    ) throws -> AccessibilityFeatureAttribute.Value {
+        guard let captureMeshData = self.captureMeshData else {
+            throw AttributeEstimationPipelineError.missingCaptureData
+        }
+        guard let surfaceIntegrityProcessor = self.surfaceIntegrityProcessor else {
+            throw AttributeEstimationPipelineError.missingPreprocessors
+        }
+        let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
+        let meshContents: MeshContents = try self.getCachedMeshContents(
+            accessibilityFeature: accessibilityFeature
+        )
+        /// For now, return a placeholder value
+        let surfaceDisruptionLength: Double = 0.0
+        guard let surfaceDisruptionLengthAttributeValue = AccessibilityFeatureAttribute.surfaceDisruptionLength.value(
+            from: surfaceDisruptionLength
+        ) else {
+            throw AttributeEstimationPipelineError.attributeAssignmentError
+        }
+        return surfaceDisruptionLengthAttributeValue
+    }
+}

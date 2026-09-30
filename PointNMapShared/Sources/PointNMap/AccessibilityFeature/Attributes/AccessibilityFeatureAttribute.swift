@@ -22,6 +22,8 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
     case surfaceIntegrity
     case surfaceDisruption
     case heightFromGround
+    case surfaceDisruptionArea
+    case surfaceDisruptionLength
     /**
      - NOTE:
      Experimental attributes
@@ -133,12 +135,22 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
             )
         case .surfaceDisruption:
             return Metadata(
-                id: 45, name: "Surface Disruption", unit: nil,
+                id: 41, name: "Surface Disruption", unit: nil,
                 valueType: .number
             )
         case .heightFromGround:
             return Metadata(
-                id: 48, name: "Height from Ground", unit: UnitLength.meters,
+                id: 42, name: "Height from Ground", unit: UnitLength.meters,
+                valueType: .length,
+            )
+        case .surfaceDisruptionArea:
+            return Metadata(
+                id: 43, name: "Surface Disruption Area", unit: UnitArea.squareMeters,
+                valueType: .length,
+            )
+        case .surfaceDisruptionLength:
+            return Metadata(
+                id: 44, name: "Surface Disruption Length", unit: UnitLength.meters,
                 valueType: .length,
             )
         case .lidarDepth:

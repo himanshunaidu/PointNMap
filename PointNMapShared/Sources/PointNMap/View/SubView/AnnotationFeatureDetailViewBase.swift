@@ -183,6 +183,20 @@ public struct AnnotationFeatureDetailViewBase<
                     }
                 }
                 
+                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceDisruptionArea)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruptionArea.displayName)) {
+                        numberTextFieldView(attribute: .surfaceDisruptionArea)
+                            .focused($focusedField, equals: .surfaceDisruptionArea)
+                    }
+                }
+                
+                if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceDisruptionLength)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruptionLength.displayName)) {
+                        numberTextFieldView(attribute: .surfaceDisruptionLength)
+                            .focused($focusedField, equals: .surfaceDisruptionLength)
+                    }
+                }
+                
                 /// Experimental Attributes Section
                 if (accessibilityFeature.accessibilityFeatureClass.kind.experimentalAttributes.contains(.lidarDepth)) {
                     Section(header: Text(AccessibilityFeatureAttribute.lidarDepth.displayName)) {

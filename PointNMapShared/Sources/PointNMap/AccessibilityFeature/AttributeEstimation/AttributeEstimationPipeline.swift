@@ -260,6 +260,20 @@ public class AttributeEstimationPipeline: ObservableObject {
                     try accessibilityFeature.setAttributeValue(
                         heightFromGroundAttributeValue, for: .heightFromGround, isCalculated: true
                     )
+                case .surfaceDisruptionArea:
+                    let surfaceDisruptionAreaAttributeValue = try self.calculateSurfaceDisruptionArea(
+                        accessibilityFeature: accessibilityFeature
+                    )
+                    try accessibilityFeature.setAttributeValue(
+                        surfaceDisruptionAreaAttributeValue, for: .surfaceDisruptionArea, isCalculated: true
+                    )
+                case .surfaceDisruptionLength:
+                    let surfaceDisruptionLengthAttributeValue = try self.calculateSurfaceDisruptionLength(
+                        accessibilityFeature: accessibilityFeature
+                    )
+                    try accessibilityFeature.setAttributeValue(
+                        surfaceDisruptionLengthAttributeValue, for: .surfaceDisruptionLength, isCalculated: true
+                    )
                 /// TODO: Add some generalizable default values
                 case .rampWidth:
                     let value = try self.calculateWidth(
