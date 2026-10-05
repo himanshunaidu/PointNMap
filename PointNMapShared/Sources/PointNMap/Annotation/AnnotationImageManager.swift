@@ -121,6 +121,7 @@ public final class AnnotationImageManager<
         self.annotationImageResults = annotationImageResults
         self.grayscaleToColorFilter = try GrayscaleToColorFilter()
         self.intersectionFilter = try IntersectionFilter()
+        /// MARK: Need to move this to main thread
         self.isConfigured = true
         
         Task {
