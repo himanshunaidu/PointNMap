@@ -99,6 +99,10 @@ struct SetupView: View {
     
     @State private var selectedClasses: [AccessibilityFeatureClass] = []
     @State private var selectedAttributesByClass: [AccessibilityFeatureClass: Set<AccessibilityFeatureAttribute>] = [:]
+    /// The presenting app owns this state so it can close the entire mapping flow when capture and annotation finish.
+    /// For modal presentation, use this same state with `.sheet(isPresented:)` or
+    /// `.fullScreenCover(isPresented:)` instead of `.navigationDestination(isPresented:)`.
+    @State private var isMappingPresented = false
     let isEnhancedAnalysisEnabled = true
     
     @StateObject private var sharedAppData: SharedBaseData = SharedBaseData()
@@ -176,12 +180,19 @@ struct SetupView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(
                 trailing:
-                    NavigationLink(destination: mappingDestination) {
+                    Button {
+                        isMappingPresented = true
+                    } label: {
                         Text("Next")
                             .foregroundStyle(Color.primary)
                             .font(.headline)
                     }
             )
+            // A modal host can replace this modifier with `.sheet` or `.fullScreenCover`
+            // driven by `isMappingPresented`; the completion callback below remains unchanged.
+            .navigationDestination(isPresented: $isMappingPresented) {
+                mappingDestination
+            }
             .onAppear {
                 configure()
             }
@@ -196,7 +207,10 @@ struct SetupView: View {
         return ARCameraViewBase(
             selectedClasses: self.selectedClasses.sorted(),
             selectedAttributesByClass: self.selectedAttributesByClass,
-            onCaptureComplete: onCaptureComplete
+            onCaptureComplete: { captureData in
+                isMappingPresented = false
+                onCaptureComplete(captureData: captureData)
+            }
         )
     }
     
