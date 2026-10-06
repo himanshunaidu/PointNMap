@@ -274,7 +274,7 @@ public final class ARCameraViewController: UIViewController, ARSessionCameraProc
     
     public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        runSessionIfNeeded()
+        resumeSession()
     }
     
     public override func viewWillDisappear(_ animated: Bool) {

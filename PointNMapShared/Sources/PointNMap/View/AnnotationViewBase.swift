@@ -208,6 +208,8 @@ public struct AnnotationViewBase: View {
     let selectedClasses: [AccessibilityFeatureClass]
     let selectedAttributesByClass: [AccessibilityFeatureClass: Set<AccessibilityFeatureAttribute>]
     let captureLocation: CLLocationCoordinate2D
+    let captureData: CaptureData
+    let onCaptureComplete: ((CaptureData) -> Void)?
     /// MARK: Extra shared settings
     @EnvironmentObject public var sharedBaseSettings: SharedBaseSettings
     
@@ -603,7 +605,8 @@ public struct AnnotationViewBase: View {
     
     private func moveToNextClass() throws {
         if isCurrentIndexLast() {
-            self.dismiss()
+            onCaptureComplete?(captureData)
+            dismiss()
             return
         }
         /// Move to next class
