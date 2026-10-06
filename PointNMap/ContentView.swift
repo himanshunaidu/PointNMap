@@ -38,6 +38,7 @@ enum SetupViewConstants {
         static let confirmationDialogCancelText = "Cancel"
         
         static let nextButton = "Next"
+        static let startMappingButton = "Start Mapping"
         
         /// ChangesetInfoTip
         static let changesetInfoTipTitle = "Upload Changeset"
@@ -100,8 +101,7 @@ struct SetupView: View {
     @State private var selectedClasses: [AccessibilityFeatureClass] = []
     @State private var selectedAttributesByClass: [AccessibilityFeatureClass: Set<AccessibilityFeatureAttribute>] = [:]
     /// The presenting app owns this state so it can close the entire mapping flow when capture and annotation finish.
-    /// For modal presentation, use this same state with `.sheet(isPresented:)` or
-    /// `.fullScreenCover(isPresented:)` instead of `.navigationDestination(isPresented:)`.
+    /// To present the mapping flow, set this state to `true` from the appropriate app action.
     @State private var isMappingPresented = false
     let isEnhancedAnalysisEnabled = true
     
@@ -124,6 +124,11 @@ struct SetupView: View {
     var body: some View {
         return NavigationStack {
             VStack {
+                Button(SetupViewConstants.Texts.startMappingButton) {
+                    isMappingPresented = true
+                }
+                .buttonStyle(.borderedProminent)
+
                 VStack {
                     Text(SetupViewConstants.Texts.selectClassesText)
                         .font(.headline)
@@ -178,19 +183,23 @@ struct SetupView: View {
             .padding()
             .navigationTitle(SetupViewConstants.Texts.setupViewTitle)
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(
-                trailing:
-                    Button {
-                        isMappingPresented = true
-                    } label: {
-                        Text("Next")
-                            .foregroundStyle(Color.primary)
-                            .font(.headline)
-                    }
-            )
-            // A modal host can replace this modifier with `.sheet` or `.fullScreenCover`
-            // driven by `isMappingPresented`; the completion callback below remains unchanged.
-            .navigationDestination(isPresented: $isMappingPresented) {
+//            .navigationBarItems(
+//                trailing:
+//                    Button {
+//                        isMappingPresented = true
+//                    } label: {
+//                        Text("Next")
+//                            .foregroundStyle(Color.primary)
+//                            .font(.headline)
+//                    }
+//            )
+            // To use a sheet, replace `sheet` with `fullScreenCover`; no other changes are needed.
+            // However, it is not recommended to use a sheet for now, as the ARCameraViewBase does not have
+            // a navigation bar and the user cannot dismiss the sheet without completing the mapping flow.
+            // To push from a navigation bar item, use the commented button above and replace this
+            // modifier with `.navigationDestination(isPresented: $isMappingPresented)`.
+            // The completion callback in `mappingDestination` closes all three presentation styles.
+            .sheet(isPresented: $isMappingPresented) {
                 mappingDestination
             }
             .onAppear {
