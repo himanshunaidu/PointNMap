@@ -389,7 +389,7 @@ public extension SurfaceIntegrityProcessor {
         secondPlaneVector: SIMD3<Float>,
         cellSize: Float = 0.27,
         stride: Float = 0.09,
-        includeEmptyWindows: Bool = false,
+        includeEmptyWindows: Bool = true,
         minMeshPoints: Int = 5
     ) throws -> SlidingWindowGrid {
         guard minMeshPoints >= 0 else {
