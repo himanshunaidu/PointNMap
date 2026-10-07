@@ -87,8 +87,12 @@ public extension SurfaceIntegrityProcessor {
                 continue
             }
             let pixelPoint = CGPoint(x: CGFloat(point.x), y: CGFloat(point.y))
-            guard let depth = try depthMapProcessor.getDepthAtPointInRadius(
-                point: pixelPoint,
+            let normalizedPoint = CGPoint(
+                x: pixelPoint.x / imageSize.width,
+                y: pixelPoint.y / imageSize.height
+            )
+            guard let depth = try depthMapProcessor.getDepthAtNormalizedPointInRadius(
+                point: normalizedPoint,
                 radius: depthSearchRadius
             ) else {
                 continue
