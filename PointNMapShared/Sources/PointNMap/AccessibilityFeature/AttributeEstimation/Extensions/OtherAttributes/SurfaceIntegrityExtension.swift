@@ -340,24 +340,32 @@ extension AttributeEstimationPipeline {
     func calculateSurfaceDisruptionAreaFromMesh(
         accessibilityFeature: any EditableAccessibilityFeatureProtocol
     ) throws -> AccessibilityFeatureAttribute.Value {
-        guard let captureMeshData = self.captureMeshData else {
-            throw AttributeEstimationPipelineError.missingCaptureData
-        }
-        guard let surfaceIntegrityProcessor = self.surfaceIntegrityProcessor else {
-            throw AttributeEstimationPipelineError.missingPreprocessors
-        }
-        let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
-        let meshContents: MeshContents = try self.getCachedMeshContents(
+        let analysis = try getCachedSurfaceIntegrityWindowAnalysis(
             accessibilityFeature: accessibilityFeature
         )
-        /// For now, return a placeholder value
-        let surfaceDisruptionArea: Double = 0.0
+        let disruptedWindowCount = analysis.windows.reduce(into: 0) { count, window in
+            if window.hasSurfaceDisruption {
+                count += 1
+            }
+        }
+        let surfaceDisruptionArea = Self.surfaceDisruptionArea(
+            disruptedWindowCount: disruptedWindowCount,
+            centerCellSize: analysis.grid.stride
+        )
         guard let surfaceDisruptionAreaAttributeValue = AccessibilityFeatureAttribute.surfaceDisruptionArea.value(
             from: surfaceDisruptionArea
         ) else {
             throw AttributeEstimationPipelineError.attributeAssignmentError
         }
         return surfaceDisruptionAreaAttributeValue
+    }
+
+    public static func surfaceDisruptionArea(
+        disruptedWindowCount: Int,
+        centerCellSize: Float
+    ) -> Double {
+        let cellSize = Double(centerCellSize)
+        return Double(disruptedWindowCount) * cellSize * cellSize
     }
 }
 

@@ -29,6 +29,7 @@ public struct SurfaceIntegrityWindowAnalysis: Sendable {
     public let surfaceDetailIndices: [Int]
     public let damageOverlapRatio: Float
     public let maximumDamageConfidence: Float
+    public let hasSurfaceDisruption: Bool
     public let features: SurfaceIntegrityWindowFeatures
 }
 
@@ -215,6 +216,7 @@ public extension SurfaceIntegrityProcessor {
                     surfaceDetailIndices: surfaceDetailIndices,
                     damageOverlapRatio: damageOverlap.overlapRatio,
                     maximumDamageConfidence: damageOverlap.maximumSeverity,
+                    hasSurfaceDisruption: damageOverlap.overlapRatio > 0.25,
                     features: features
                 )
             )

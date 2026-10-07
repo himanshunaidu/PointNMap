@@ -23,6 +23,7 @@ public extension AttributeEstimationPipeline {
         
         /// Additional lazy properties for caching can be added here as needed.
         public var surfaceNormalsGrid: SurfaceNormalsForPointsGrid? = nil
+        public var surfaceIntegrityWindowAnalysis: SurfaceIntegrityWindowAnalysisResult? = nil
         
         mutating func getOrCompute<T>(
             _ keyPath: WritableKeyPath<PrerequisiteCache, T?>,
@@ -46,6 +47,7 @@ public extension AttributeEstimationPipeline {
         self.prerequisiteCache.meshContents = nil
         self.prerequisiteCache.meshAlignedPlane = nil
         self.prerequisiteCache.meshProjectedPlane = nil
+        self.prerequisiteCache.surfaceIntegrityWindowAnalysis = nil
     }
 }
 
@@ -146,5 +148,38 @@ public extension AttributeEstimationPipeline {
                 worldPointsGrid: worldPointsGrid, plane: plane, projectedPlane: projectedPlane
             )
         }
+    }
+
+    func getCachedSurfaceIntegrityWindowAnalysis(
+        accessibilityFeature: any EditableAccessibilityFeatureProtocol
+    ) throws -> SurfaceIntegrityWindowAnalysisResult {
+        if let cachedResult = prerequisiteCache.surfaceIntegrityWindowAnalysis {
+            return cachedResult
+        }
+        guard let captureMeshData else {
+            throw AttributeEstimationPipelineError.missingCaptureData
+        }
+        guard surfaceIntegrityProcessor != nil else {
+            throw AttributeEstimationPipelineError.missingPreprocessors
+        }
+
+        let meshContents = try getCachedMeshContents(
+            accessibilityFeature: accessibilityFeature
+        )
+        let alignedPlane = try getCachedAlignedPlane(
+            accessibilityFeature: accessibilityFeature,
+            meshPolygons: meshContents.polygons
+        )
+        let damageDetectionResults = try getDamageDetectionResults(
+            accessibilityFeature: accessibilityFeature
+        )
+        let result = try SurfaceIntegrityProcessor.analyzeMeshWindows(
+            meshContents: meshContents,
+            plane: alignedPlane,
+            damageDetectionResults: damageDetectionResults,
+            captureData: captureMeshData
+        )
+        prerequisiteCache.surfaceIntegrityWindowAnalysis = result
+        return result
     }
 }
