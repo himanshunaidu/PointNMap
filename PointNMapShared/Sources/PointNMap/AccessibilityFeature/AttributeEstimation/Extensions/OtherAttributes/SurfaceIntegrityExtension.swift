@@ -350,7 +350,7 @@ extension AttributeEstimationPipeline {
         }
         let surfaceDisruptionArea = Self.surfaceDisruptionArea(
             disruptedWindowCount: disruptedWindowCount,
-            centerCellSize: analysis.grid.stride
+            centerCellSize: analysis.grid.predictionCellSize
         )
         guard let surfaceDisruptionAreaAttributeValue = AccessibilityFeatureAttribute.surfaceDisruptionArea.value(
             from: surfaceDisruptionArea

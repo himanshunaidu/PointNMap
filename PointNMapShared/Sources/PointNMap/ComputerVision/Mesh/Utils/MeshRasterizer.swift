@@ -63,4 +63,24 @@ public struct MeshRasterizer {
         }
         return nil
     }
+
+    /// Rasterizes projected polygon regions, such as the center cells that receive
+    /// surface-integrity predictions, into a transparent overlay image.
+    public static func rasterizePolygons(
+        polygonsNormalizedCoordinates: [[SIMD2<Float>]],
+        size: CGSize,
+        fillConfig: RasterizeConfig
+    ) -> CGImage? {
+        UIGraphicsBeginImageContextWithOptions(size, false, 1.0)
+        defer { UIGraphicsEndImageContext() }
+        guard let context = UIGraphicsGetCurrentContext() else { return nil }
+
+        let fillColor = (fillConfig.color ?? .red).withAlphaComponent(fillConfig.alpha)
+        context.setFillColor(fillColor.cgColor)
+        for polygon in polygonsNormalizedCoordinates where polygon.count >= 3 {
+            context.addPath(createPath(points: polygon, size: size).cgPath)
+            context.fillPath()
+        }
+        return UIGraphicsGetImageFromCurrentImageContext()?.cgImage
+    }
 }

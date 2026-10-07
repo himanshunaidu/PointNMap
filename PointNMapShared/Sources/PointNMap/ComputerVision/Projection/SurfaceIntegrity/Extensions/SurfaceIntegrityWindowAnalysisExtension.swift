@@ -50,6 +50,7 @@ public extension SurfaceIntegrityProcessor {
         configuration: SurfaceIntegrityFeatureConfiguration = .pythonModelDefault,
         cellSize: Float = 0.27,
         stride: Float = 0.09,
+        predictionCellSize: Float = 0.09,
         includeEmptyWindows: Bool = true,
         minimumWindowPolygonCount: Int = 5
     ) throws -> SurfaceIntegrityWindowAnalysisResult {
@@ -99,6 +100,7 @@ public extension SurfaceIntegrityProcessor {
             configuration: configuration,
             cellSize: cellSize,
             stride: stride,
+            predictionCellSize: predictionCellSize,
             includeEmptyWindows: includeEmptyWindows,
             minimumWindowPolygonCount: minimumWindowPolygonCount
         )
@@ -113,6 +115,7 @@ public extension SurfaceIntegrityProcessor {
         configuration: SurfaceIntegrityFeatureConfiguration = .pythonModelDefault,
         cellSize: Float = 0.27,
         stride: Float = 0.09,
+        predictionCellSize: Float = 0.09,
         includeEmptyWindows: Bool = true,
         minimumWindowPolygonCount: Int = 5
     ) throws -> SurfaceIntegrityWindowAnalysisResult {
@@ -128,6 +131,7 @@ public extension SurfaceIntegrityProcessor {
             configuration: configuration,
             cellSize: cellSize,
             stride: stride,
+            predictionCellSize: predictionCellSize,
             includeEmptyWindows: includeEmptyWindows,
             minimumWindowPolygonCount: minimumWindowPolygonCount
         )
@@ -145,6 +149,7 @@ public extension SurfaceIntegrityProcessor {
         configuration: SurfaceIntegrityFeatureConfiguration = .pythonModelDefault,
         cellSize: Float = 0.27,
         stride: Float = 0.09,
+        predictionCellSize: Float = 0.09,
         includeEmptyWindows: Bool = true,
         minimumWindowPolygonCount: Int = 5
     ) throws -> SurfaceIntegrityWindowAnalysisResult {
@@ -178,6 +183,7 @@ public extension SurfaceIntegrityProcessor {
             secondPlaneVector: secondPlaneVector,
             cellSize: cellSize,
             stride: stride,
+            predictionCellSize: predictionCellSize,
             includeEmptyWindows: includeEmptyWindows,
             minMeshPoints: minimumWindowPolygonCount
         )

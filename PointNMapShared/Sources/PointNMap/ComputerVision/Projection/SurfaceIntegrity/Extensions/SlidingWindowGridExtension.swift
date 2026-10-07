@@ -10,6 +10,7 @@ public enum SlidingWindowGridError: Error, LocalizedError {
     case emptyMesh
     case invalidCellSize
     case invalidStride
+    case invalidPredictionCellSize
     case invalidMinimumMeshPointCount
     case gridDimensionOverflow
 
@@ -21,6 +22,8 @@ public enum SlidingWindowGridError: Error, LocalizedError {
             return "The sliding-window cell size must be finite and greater than zero."
         case .invalidStride:
             return "The sliding-window stride must be finite and greater than zero."
+        case .invalidPredictionCellSize:
+            return "The prediction-cell size must be finite, greater than zero, and no larger than the context window."
         case .invalidMinimumMeshPointCount:
             return "The minimum mesh point count cannot be negative."
         case .gridDimensionOverflow:
@@ -61,6 +64,9 @@ public struct SlidingWindowGrid: Sendable {
     public let gridIndices: [SIMD2<Int32>]
     public let gridBounds: [SlidingWindowBounds]
     public let gridBounds3D: [[SIMD3<Float>]]
+    /// Centered cells that receive each context window's prediction.
+    public let predictionCellBounds: [SlidingWindowBounds]
+    public let predictionCellBounds3D: [[SIMD3<Float>]]
     public let windowToMeshIndices: [[Int]]
     public let uvCoordinates: [SIMD2<Float>]
     public let gridOriginU: Float
@@ -68,6 +74,7 @@ public struct SlidingWindowGrid: Sendable {
     public let gridShape: SIMD2<Int32>
     public let cellSize: Float
     public let stride: Float
+    public let predictionCellSize: Float
 }
 
 public extension SurfaceIntegrityProcessor {
@@ -371,6 +378,7 @@ public extension SurfaceIntegrityProcessor {
         plane: Plane,
         cellSize: Float = 0.27,
         stride: Float = 0.09,
+        predictionCellSize: Float = 0.09,
         includeEmptyWindows: Bool = true,
         minMeshPoints: Int = 5
     ) throws -> SlidingWindowGrid {
@@ -381,6 +389,7 @@ public extension SurfaceIntegrityProcessor {
             secondPlaneVector: plane.secondVector,
             cellSize: cellSize,
             stride: stride,
+            predictionCellSize: predictionCellSize,
             includeEmptyWindows: includeEmptyWindows,
             minMeshPoints: minMeshPoints
         )
@@ -393,11 +402,16 @@ public extension SurfaceIntegrityProcessor {
         secondPlaneVector: SIMD3<Float>,
         cellSize: Float = 0.27,
         stride: Float = 0.09,
+        predictionCellSize: Float = 0.09,
         includeEmptyWindows: Bool = true,
         minMeshPoints: Int = 5
     ) throws -> SlidingWindowGrid {
         guard minMeshPoints >= 0 else {
             throw SlidingWindowGridError.invalidMinimumMeshPointCount
+        }
+        guard predictionCellSize.isFinite, predictionCellSize > 0,
+              predictionCellSize <= cellSize else {
+            throw SlidingWindowGridError.invalidPredictionCellSize
         }
         let indexResult = try computeGridIndices(
             meshCentroids: meshCentroids,
@@ -420,6 +434,8 @@ public extension SurfaceIntegrityProcessor {
         var retainedIndices: [SIMD2<Int32>] = []
         var retainedBounds: [SlidingWindowBounds] = []
         var retainedBounds3D: [[SIMD3<Float>]] = []
+        var predictionCellBounds: [SlidingWindowBounds] = []
+        var predictionCellBounds3D: [[SIMD3<Float>]] = []
         var windowToMeshIndices: [[Int]] = []
         for windowIndex in boundsResult.bounds.indices {
             let windowBounds = boundsResult.bounds[windowIndex]
@@ -435,6 +451,20 @@ public extension SurfaceIntegrityProcessor {
             retainedIndices.append(indexResult.gridIndices[windowIndex])
             retainedBounds.append(windowBounds)
             retainedBounds3D.append(boundsResult.bounds3D[windowIndex])
+            let inset = (cellSize - predictionCellSize) / 2
+            let predictionBounds = SlidingWindowBounds(
+                minU: windowBounds.minU + inset,
+                maxU: windowBounds.maxU - inset,
+                minV: windowBounds.minV + inset,
+                maxV: windowBounds.maxV - inset
+            )
+            predictionCellBounds.append(predictionBounds)
+            predictionCellBounds3D.append([
+                planeOrigin + predictionBounds.minU * firstPlaneVector + predictionBounds.minV * secondPlaneVector,
+                planeOrigin + predictionBounds.maxU * firstPlaneVector + predictionBounds.minV * secondPlaneVector,
+                planeOrigin + predictionBounds.maxU * firstPlaneVector + predictionBounds.maxV * secondPlaneVector,
+                planeOrigin + predictionBounds.minU * firstPlaneVector + predictionBounds.maxV * secondPlaneVector
+            ])
             windowToMeshIndices.append(meshIndices)
         }
 
@@ -442,13 +472,16 @@ public extension SurfaceIntegrityProcessor {
             gridIndices: retainedIndices,
             gridBounds: retainedBounds,
             gridBounds3D: retainedBounds3D,
+            predictionCellBounds: predictionCellBounds,
+            predictionCellBounds3D: predictionCellBounds3D,
             windowToMeshIndices: windowToMeshIndices,
             uvCoordinates: indexResult.uvCoordinates,
             gridOriginU: indexResult.gridOriginU,
             gridOriginV: indexResult.gridOriginV,
             gridShape: indexResult.gridShape,
             cellSize: cellSize,
-            stride: stride
+            stride: stride,
+            predictionCellSize: predictionCellSize
         )
     }
 }

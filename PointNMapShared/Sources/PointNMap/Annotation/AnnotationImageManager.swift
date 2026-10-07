@@ -66,11 +66,18 @@ public struct AnnotationImageFeatureUpdateResults: Sendable {
     public let plane: Plane
     public let projectedPlane: ProjectedPlane
     public let damageDetectionResults: [DamageDetectionResult]
+    public let surfaceIntegrityWindowAnalysis: SurfaceIntegrityWindowAnalysisResult?
     
-    public init(plane: Plane, projectedPlane: ProjectedPlane, damageDetectionResults: [DamageDetectionResult]) {
+    public init(
+        plane: Plane,
+        projectedPlane: ProjectedPlane,
+        damageDetectionResults: [DamageDetectionResult],
+        surfaceIntegrityWindowAnalysis: SurfaceIntegrityWindowAnalysisResult? = nil
+    ) {
         self.plane = plane
         self.projectedPlane = projectedPlane
         self.damageDetectionResults = damageDetectionResults
+        self.surfaceIntegrityWindowAnalysis = surfaceIntegrityWindowAnalysis
     }
 }
 
@@ -282,11 +289,20 @@ public final class AnnotationImageManager<
 //            }
 //            return nil
 //        }()
-        let overlay3Image: CIImage? = self.getDamageDetectionImage(
-            captureImageData: captureImageData,
-            size: captureImageData.originalSize,
-            updateFeatureResults: updateFeatureResults
-        )
+        let overlay3Image: CIImage?
+        if let analysis = updateFeatureResults?.surfaceIntegrityWindowAnalysis {
+            overlay3Image = try getSurfaceDisruptionOverlayOutputImage(
+                captureImageData: captureImageData,
+                analysis: analysis,
+                size: captureImageData.originalSize
+            )
+        } else {
+            overlay3Image = self.getDamageDetectionImage(
+                captureImageData: captureImageData,
+                size: captureImageData.originalSize,
+                updateFeatureResults: updateFeatureResults
+            )
+        }
         Task {
             await MainActor.run {
                 self.outputConsumer?.annotationOutputImage(
@@ -544,6 +560,52 @@ public extension AnnotationImageManager {
     TODO: MESH PROCESSING: Integrate mesh data processing in the annotation image manager.
  */
 public extension AnnotationImageManager {
+    private func getSurfaceDisruptionOverlayOutputImage(
+        captureImageData: any CaptureImageDataProtocol,
+        analysis: SurfaceIntegrityWindowAnalysisResult,
+        size: CGSize
+    ) throws -> CIImage? {
+        let viewMatrix = captureImageData.cameraTransform.inverse
+        let intrinsics = captureImageData.cameraIntrinsics
+        let width = Float(size.width)
+        let height = Float(size.height)
+
+        let disruptedCells = analysis.windows.indices.compactMap { index -> [SIMD2<Float>]? in
+            guard analysis.windows[index].hasSurfaceDisruption else { return nil }
+            let projectedCorners = analysis.grid.predictionCellBounds3D[index].compactMap {
+                MeshHelpers.projectWorldToPixel(
+                    $0,
+                    viewMatrix: viewMatrix,
+                    intrinsics: intrinsics,
+                    imageSize: size
+                )
+            }
+            guard projectedCorners.count == 4 else { return nil }
+            return projectedCorners.map { SIMD2<Float>($0.x / width, $0.y / height) }
+        }
+        guard !disruptedCells.isEmpty,
+              let rasterizedImage = MeshRasterizer.rasterizePolygons(
+                polygonsNormalizedCoordinates: disruptedCells,
+                size: size,
+                fillConfig: RasterizeConfig(color: .red, alpha: 0.55)
+              ) else {
+            return nil
+        }
+
+        let imageOrientation = CameraOrientation.getCGImageOrientationForInterface(
+            currentInterfaceOrientation: captureImageData.interfaceOrientation
+        )
+        let orientedImage = CIImage(cgImage: rasterizedImage).oriented(imageOrientation)
+        let outputImage = CenterCropTransformUtils.centerCropAspectFit(
+            orientedImage,
+            to: PointNMapConstants.SelectedAccessibilityFeatureConfig.inputSize
+        )
+        guard let outputCGImage = context.createCGImage(outputImage, from: outputImage.extent) else {
+            throw AnnotationImageManagerError.meshRasterizationFailed
+        }
+        return CIImage(cgImage: outputCGImage)
+    }
+
     private func getMeshOverlayOutputImage(
         captureMeshData: (any CaptureMeshDataProtocol),
         polygonsNormalizedCoordinates: [(SIMD2<Float>, SIMD2<Float>, SIMD2<Float>)],
