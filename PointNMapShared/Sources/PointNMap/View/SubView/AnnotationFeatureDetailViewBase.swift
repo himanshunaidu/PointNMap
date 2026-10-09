@@ -330,13 +330,10 @@ public struct AnnotationFeatureDetailViewBase<
                     }
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
         }
         .onAppear {
             self.statusViewModel.configure(accessibilityFeature: accessibilityFeature)
-            focusedField = nil
-        }
-        .onTapGesture {
-            // Dismiss the keyboard when tapping outside of a TextField
             focusedField = nil
         }
     }
