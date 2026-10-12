@@ -13,6 +13,7 @@ public enum SlidingWindowGridError: Error, LocalizedError {
     case invalidPredictionCellSize
     case invalidMinimumMeshPointCount
     case gridDimensionOverflow
+    case membershipIndexOverflow
 
     public var errorDescription: String? {
         switch self {
@@ -28,6 +29,8 @@ public enum SlidingWindowGridError: Error, LocalizedError {
             return "The minimum mesh point count cannot be negative."
         case .gridDimensionOverflow:
             return "The sliding-window grid dimensions exceed the supported range."
+        case .membershipIndexOverflow:
+            return "The sliding-window membership data exceeds the UInt32 CSR index range."
         }
     }
 }
@@ -59,6 +62,25 @@ public struct SlidingWindowBoundsResult: Sendable {
     public let bounds3D: [[SIMD3<Float>]]
 }
 
+/// Compact window-to-mesh membership shared by the CPU reference and future Metal implementation.
+public struct SlidingWindowMembershipCSR: Sendable, Equatable {
+    public let windowOffsets: [UInt32]
+    public let meshIndices: [UInt32]
+
+    public init(windowOffsets: [UInt32], meshIndices: [UInt32]) {
+        self.windowOffsets = windowOffsets
+        self.meshIndices = meshIndices
+    }
+
+    public var windowCount: Int {
+        max(windowOffsets.count - 1, 0)
+    }
+
+    public var membershipCount: Int {
+        meshIndices.count
+    }
+}
+
 public struct SlidingWindowGrid: Sendable {
     /// Retained context windows and the source mesh polygons whose centroids support each window.
     public let gridIndices: [SIMD2<Int32>]
@@ -68,6 +90,7 @@ public struct SlidingWindowGrid: Sendable {
     public let predictionCellBounds: [SlidingWindowBounds]
     public let predictionCellBounds3D: [[SIMD3<Float>]]
     public let windowToMeshIndices: [[Int]]
+    public let membershipCSR: SlidingWindowMembershipCSR
     public let uvCoordinates: [SIMD2<Float>]
     public let gridOriginU: Float
     public let gridOriginV: Float
@@ -251,6 +274,11 @@ public extension SurfaceIntegrityProcessor {
         )
     }
 
+    /**
+     This method computes the grid indices for a sliding window grid based on the provided mesh centroids and the specified plane parameters.
+     It transforms each 3D centroid into the 2D coordinate system defined by the plane, calculates the minimum and maximum U and V coordinates, and determines the grid origin and shape.
+     The resulting grid indices are returned along with the UV coordinates of the centroids.
+     */
     static func computeGridIndices(
         meshCentroids: [SIMD3<Float>],
         planeOrigin: SIMD3<Float>,
@@ -334,6 +362,9 @@ public extension SurfaceIntegrityProcessor {
         )
     }
 
+    /**
+     This method computes the bounds of each sliding window in the grid based on the provided grid indices, grid origin, and plane parameters.
+     */
     static func computeGridBounds(
         gridIndices: [SIMD2<Int32>],
         gridOriginU: Float,
@@ -406,13 +437,12 @@ public extension SurfaceIntegrityProcessor {
         includeEmptyWindows: Bool = true,
         minMeshPoints: Int = 5
     ) throws -> SlidingWindowGrid {
-        guard minMeshPoints >= 0 else {
-            throw SlidingWindowGridError.invalidMinimumMeshPointCount
-        }
-        guard predictionCellSize.isFinite, predictionCellSize > 0,
-              predictionCellSize <= cellSize else {
-            throw SlidingWindowGridError.invalidPredictionCellSize
-        }
+        try validateSlidingWindowConfiguration(
+            cellSize: cellSize,
+            stride: stride,
+            predictionCellSize: predictionCellSize,
+            minMeshPoints: minMeshPoints
+        )
         let indexResult = try computeGridIndices(
             meshCentroids: meshCentroids,
             planeOrigin: planeOrigin,
@@ -431,6 +461,137 @@ public extension SurfaceIntegrityProcessor {
             stride: stride
         )
 
+        var denseMemberships = Array(repeating: [Int](), count: boundsResult.bounds.count)
+        let candidateSpan = Int(ceil(cellSize / stride))
+        let uCount = Int(indexResult.gridShape.x)
+        let vCount = Int(indexResult.gridShape.y)
+        for (meshIndex, coordinate) in indexResult.uvCoordinates.enumerated() {
+            let baseU = Int(floor((coordinate.x - indexResult.gridOriginU) / stride))
+            let baseV = Int(floor((coordinate.y - indexResult.gridOriginV) / stride))
+            for uOffset in 0..<candidateSpan {
+                let uIndex = baseU - uOffset
+                guard uIndex >= 0, uIndex < uCount else { continue }
+                for vOffset in 0..<candidateSpan {
+                    let vIndex = baseV - vOffset
+                    guard vIndex >= 0, vIndex < vCount else { continue }
+                    let windowIndex = uIndex * vCount + vIndex
+                    let bounds = boundsResult.bounds[windowIndex]
+                    guard coordinate.x >= bounds.minU, coordinate.x < bounds.maxU,
+                          coordinate.y >= bounds.minV, coordinate.y < bounds.maxV else {
+                        continue
+                    }
+                    denseMemberships[windowIndex].append(meshIndex)
+                }
+            }
+        }
+
+        return try buildSlidingWindowGrid(
+            indexResult: indexResult,
+            boundsResult: boundsResult,
+            denseMemberships: denseMemberships,
+            planeOrigin: planeOrigin,
+            firstPlaneVector: firstPlaneVector,
+            secondPlaneVector: secondPlaneVector,
+            cellSize: cellSize,
+            stride: stride,
+            predictionCellSize: predictionCellSize,
+            includeEmptyWindows: includeEmptyWindows,
+            minMeshPoints: minMeshPoints
+        )
+    }
+
+    /// Quadratic implementation retained for parity testing and performance comparisons.
+    static func computeSlidingWindowGridReference(
+        meshCentroids: [SIMD3<Float>],
+        planeOrigin: SIMD3<Float>,
+        firstPlaneVector: SIMD3<Float>,
+        secondPlaneVector: SIMD3<Float>,
+        cellSize: Float = 0.27,
+        stride: Float = 0.09,
+        predictionCellSize: Float = 0.09,
+        includeEmptyWindows: Bool = true,
+        minMeshPoints: Int = 5
+    ) throws -> SlidingWindowGrid {
+        try validateSlidingWindowConfiguration(
+            cellSize: cellSize,
+            stride: stride,
+            predictionCellSize: predictionCellSize,
+            minMeshPoints: minMeshPoints
+        )
+        let indexResult = try computeGridIndices(
+            meshCentroids: meshCentroids,
+            planeOrigin: planeOrigin,
+            firstPlaneVector: firstPlaneVector,
+            secondPlaneVector: secondPlaneVector,
+            stride: stride
+        )
+        let boundsResult = try computeGridBounds(
+            gridIndices: indexResult.gridIndices,
+            gridOriginU: indexResult.gridOriginU,
+            gridOriginV: indexResult.gridOriginV,
+            planeOrigin: planeOrigin,
+            firstPlaneVector: firstPlaneVector,
+            secondPlaneVector: secondPlaneVector,
+            cellSize: cellSize,
+            stride: stride
+        )
+        let denseMemberships = boundsResult.bounds.map { windowBounds in
+            indexResult.uvCoordinates.indices.filter { meshIndex in
+                let coordinate = indexResult.uvCoordinates[meshIndex]
+                return coordinate.x >= windowBounds.minU && coordinate.x < windowBounds.maxU
+                    && coordinate.y >= windowBounds.minV && coordinate.y < windowBounds.maxV
+            }
+        }
+
+        return try buildSlidingWindowGrid(
+            indexResult: indexResult,
+            boundsResult: boundsResult,
+            denseMemberships: denseMemberships,
+            planeOrigin: planeOrigin,
+            firstPlaneVector: firstPlaneVector,
+            secondPlaneVector: secondPlaneVector,
+            cellSize: cellSize,
+            stride: stride,
+            predictionCellSize: predictionCellSize,
+            includeEmptyWindows: includeEmptyWindows,
+            minMeshPoints: minMeshPoints
+        )
+    }
+
+    private static func validateSlidingWindowConfiguration(
+        cellSize: Float,
+        stride: Float,
+        predictionCellSize: Float,
+        minMeshPoints: Int
+    ) throws {
+        guard minMeshPoints >= 0 else {
+            throw SlidingWindowGridError.invalidMinimumMeshPointCount
+        }
+        guard cellSize.isFinite, cellSize > 0 else {
+            throw SlidingWindowGridError.invalidCellSize
+        }
+        guard stride.isFinite, stride > 0 else {
+            throw SlidingWindowGridError.invalidStride
+        }
+        guard predictionCellSize.isFinite, predictionCellSize > 0,
+              predictionCellSize <= cellSize else {
+            throw SlidingWindowGridError.invalidPredictionCellSize
+        }
+    }
+
+    private static func buildSlidingWindowGrid(
+        indexResult: SlidingWindowGridIndexResult,
+        boundsResult: SlidingWindowBoundsResult,
+        denseMemberships: [[Int]],
+        planeOrigin: SIMD3<Float>,
+        firstPlaneVector: SIMD3<Float>,
+        secondPlaneVector: SIMD3<Float>,
+        cellSize: Float,
+        stride: Float,
+        predictionCellSize: Float,
+        includeEmptyWindows: Bool,
+        minMeshPoints: Int
+    ) throws -> SlidingWindowGrid {
         var retainedIndices: [SIMD2<Int32>] = []
         var retainedBounds: [SlidingWindowBounds] = []
         var retainedBounds3D: [[SIMD3<Float>]] = []
@@ -439,12 +600,7 @@ public extension SurfaceIntegrityProcessor {
         var windowToMeshIndices: [[Int]] = []
         for windowIndex in boundsResult.bounds.indices {
             let windowBounds = boundsResult.bounds[windowIndex]
-            // Half-open bounds reproduce the Python behavior and avoid ambiguous ownership on upper edges.
-            let meshIndices = indexResult.uvCoordinates.indices.filter { meshIndex in
-                let coordinate = indexResult.uvCoordinates[meshIndex]
-                return coordinate.x >= windowBounds.minU && coordinate.x < windowBounds.maxU
-                    && coordinate.y >= windowBounds.minV && coordinate.y < windowBounds.maxV
-            }
+            let meshIndices = denseMemberships[windowIndex]
             guard includeEmptyWindows || meshIndices.count >= minMeshPoints else {
                 continue
             }
@@ -468,6 +624,26 @@ public extension SurfaceIntegrityProcessor {
             windowToMeshIndices.append(meshIndices)
         }
 
+        var windowOffsets: [UInt32] = [0]
+        var csrMeshIndices: [UInt32] = []
+        windowOffsets.reserveCapacity(windowToMeshIndices.count + 1)
+        for meshIndices in windowToMeshIndices {
+            guard csrMeshIndices.count <= Int(UInt32.max) - meshIndices.count else {
+                throw SlidingWindowGridError.membershipIndexOverflow
+            }
+            for meshIndex in meshIndices {
+                guard let index = UInt32(exactly: meshIndex) else {
+                    throw SlidingWindowGridError.membershipIndexOverflow
+                }
+                csrMeshIndices.append(index)
+            }
+            windowOffsets.append(UInt32(csrMeshIndices.count))
+        }
+        let membershipCSR = SlidingWindowMembershipCSR(
+            windowOffsets: windowOffsets,
+            meshIndices: csrMeshIndices
+        )
+
         return SlidingWindowGrid(
             gridIndices: retainedIndices,
             gridBounds: retainedBounds,
@@ -475,6 +651,7 @@ public extension SurfaceIntegrityProcessor {
             predictionCellBounds: predictionCellBounds,
             predictionCellBounds3D: predictionCellBounds3D,
             windowToMeshIndices: windowToMeshIndices,
+            membershipCSR: membershipCSR,
             uvCoordinates: indexResult.uvCoordinates,
             gridOriginU: indexResult.gridOriginU,
             gridOriginV: indexResult.gridOriginV,
