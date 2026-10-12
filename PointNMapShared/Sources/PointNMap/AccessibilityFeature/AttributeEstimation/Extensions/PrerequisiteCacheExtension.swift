@@ -27,12 +27,22 @@ public extension AttributeEstimationPipeline {
         
         mutating func getOrCompute<T>(
             _ keyPath: WritableKeyPath<PrerequisiteCache, T?>,
+            cacheName: String,
             compute: () throws -> T
         ) rethrows -> T {
             if let cachedValue = self[keyPath: keyPath] {
+                AttributeEstimationPerformanceProfiler.shared.recordEvent(
+                    .cacheLookup,
+                    metadata: ["cache": cacheName, "result": "hit"]
+                )
                 return cachedValue
             } else {
-                let computedValue = try compute()
+                let computedValue = try AttributeEstimationPerformanceProfiler.shared.measure(
+                    .cacheLookup,
+                    metadata: ["cache": cacheName, "result": "miss"]
+                ) {
+                    try compute()
+                }
                 self[keyPath: keyPath] = computedValue
                 return computedValue
             }
@@ -47,6 +57,7 @@ public extension AttributeEstimationPipeline {
         self.prerequisiteCache.meshContents = nil
         self.prerequisiteCache.meshAlignedPlane = nil
         self.prerequisiteCache.meshProjectedPlane = nil
+        self.prerequisiteCache.surfaceNormalsGrid = nil
         self.prerequisiteCache.surfaceIntegrityWindowAnalysis = nil
     }
 }
@@ -59,7 +70,7 @@ extension AttributeEstimationPipeline {
     func getCachedWorldPoints(
         accessibilityFeature: any EditableAccessibilityFeatureProtocol
     ) throws -> [WorldPoint] {
-        return try self.prerequisiteCache.getOrCompute(\.worldPoints) {
+        return try self.prerequisiteCache.getOrCompute(\.worldPoints, cacheName: "world_points") {
             try self.getWorldPoints(accessibilityFeature: accessibilityFeature)
         }
     }
@@ -69,7 +80,7 @@ extension AttributeEstimationPipeline {
         accessibilityFeature: any EditableAccessibilityFeatureProtocol,
         worldPoints: [WorldPoint]
     ) throws -> WorldPointsGrid {
-        return try self.prerequisiteCache.getOrCompute(\.worldPointsGrid) {
+        return try self.prerequisiteCache.getOrCompute(\.worldPointsGrid, cacheName: "world_points_grid") {
             try self.getWorldPointsGrid(
                 accessibilityFeature: accessibilityFeature,
                 worldPoints: worldPoints
@@ -82,7 +93,7 @@ extension AttributeEstimationPipeline {
         accessibilityFeature: any EditableAccessibilityFeatureProtocol,
         worldPoints: [WorldPoint]
     ) throws -> Plane {
-        return try self.prerequisiteCache.getOrCompute(\.pointAlignedPlane) {
+        return try self.prerequisiteCache.getOrCompute(\.pointAlignedPlane, cacheName: "point_aligned_plane") {
             try self.calculateAlignedPlane(
                 accessibilityFeature: accessibilityFeature,
                 worldPoints: worldPoints
@@ -95,7 +106,7 @@ extension AttributeEstimationPipeline {
         accessibilityFeature: any EditableAccessibilityFeatureProtocol,
         plane: Plane
     ) throws -> ProjectedPlane {
-        return try self.prerequisiteCache.getOrCompute(\.pointProjectedPlane) {
+        return try self.prerequisiteCache.getOrCompute(\.pointProjectedPlane, cacheName: "point_projected_plane") {
             try self.calculateProjectedPlane(
                 accessibilityFeature: accessibilityFeature,
                 plane: plane
@@ -112,7 +123,7 @@ public extension AttributeEstimationPipeline {
     func getCachedMeshContents(
         accessibilityFeature: any EditableAccessibilityFeatureProtocol
     ) throws -> MeshContents {
-        return try self.prerequisiteCache.getOrCompute(\.meshContents) {
+        return try self.prerequisiteCache.getOrCompute(\.meshContents, cacheName: "mesh_contents") {
             try self.getMeshContents(accessibilityFeature: accessibilityFeature)
         }
     }
@@ -122,7 +133,7 @@ public extension AttributeEstimationPipeline {
         accessibilityFeature: any EditableAccessibilityFeatureProtocol,
         meshPolygons: [MeshPolygon]
     ) throws -> Plane {
-        return try self.prerequisiteCache.getOrCompute(\.meshAlignedPlane) {
+        return try self.prerequisiteCache.getOrCompute(\.meshAlignedPlane, cacheName: "mesh_aligned_plane") {
             try self.calculateAlignedPlane(
                 accessibilityFeature: accessibilityFeature,
                 meshPolygons: meshPolygons
@@ -140,7 +151,7 @@ public extension AttributeEstimationPipeline {
         plane: Plane,
         projectedPlane: ProjectedPlane
     ) throws -> SurfaceNormalsForPointsGrid {
-        return try self.prerequisiteCache.getOrCompute(\.surfaceNormalsGrid) {
+        return try self.prerequisiteCache.getOrCompute(\.surfaceNormalsGrid, cacheName: "surface_normals_grid") {
             guard let surfaceNormalsProcessor = self.surfaceNormalsProcessor else {
                 throw AttributeEstimationPipelineError.missingPreprocessors
             }
@@ -154,6 +165,10 @@ public extension AttributeEstimationPipeline {
         accessibilityFeature: any EditableAccessibilityFeatureProtocol
     ) throws -> SurfaceIntegrityWindowAnalysisResult {
         if let cachedResult = prerequisiteCache.surfaceIntegrityWindowAnalysis {
+            AttributeEstimationPerformanceProfiler.shared.recordEvent(
+                .cacheLookup,
+                metadata: ["cache": "surface_integrity_window_analysis", "result": "hit"]
+            )
             return cachedResult
         }
         guard let captureMeshData else {
@@ -163,22 +178,38 @@ public extension AttributeEstimationPipeline {
             throw AttributeEstimationPipelineError.missingPreprocessors
         }
 
-        let meshContents = try getCachedMeshContents(
-            accessibilityFeature: accessibilityFeature
-        )
-        let alignedPlane = try getCachedAlignedPlane(
-            accessibilityFeature: accessibilityFeature,
-            meshPolygons: meshContents.polygons
-        )
-        let damageDetectionResults = try getDamageDetectionResults(
-            accessibilityFeature: accessibilityFeature
-        )
-        let result = try SurfaceIntegrityProcessor.analyzeMeshWindows(
-            meshContents: meshContents,
-            plane: alignedPlane,
-            damageDetectionResults: damageDetectionResults,
-            captureData: captureMeshData
-        )
+        let result = try AttributeEstimationPerformanceProfiler.shared.measure(
+            .surfaceWindowAnalysis,
+            metadata: ["cache": "surface_integrity_window_analysis", "result": "miss"]
+        ) {
+            let meshContents = try getCachedMeshContents(
+                accessibilityFeature: accessibilityFeature
+            )
+            let alignedPlane = try getCachedAlignedPlane(
+                accessibilityFeature: accessibilityFeature,
+                meshPolygons: meshContents.polygons
+            )
+            let damageDetectionResults = try getDamageDetectionResults(
+                accessibilityFeature: accessibilityFeature
+            )
+            let result = try SurfaceIntegrityProcessor.analyzeMeshWindows(
+                meshContents: meshContents,
+                plane: alignedPlane,
+                damageDetectionResults: damageDetectionResults,
+                captureData: captureMeshData
+            )
+            AttributeEstimationPerformanceProfiler.shared.recordEvent(
+                .surfaceWindowAnalysis,
+                metadata: [
+                    "mesh_polygon_count": String(meshContents.polygons.count),
+                    "window_count": String(result.windows.count),
+                    "detection_count": String(damageDetectionResults.count),
+                    "positive_window_count": String(result.windows.filter(\.hasSurfaceDisruption).count),
+                    "event": "result"
+                ]
+            )
+            return result
+        }
         prerequisiteCache.surfaceIntegrityWindowAnalysis = result
         return result
     }

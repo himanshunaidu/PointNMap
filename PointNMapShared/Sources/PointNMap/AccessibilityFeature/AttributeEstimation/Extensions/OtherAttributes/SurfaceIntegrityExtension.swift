@@ -117,17 +117,25 @@ public extension AttributeEstimationPipeline {
         let orientedImage = cameraImage.oriented(imageOrientation)
         let inputImage = CenterCropTransformUtils.centerCropAspectFit(orientedImage, to: croppedSize)
         
-        let damageDetectionResults: [DamageDetectionResult] = try damageDetectionPipeline.processRequest(with: inputImage)
-        let alignedDamageDetectionResults = damageDetectionResults.map { result -> DamageDetectionResult in
-            let alignedBox = self.alignBoundingBox(result.boundingBox, orientation: imageOrientation, imageSize: croppedSize, originalSize: cameraImage.extent.size)
-            return DamageDetectionResult(
-                boundingBox: alignedBox,
-                confidence: result.confidence,
-                label: result.label
-            )
+        return try AttributeEstimationPerformanceProfiler.shared.measure(
+            .damageDetection,
+            metadata: ["feature_class": accessibilityFeature.accessibilityFeatureClass.name]
+        ) {
+            let damageDetectionResults = try damageDetectionPipeline.processRequest(with: inputImage)
+            return damageDetectionResults.map { result -> DamageDetectionResult in
+                let alignedBox = self.alignBoundingBox(
+                    result.boundingBox,
+                    orientation: imageOrientation,
+                    imageSize: croppedSize,
+                    originalSize: cameraImage.extent.size
+                )
+                return DamageDetectionResult(
+                    boundingBox: alignedBox,
+                    confidence: result.confidence,
+                    label: result.label
+                )
+            }
         }
-        
-        return alignedDamageDetectionResults
     }
     
     private func alignBoundingBox(_ boundingBox: CGRect, orientation: CGImagePropertyOrientation, imageSize: CGSize, originalSize: CGSize) -> CGRect {

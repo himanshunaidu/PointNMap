@@ -58,27 +58,32 @@ public extension SurfaceIntegrityProcessor {
             throw SurfaceIntegrityWindowAnalysisError.missingDepthImage
         }
 
-        let depthMapProcessor = try DepthMapProcessor(depthImage: depthImage)
         let imageSize = captureData.originalSize
-        var damagePolygonsOnPlane: [[SIMD2<Float>]] = []
-        damagePolygonsOnPlane.reserveCapacity(damageDetectionResults.count)
-
-        for result in damageDetectionResults {
-            let rectangle = result.getPixelCGRect(for: imageSize)
-            let imagePolygon = [
-                SIMD2<Float>(Float(rectangle.minX), Float(rectangle.minY)),
-                SIMD2<Float>(Float(rectangle.maxX), Float(rectangle.minY)),
-                SIMD2<Float>(Float(rectangle.maxX), Float(rectangle.maxY)),
-                SIMD2<Float>(Float(rectangle.minX), Float(rectangle.maxY))
-            ]
-            let worldPolygon = try projectPolygon(
-                imagePolygon,
-                depthMapProcessor: depthMapProcessor,
-                cameraIntrinsics: captureData.cameraIntrinsics,
-                cameraTransform: captureData.cameraTransform,
-                imageSize: imageSize
-            )
-            damagePolygonsOnPlane.append(projectPolygonToPlane(worldPolygon, plane: plane))
+        let damagePolygonsOnPlane = try AttributeEstimationPerformanceProfiler.shared.measure(
+            .surfaceDamageProjection,
+            metadata: ["detection_count": String(damageDetectionResults.count)]
+        ) { () -> [[SIMD2<Float>]] in
+            let depthMapProcessor = try DepthMapProcessor(depthImage: depthImage)
+            var polygons: [[SIMD2<Float>]] = []
+            polygons.reserveCapacity(damageDetectionResults.count)
+            for result in damageDetectionResults {
+                let rectangle = result.getPixelCGRect(for: imageSize)
+                let imagePolygon = [
+                    SIMD2<Float>(Float(rectangle.minX), Float(rectangle.minY)),
+                    SIMD2<Float>(Float(rectangle.maxX), Float(rectangle.minY)),
+                    SIMD2<Float>(Float(rectangle.maxX), Float(rectangle.maxY)),
+                    SIMD2<Float>(Float(rectangle.minX), Float(rectangle.maxY))
+                ]
+                let worldPolygon = try projectPolygon(
+                    imagePolygon,
+                    depthMapProcessor: depthMapProcessor,
+                    cameraIntrinsics: captureData.cameraIntrinsics,
+                    cameraTransform: captureData.cameraTransform,
+                    imageSize: imageSize
+                )
+                polygons.append(projectPolygonToPlane(worldPolygon, plane: plane))
+            }
+            return polygons
         }
 
         let cameraPosition4 = captureData.cameraTransform.columns.3
@@ -159,60 +164,99 @@ public extension SurfaceIntegrityProcessor {
 
         // Invalid polygon normals are removed before grid creation so membership indices
         // remain aligned with every per-polygon feature array.
-        let surfaceDetails = try getSurfaceDetailsFromMesh(
-            centroids: meshPolygons.map(\.centroid),
-            normals: meshPolygons.map(\.normal),
-            areas: meshPolygons.map(\.area),
-            planeNormal: planeNormal
-        )
-        let heightResiduals = calculateHeightResiduals(
-            surfaceDetails: surfaceDetails,
-            planeOrigin: planeOrigin,
-            planeNormal: planeNormal
-        )
-        let signedTiltData = try calculateSignedTiltData(
-            surfaceDetails: surfaceDetails,
-            firstPlaneVector: firstPlaneVector,
-            secondPlaneVector: secondPlaneVector,
-            planeNormal: planeNormal
-        )
-        let grid = try computeSlidingWindowGrid(
-            meshCentroids: surfaceDetails.map(\.centroid),
-            planeOrigin: planeOrigin,
-            firstPlaneVector: firstPlaneVector,
-            secondPlaneVector: secondPlaneVector,
-            cellSize: cellSize,
-            stride: stride,
-            predictionCellSize: predictionCellSize,
-            includeEmptyWindows: includeEmptyWindows,
-            minMeshPoints: minimumWindowPolygonCount
-        )
-        let windowsOnPlane = projectGridWindowsToPlane(
-            grid.gridBounds3D,
-            planeOrigin: planeOrigin,
-            firstPlaneVector: firstPlaneVector,
-            secondPlaneVector: secondPlaneVector
-        )
+        let featureData = try AttributeEstimationPerformanceProfiler.shared.measure(
+            .surfaceMeshFeatureExtraction,
+            metadata: ["mesh_polygon_count": String(meshPolygons.count)]
+        ) {
+            let surfaceDetails = try getSurfaceDetailsFromMesh(
+                centroids: meshPolygons.map(\.centroid),
+                normals: meshPolygons.map(\.normal),
+                areas: meshPolygons.map(\.area),
+                planeNormal: planeNormal
+            )
+            let heightResiduals = calculateHeightResiduals(
+                surfaceDetails: surfaceDetails,
+                planeOrigin: planeOrigin,
+                planeNormal: planeNormal
+            )
+            let signedTiltData = try calculateSignedTiltData(
+                surfaceDetails: surfaceDetails,
+                firstPlaneVector: firstPlaneVector,
+                secondPlaneVector: secondPlaneVector,
+                planeNormal: planeNormal
+            )
+            return (surfaceDetails, heightResiduals, signedTiltData)
+        }
+        let surfaceDetails = featureData.0
+        let heightResiduals = featureData.1
+        let signedTiltData = featureData.2
+        let grid = try AttributeEstimationPerformanceProfiler.shared.measure(
+            .surfaceGridConstruction,
+            metadata: ["surface_detail_count": String(surfaceDetails.count)]
+        ) {
+            try computeSlidingWindowGrid(
+                meshCentroids: surfaceDetails.map(\.centroid),
+                planeOrigin: planeOrigin,
+                firstPlaneVector: firstPlaneVector,
+                secondPlaneVector: secondPlaneVector,
+                cellSize: cellSize,
+                stride: stride,
+                predictionCellSize: predictionCellSize,
+                includeEmptyWindows: includeEmptyWindows,
+                minMeshPoints: minimumWindowPolygonCount
+            )
+        }
+        let windowMetadata = [
+            "window_count": String(grid.gridIndices.count),
+            "surface_detail_count": String(surfaceDetails.count)
+        ]
+        let windowsOnPlane = AttributeEstimationPerformanceProfiler.shared.measure(
+            .surfaceGridProjection,
+            metadata: windowMetadata
+        ) {
+            projectGridWindowsToPlane(
+                grid.gridBounds3D,
+                planeOrigin: planeOrigin,
+                firstPlaneVector: firstPlaneVector,
+                secondPlaneVector: secondPlaneVector
+            )
+        }
+
+        let damageOverlaps = AttributeEstimationPerformanceProfiler.shared.measure(
+            .surfaceDamageOverlap,
+            metadata: windowMetadata.merging([
+                "detection_count": String(damagePolygonsOnPlane.count)
+            ]) { _, new in new }
+        ) {
+            windowsOnPlane.map { window in
+                checkOverlapBetweenPolygons(
+                    polygonBase: window,
+                    polygonsCompare: damagePolygonsOnPlane,
+                    severityCompare: damageConfidenceScores
+                )
+            }
+        }
+        let featureResults = try AttributeEstimationPerformanceProfiler.shared.measure(
+            .surfaceWindowFeatures,
+            metadata: windowMetadata
+        ) {
+            try grid.windowToMeshIndices.map { surfaceDetailIndices in
+                try processWindowFeatures(
+                    surfaceDetails: surfaceDetailIndices.map { surfaceDetails[$0] },
+                    heightResiduals: surfaceDetailIndices.map { heightResiduals[$0] },
+                    signedTiltData: surfaceDetailIndices.map { signedTiltData[$0] },
+                    heightFromGround: heightFromGround,
+                    configuration: configuration
+                )
+            }
+        }
 
         var windows: [SurfaceIntegrityWindowAnalysis] = []
         windows.reserveCapacity(grid.gridIndices.count)
         for index in grid.gridIndices.indices {
             let surfaceDetailIndices = grid.windowToMeshIndices[index]
-            let windowSurfaceDetails = surfaceDetailIndices.map { surfaceDetails[$0] }
-            let windowHeightResiduals = surfaceDetailIndices.map { heightResiduals[$0] }
-            let windowSignedTiltData = surfaceDetailIndices.map { signedTiltData[$0] }
-            let damageOverlap = checkOverlapBetweenPolygons(
-                polygonBase: windowsOnPlane[index],
-                polygonsCompare: damagePolygonsOnPlane,
-                severityCompare: damageConfidenceScores
-            )
-            let features = try processWindowFeatures(
-                surfaceDetails: windowSurfaceDetails,
-                heightResiduals: windowHeightResiduals,
-                signedTiltData: windowSignedTiltData,
-                heightFromGround: heightFromGround,
-                configuration: configuration
-            )
+            let damageOverlap = damageOverlaps[index]
+            let features = featureResults[index]
 
             windows.append(
                 SurfaceIntegrityWindowAnalysis(
