@@ -91,6 +91,10 @@ public struct SlidingWindowGrid: Sendable {
     public let predictionCellBounds3D: [[SIMD3<Float>]]
     public let windowToMeshIndices: [[Int]]
     public let membershipCSR: SlidingWindowMembershipCSR
+    /// Original-grid Metal memberships retained for future GPU feature extraction.
+    public let gpuMembership: SlidingWindowMembershipGPU?
+    /// Maps each retained grid window to its position in the original GPU CSR.
+    public let retainedWindowIndices: [Int]
     public let uvCoordinates: [SIMD2<Float>]
     public let gridOriginU: Float
     public let gridOriginV: Float
@@ -404,6 +408,8 @@ public extension SurfaceIntegrityProcessor {
         return SlidingWindowBoundsResult(bounds: bounds, bounds3D: bounds3D)
     }
 
+    /// The computeSlidingWindowGrid-based methods in this extension are now just for reference.
+    /// The main method being used for this is computeSlidingWindowGridUsingMetalMemership.
     static func computeSlidingWindowGrid(
         meshPolygons: [MeshPolygon],
         plane: Plane,
@@ -590,7 +596,8 @@ public extension SurfaceIntegrityProcessor {
         stride: Float,
         predictionCellSize: Float,
         includeEmptyWindows: Bool,
-        minMeshPoints: Int
+        minMeshPoints: Int,
+        gpuMembership: SlidingWindowMembershipGPU? = nil
     ) throws -> SlidingWindowGrid {
         var retainedIndices: [SIMD2<Int32>] = []
         var retainedBounds: [SlidingWindowBounds] = []
@@ -598,6 +605,7 @@ public extension SurfaceIntegrityProcessor {
         var predictionCellBounds: [SlidingWindowBounds] = []
         var predictionCellBounds3D: [[SIMD3<Float>]] = []
         var windowToMeshIndices: [[Int]] = []
+        var retainedWindowIndices: [Int] = []
         for windowIndex in boundsResult.bounds.indices {
             let windowBounds = boundsResult.bounds[windowIndex]
             let meshIndices = denseMemberships[windowIndex]
@@ -605,6 +613,7 @@ public extension SurfaceIntegrityProcessor {
                 continue
             }
             retainedIndices.append(indexResult.gridIndices[windowIndex])
+            retainedWindowIndices.append(windowIndex)
             retainedBounds.append(windowBounds)
             retainedBounds3D.append(boundsResult.bounds3D[windowIndex])
             let inset = (cellSize - predictionCellSize) / 2
@@ -652,6 +661,8 @@ public extension SurfaceIntegrityProcessor {
             predictionCellBounds3D: predictionCellBounds3D,
             windowToMeshIndices: windowToMeshIndices,
             membershipCSR: membershipCSR,
+            gpuMembership: gpuMembership,
+            retainedWindowIndices: retainedWindowIndices,
             uvCoordinates: indexResult.uvCoordinates,
             gridOriginU: indexResult.gridOriginU,
             gridOriginV: indexResult.gridOriginV,
