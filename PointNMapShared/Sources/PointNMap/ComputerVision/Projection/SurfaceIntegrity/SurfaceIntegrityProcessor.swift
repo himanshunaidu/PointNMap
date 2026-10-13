@@ -78,6 +78,7 @@ public struct SurfaceIntegrityProcessor {
     let countPolygonPipeline: MTLComputePipelineState
     let areaWithinBoundsPolygonPipeline: MTLComputePipelineState
     let stdPolygonPipeline: MTLComputePipelineState
+    let slidingWindowMembershipCountPipeline: MTLComputePipelineState
     let textureLoader: MTKTextureLoader
     
     let ciContext: CIContext
@@ -119,6 +120,13 @@ public struct SurfaceIntegrityProcessor {
             throw SurfaceIntegrityProcessorError.metalInitializationFailed
         }
         self.stdPolygonPipeline = stdPolygonPipeline
+        guard let membershipCountFunction = library.makeFunction(name: "countSlidingWindowMemberships"),
+              let membershipCountPipeline = try? device.makeComputePipelineState(
+                function: membershipCountFunction
+              ) else {
+            throw SurfaceIntegrityProcessorError.metalInitializationFailed
+        }
+        self.slidingWindowMembershipCountPipeline = membershipCountPipeline
     }
     
     /**
