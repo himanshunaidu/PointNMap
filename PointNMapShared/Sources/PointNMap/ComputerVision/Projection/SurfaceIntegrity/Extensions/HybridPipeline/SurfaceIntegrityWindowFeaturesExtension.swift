@@ -394,7 +394,9 @@ private extension SurfaceIntegrityProcessor {
         guard !values.isEmpty else {
             return .nan
         }
-        return values.reduce(0, +) / Float(values.count)
+        let reference = values[0]
+        let deltaSum = values.reduce(Float.zero) { $0 + ($1 - reference) }
+        return reference + deltaSum / Float(values.count)
     }
 
     static func populationStandardDeviation(_ values: [Float]) -> Float {

@@ -94,6 +94,213 @@ kernel void scatterSlidingWindowMemberships(
     }
 }
 
+inline float surfaceIntegrityValue(
+    SurfaceIntegrityPackedPolygonFeaturesGPU value,
+    uint source
+) {
+    switch (source) {
+        case 0: return value.normalDeviation;
+        case 1: return value.heightResidual;
+        case 2: return value.absoluteHeightResidual;
+        case 3: return value.signedTiltU;
+        case 4: return value.signedTiltV;
+        default: return value.signedTiltMagnitude;
+    }
+}
+
+kernel void reduceSurfaceIntegrityWindowFeatures(
+    device const uint* offsets [[buffer(0)]],
+    device const uint* meshIndices [[buffer(1)]],
+    device const SurfaceIntegrityPackedPolygonFeaturesGPU* polygonFeatures [[buffer(2)]],
+    constant uint& windowCount [[buffer(3)]],
+    constant uint& polygonCount [[buffer(4)]],
+    device SurfaceIntegrityWindowReductionGPU* output [[buffer(5)]],
+    uint tid [[thread_index_in_threadgroup]],
+    uint3 group [[threadgroup_position_in_grid]],
+    uint3 threadsPerGroup [[threads_per_threadgroup]]
+) {
+    threadgroup float areaValues[256];
+    threadgroup float deltaSums[256];
+    threadgroup float minima[256];
+    threadgroup float maxima[256];
+    threadgroup uint counts[256];
+    uint window = group.x;
+    uint source = group.y;
+    if (window >= windowCount || source >= 6) return;
+    uint firstPosition = offsets[window];
+    float reference = firstPosition < offsets[window + 1]
+        ? surfaceIntegrityValue(polygonFeatures[meshIndices[firstPosition]], source)
+        : 0.0f;
+    float area = 0.0f, deltaSum = 0.0f;
+    float minimum = INFINITY, maximum = -INFINITY;
+    uint count = 0;
+    for (uint position = offsets[window] + tid; position < offsets[window + 1]; position += threadsPerGroup.x) {
+        uint polygon = meshIndices[position];
+        if (polygon >= polygonCount) continue;
+        SurfaceIntegrityPackedPolygonFeaturesGPU packed = polygonFeatures[polygon];
+        float value = surfaceIntegrityValue(packed, source);
+        area += packed.area;
+        deltaSum += value - reference;
+        count += 1;
+        minimum = min(minimum, value);
+        maximum = max(maximum, value);
+    }
+    areaValues[tid] = area; deltaSums[tid] = deltaSum; minima[tid] = minimum;
+    maxima[tid] = maximum; counts[tid] = count;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    for (uint offset = threadsPerGroup.x / 2; offset > 0; offset /= 2) {
+        if (tid < offset) {
+            areaValues[tid] += areaValues[tid + offset];
+            deltaSums[tid] += deltaSums[tid + offset];
+            minima[tid] = min(minima[tid], minima[tid + offset]);
+            maxima[tid] = max(maxima[tid], maxima[tid + offset]);
+            counts[tid] += counts[tid + offset];
+        }
+        threadgroup_barrier(mem_flags::mem_threadgroup);
+    }
+    if (tid == 0) {
+        uint index = window * 6 + source;
+        output[index].count = counts[0]; output[index].totalArea = areaValues[0];
+        output[index].mean = counts[0] == 0
+            ? 0.0f
+            : reference + deltaSums[0] / float(counts[0]);
+        output[index].centeredMoment2Sum = 0.0f;
+        output[index].centeredMoment3Sum = 0.0f;
+        output[index].centeredMoment4Sum = 0.0f;
+        output[index].minimum = counts[0] == 0 ? 0.0f : minima[0];
+        output[index].maximum = counts[0] == 0 ? 0.0f : maxima[0];
+    }
+}
+
+kernel void computeSurfaceIntegrityWindowCenteredMoments(
+    device const uint* offsets [[buffer(0)]],
+    device const uint* meshIndices [[buffer(1)]],
+    device const SurfaceIntegrityPackedPolygonFeaturesGPU* polygonFeatures [[buffer(2)]],
+    constant uint& windowCount [[buffer(3)]],
+    constant uint& polygonCount [[buffer(4)]],
+    device SurfaceIntegrityWindowReductionGPU* reductions [[buffer(5)]],
+    uint tid [[thread_index_in_threadgroup]],
+    uint3 group [[threadgroup_position_in_grid]],
+    uint3 threadsPerGroup [[threads_per_threadgroup]]
+) {
+    threadgroup float moment2[256];
+    threadgroup float moment3[256];
+    threadgroup float moment4[256];
+    uint window = group.x;
+    uint source = group.y;
+    if (window >= windowCount || source >= 6) return;
+    uint reductionIndex = window * 6 + source;
+    SurfaceIntegrityWindowReductionGPU reduction = reductions[reductionIndex];
+    float mean = reduction.mean;
+    float m2 = 0.0f, m3 = 0.0f, m4 = 0.0f;
+    for (uint position = offsets[window] + tid; position < offsets[window + 1]; position += threadsPerGroup.x) {
+        uint polygon = meshIndices[position];
+        if (polygon >= polygonCount) continue;
+        float delta = surfaceIntegrityValue(polygonFeatures[polygon], source) - mean;
+        float delta2 = delta * delta;
+        m2 += delta2;
+        m3 += delta2 * delta;
+        m4 += delta2 * delta2;
+    }
+    moment2[tid] = m2;
+    moment3[tid] = m3;
+    moment4[tid] = m4;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    for (uint offset = threadsPerGroup.x / 2; offset > 0; offset /= 2) {
+        if (tid < offset) {
+            moment2[tid] += moment2[tid + offset];
+            moment3[tid] += moment3[tid + offset];
+            moment4[tid] += moment4[tid + offset];
+        }
+        threadgroup_barrier(mem_flags::mem_threadgroup);
+    }
+    if (tid == 0) {
+        reductions[reductionIndex].centeredMoment2Sum = moment2[0];
+        reductions[reductionIndex].centeredMoment3Sum = moment3[0];
+        reductions[reductionIndex].centeredMoment4Sum = moment4[0];
+    }
+}
+
+kernel void computeSurfaceIntegrityWindowEntropy(
+    device const uint* offsets [[buffer(0)]],
+    device const uint* meshIndices [[buffer(1)]],
+    device const SurfaceIntegrityPackedPolygonFeaturesGPU* polygonFeatures [[buffer(2)]],
+    device const SurfaceIntegrityWindowReductionGPU* reductions [[buffer(3)]],
+    constant uint& windowCount [[buffer(4)]],
+    constant uint& polygonCount [[buffer(5)]],
+    device float* entropies [[buffer(6)]],
+    device atomic_uint* histograms [[buffer(7)]],
+    uint tid [[thread_index_in_threadgroup]],
+    uint3 group [[threadgroup_position_in_grid]],
+    uint3 threadsPerGroup [[threads_per_threadgroup]]
+) {
+    uint window = group.x, source = group.y;
+    if (window >= windowCount || source >= 6) return;
+    SurfaceIntegrityWindowReductionGPU reduction = reductions[window * 6 + source];
+    float lower = reduction.minimum, upper = reduction.maximum;
+    if (lower == upper) { lower -= 0.5f; upper += 0.5f; }
+    float width = (upper - lower) / 30.0f;
+    uint histogramOffset = (window * 6 + source) * 30;
+    for (uint position = offsets[window] + tid; position < offsets[window + 1]; position += threadsPerGroup.x) {
+        uint polygon = meshIndices[position];
+        if (polygon >= polygonCount || width <= 0.0f) continue;
+        float value = surfaceIntegrityValue(polygonFeatures[polygon], source);
+        // Counteract fast-math division landing infinitesimally below an exact bin edge.
+        int bin = clamp(int(floor((value - lower) / width + 1e-6f)), 0, 29);
+        atomic_fetch_add_explicit(&histograms[histogramOffset + bin], 1, memory_order_relaxed);
+    }
+    threadgroup_barrier(mem_flags::mem_device);
+    if (tid != 0) return;
+    float total = float(reduction.count) + 30.0f * 1e-10f;
+    float entropy = 0.0f;
+    if (reduction.count > 0) {
+        for (uint bin = 0; bin < 30; ++bin) {
+            float probability = (float(atomic_load_explicit(&histograms[histogramOffset + bin], memory_order_relaxed)) + 1e-10f) / total;
+            entropy -= probability * log(probability);
+        }
+    }
+    entropies[window * 6 + source] = entropy;
+}
+
+kernel void computeSurfaceIntegrityWindowTails(
+    device const uint* offsets [[buffer(0)]],
+    device const uint* meshIndices [[buffer(1)]],
+    device const SurfaceIntegrityPackedPolygonFeaturesGPU* polygonFeatures [[buffer(2)]],
+    device const SurfaceIntegrityTailDescriptorGPU* descriptors [[buffer(3)]],
+    constant uint& windowCount [[buffer(4)]],
+    constant uint& polygonCount [[buffer(5)]],
+    constant uint& descriptorCount [[buffer(6)]],
+    device float* output [[buffer(7)]],
+    uint tid [[thread_index_in_threadgroup]],
+    uint3 group [[threadgroup_position_in_grid]],
+    uint3 threadsPerGroup [[threads_per_threadgroup]]
+) {
+    threadgroup float totalWeights[256];
+    threadgroup float matchingWeights[256];
+    uint window = group.x, descriptorIndex = group.y;
+    if (window >= windowCount || descriptorIndex >= descriptorCount) return;
+    SurfaceIntegrityTailDescriptorGPU descriptor = descriptors[descriptorIndex];
+    float total = 0.0f, matching = 0.0f;
+    for (uint position = offsets[window] + tid; position < offsets[window + 1]; position += threadsPerGroup.x) {
+        uint polygon = meshIndices[position];
+        if (polygon >= polygonCount) continue;
+        SurfaceIntegrityPackedPolygonFeaturesGPU packed = polygonFeatures[polygon];
+        total += packed.area;
+        if (surfaceIntegrityValue(packed, descriptor.source) > descriptor.threshold) matching += packed.area;
+    }
+    totalWeights[tid] = total; matchingWeights[tid] = matching;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    for (uint offset = threadsPerGroup.x / 2; offset > 0; offset /= 2) {
+        if (tid < offset) {
+            totalWeights[tid] += totalWeights[tid + offset];
+            matchingWeights[tid] += matchingWeights[tid + offset];
+        }
+        threadgroup_barrier(mem_flags::mem_threadgroup);
+    }
+    if (tid == 0) output[window * descriptorCount + descriptorIndex] =
+        totalWeights[0] > 0.0f ? matchingWeights[0] / totalWeights[0] : 0.0f;
+}
+
 // Needed for mesh normals which are not pre-aligned to reference direction
 inline float3 alignNormalWithReference(float3 normal, float3 reference) {
     if (dot(normal, reference) < 0.0) {

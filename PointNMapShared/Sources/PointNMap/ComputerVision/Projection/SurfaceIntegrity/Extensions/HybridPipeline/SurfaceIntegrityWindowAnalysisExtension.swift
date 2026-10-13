@@ -5,6 +5,7 @@
 
 import Foundation
 import CoreGraphics
+import Metal
 import simd
 
 public enum SurfaceIntegrityWindowAnalysisError: Error, LocalizedError {
@@ -194,10 +195,39 @@ public extension SurfaceIntegrityProcessor {
             secondPlaneVector: secondPlaneVector
         )
 
+        var stagedFeatureResult: SurfaceIntegrityStagedWindowFeatureResult?
+        if let gpuMembership = grid.gpuMembership {
+            do {
+                let originalMembership = try materializeSlidingWindowMembershipForCPU(gpuMembership)
+                    .membershipCSR
+                let intermediate = try computeGPUWindowFeatureIntermediate(
+                    surfaceDetails: surfaceDetails,
+                    heightResiduals: heightResiduals,
+                    signedTiltData: signedTiltData,
+                    membership: gpuMembership,
+                    configuration: configuration
+                )
+                stagedFeatureResult = try processStagedWindowFeatures(
+                    intermediate: intermediate,
+                    surfaceDetails: surfaceDetails,
+                    heightResiduals: heightResiduals,
+                    signedTiltData: signedTiltData,
+                    membershipCSR: originalMembership,
+                    retainedWindowIndices: grid.retainedWindowIndices,
+                    heightFromGround: heightFromGround,
+                    configuration: configuration
+                )
+            } catch {
+                print("[WINDOW_FEATURE:GPU_PARITY] success=false error=\(error.localizedDescription)")
+            }
+        }
+
         var windows: [SurfaceIntegrityWindowAnalysis] = []
+        var cpuFeatureMilliseconds: Double = 0
         windows.reserveCapacity(grid.gridIndices.count)
         for index in grid.gridIndices.indices {
-            let surfaceDetailIndices = grid.windowToMeshIndices[index]
+            // Metal scatter ordering is intentionally unspecified; canonicalize the CPU bridge.
+            let surfaceDetailIndices = grid.windowToMeshIndices[index].sorted()
             let windowSurfaceDetails = surfaceDetailIndices.map { surfaceDetails[$0] }
             let windowHeightResiduals = surfaceDetailIndices.map { heightResiduals[$0] }
             let windowSignedTiltData = surfaceDetailIndices.map { signedTiltData[$0] }
@@ -206,6 +236,7 @@ public extension SurfaceIntegrityProcessor {
                 polygonsCompare: damagePolygonsOnPlane,
                 severityCompare: damageConfidenceScores
             )
+            let cpuFeatureStart = ProcessInfo.processInfo.systemUptime
             let features = try Self.processWindowFeatures(
                 surfaceDetails: windowSurfaceDetails,
                 heightResiduals: windowHeightResiduals,
@@ -213,6 +244,7 @@ public extension SurfaceIntegrityProcessor {
                 heightFromGround: heightFromGround,
                 configuration: configuration
             )
+            cpuFeatureMilliseconds += (ProcessInfo.processInfo.systemUptime - cpuFeatureStart) * 1_000
 
             windows.append(
                 SurfaceIntegrityWindowAnalysis(
@@ -225,6 +257,26 @@ public extension SurfaceIntegrityProcessor {
                     hasSurfaceDisruption: damageOverlap.overlapRatio > 0.25,
                     features: features
                 )
+            )
+        }
+
+        if let stagedFeatureResult {
+            let summary = Self.compareWindowFeatures(
+                cpu: windows.map(\.features),
+                staged: stagedFeatureResult.features,
+                retainedWindowIndices: grid.retainedWindowIndices,
+                gpuSupportedColumns: stagedFeatureResult.supportedColumns
+            )
+            var parityTimings = stagedFeatureResult.timings
+            parityTimings.cpuReferenceMilliseconds = cpuFeatureMilliseconds
+            Self.logWindowFeatureParity(
+                summary,
+                originalWindowCount: grid.gpuMembership?.windowCount ?? grid.gridIndices.count,
+                retainedWindowCount: grid.gridIndices.count,
+                polygonCount: surfaceDetails.count,
+                membershipCount: grid.gpuMembership?.membershipCount ?? grid.membershipCSR.membershipCount,
+                timings: parityTimings,
+                deviceName: device.name
             )
         }
 

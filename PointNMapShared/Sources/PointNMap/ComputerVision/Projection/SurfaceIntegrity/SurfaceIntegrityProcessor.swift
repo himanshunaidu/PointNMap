@@ -80,6 +80,10 @@ public struct SurfaceIntegrityProcessor {
     let stdPolygonPipeline: MTLComputePipelineState
     let slidingWindowMembershipCountPipeline: MTLComputePipelineState
     let slidingWindowMembershipScatterPipeline: MTLComputePipelineState
+    let surfaceIntegrityWindowReductionPipeline: MTLComputePipelineState
+    let surfaceIntegrityWindowCenteredMomentsPipeline: MTLComputePipelineState
+    let surfaceIntegrityWindowEntropyPipeline: MTLComputePipelineState
+    let surfaceIntegrityWindowTailPipeline: MTLComputePipelineState
     let textureLoader: MTKTextureLoader
     
     let ciContext: CIContext
@@ -135,6 +139,20 @@ public struct SurfaceIntegrityProcessor {
             throw SurfaceIntegrityProcessorError.metalInitializationFailed
         }
         self.slidingWindowMembershipScatterPipeline = membershipScatterPipeline
+        guard let reductionFunction = library.makeFunction(name: "reduceSurfaceIntegrityWindowFeatures"),
+              let reductionPipeline = try? device.makeComputePipelineState(function: reductionFunction),
+              let centeredMomentsFunction = library.makeFunction(name: "computeSurfaceIntegrityWindowCenteredMoments"),
+              let centeredMomentsPipeline = try? device.makeComputePipelineState(function: centeredMomentsFunction),
+              let entropyFunction = library.makeFunction(name: "computeSurfaceIntegrityWindowEntropy"),
+              let entropyPipeline = try? device.makeComputePipelineState(function: entropyFunction),
+              let tailFunction = library.makeFunction(name: "computeSurfaceIntegrityWindowTails"),
+              let tailPipeline = try? device.makeComputePipelineState(function: tailFunction) else {
+            throw SurfaceIntegrityProcessorError.metalInitializationFailed
+        }
+        self.surfaceIntegrityWindowReductionPipeline = reductionPipeline
+        self.surfaceIntegrityWindowCenteredMomentsPipeline = centeredMomentsPipeline
+        self.surfaceIntegrityWindowEntropyPipeline = entropyPipeline
+        self.surfaceIntegrityWindowTailPipeline = tailPipeline
     }
     
     /**
