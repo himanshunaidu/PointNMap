@@ -49,6 +49,51 @@ kernel void countSlidingWindowMemberships(
     }
 }
 
+kernel void scatterSlidingWindowMemberships(
+    device const float2* uvCoordinates [[buffer(0)]],
+    constant uint& centroidCount [[buffer(1)]],
+    constant float2& gridOrigin [[buffer(2)]],
+    constant uint2& gridShape [[buffer(3)]],
+    constant float& cellSize [[buffer(4)]],
+    constant float& stride [[buffer(5)]],
+    constant uint& candidateSpan [[buffer(6)]],
+    device atomic_uint* windowWriteCursors [[buffer(7)]],
+    device uint* meshIndices [[buffer(8)]],
+    uint centroidIndex [[thread_position_in_grid]]
+) {
+    if (centroidIndex >= centroidCount) {
+        return;
+    }
+
+    float2 coordinate = uvCoordinates[centroidIndex];
+    int2 baseIndex = int2(floor((coordinate - gridOrigin) / stride));
+    for (uint uOffset = 0; uOffset < candidateSpan; ++uOffset) {
+        int uIndex = baseIndex.x - int(uOffset);
+        if (uIndex < 0 || uIndex >= int(gridShape.x)) {
+            continue;
+        }
+        for (uint vOffset = 0; vOffset < candidateSpan; ++vOffset) {
+            int vIndex = baseIndex.y - int(vOffset);
+            if (vIndex < 0 || vIndex >= int(gridShape.y)) {
+                continue;
+            }
+
+            float2 windowMinimum = gridOrigin + float2(uIndex, vIndex) * stride;
+            float2 windowMaximum = windowMinimum + cellSize;
+            if (coordinate.x >= windowMinimum.x && coordinate.x < windowMaximum.x &&
+                coordinate.y >= windowMinimum.y && coordinate.y < windowMaximum.y) {
+                uint windowIndex = uint(uIndex) * gridShape.y + uint(vIndex);
+                uint destination = atomic_fetch_add_explicit(
+                    &windowWriteCursors[windowIndex],
+                    1,
+                    memory_order_relaxed
+                );
+                meshIndices[destination] = centroidIndex;
+            }
+        }
+    }
+}
+
 // Needed for mesh normals which are not pre-aligned to reference direction
 inline float3 alignNormalWithReference(float3 normal, float3 reference) {
     if (dot(normal, reference) < 0.0) {

@@ -112,6 +112,111 @@ public extension SurfaceIntegrityProcessor {
         )
     }
 
+    /// Builds complete CSR membership using Metal count/scatter passes and a CPU prefix sum.
+    func computeSlidingWindowMembershipCSR(
+        uvCoordinates: [SIMD2<Float>],
+        gridOriginU: Float,
+        gridOriginV: Float,
+        gridShape: SIMD2<Int32>,
+        cellSize: Float = 0.27,
+        stride: Float = 0.09
+    ) throws -> SlidingWindowMembershipCSR {
+        let countResult = try computeSlidingWindowMembershipCounts(
+            uvCoordinates: uvCoordinates,
+            gridOriginU: gridOriginU,
+            gridOriginV: gridOriginV,
+            gridShape: gridShape,
+            cellSize: cellSize,
+            stride: stride
+        )
+        guard countResult.membershipCount > 0 else {
+            return SlidingWindowMembershipCSR(
+                windowOffsets: countResult.windowOffsets,
+                meshIndices: []
+            )
+        }
+        guard let centroidCount = UInt32(exactly: uvCoordinates.count),
+              let gridWidth = UInt32(exactly: gridShape.x),
+              let gridHeight = UInt32(exactly: gridShape.y),
+              let candidateSpan = UInt32(exactly: Int(ceil(cellSize / stride))) else {
+            throw SlidingWindowGridError.membershipIndexOverflow
+        }
+
+        let writeCursors = Array(countResult.windowOffsets.dropLast())
+        guard let coordinateBuffer = device.makeBuffer(
+            bytes: uvCoordinates,
+            length: MemoryLayout<SIMD2<Float>>.stride * uvCoordinates.count,
+            options: .storageModeShared
+        ), let cursorBuffer = device.makeBuffer(
+            bytes: writeCursors,
+            length: MemoryLayout<UInt32>.stride * writeCursors.count,
+            options: .storageModeShared
+        ), let membershipBuffer = device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * countResult.membershipCount,
+            options: .storageModeShared
+        ), let commandBuffer = commandQueue.makeCommandBuffer(),
+              let encoder = commandBuffer.makeComputeCommandEncoder() else {
+            throw SurfaceIntegrityProcessorError.unableToProcessBufferData
+        }
+
+        membershipBuffer.contents()
+            .bindMemory(to: UInt32.self, capacity: countResult.membershipCount)
+            .initialize(repeating: UInt32.max, count: countResult.membershipCount)
+        var origin = SIMD2<Float>(gridOriginU, gridOriginV)
+        var unsignedGridShape = SIMD2<UInt32>(gridWidth, gridHeight)
+        var mutableCellSize = cellSize
+        var mutableStride = stride
+        var mutableCentroidCount = centroidCount
+        var mutableCandidateSpan = candidateSpan
+
+        encoder.setComputePipelineState(slidingWindowMembershipScatterPipeline)
+        encoder.setBuffer(coordinateBuffer, offset: 0, index: 0)
+        encoder.setBytes(&mutableCentroidCount, length: MemoryLayout<UInt32>.stride, index: 1)
+        encoder.setBytes(&origin, length: MemoryLayout<SIMD2<Float>>.stride, index: 2)
+        encoder.setBytes(&unsignedGridShape, length: MemoryLayout<SIMD2<UInt32>>.stride, index: 3)
+        encoder.setBytes(&mutableCellSize, length: MemoryLayout<Float>.stride, index: 4)
+        encoder.setBytes(&mutableStride, length: MemoryLayout<Float>.stride, index: 5)
+        encoder.setBytes(&mutableCandidateSpan, length: MemoryLayout<UInt32>.stride, index: 6)
+        encoder.setBuffer(cursorBuffer, offset: 0, index: 7)
+        encoder.setBuffer(membershipBuffer, offset: 0, index: 8)
+        let threadgroupWidth = min(
+            slidingWindowMembershipScatterPipeline.maxTotalThreadsPerThreadgroup,
+            256
+        )
+        encoder.dispatchThreads(
+            MTLSize(width: uvCoordinates.count, height: 1, depth: 1),
+            threadsPerThreadgroup: MTLSize(width: threadgroupWidth, height: 1, depth: 1)
+        )
+        encoder.endEncoding()
+        commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
+        guard commandBuffer.status == .completed else {
+            throw SurfaceIntegrityProcessorError.unableToProcessBufferData
+        }
+
+        let cursorPointer = cursorBuffer.contents().bindMemory(
+            to: UInt32.self,
+            capacity: countResult.windowCount
+        )
+        let finalCursors = Array(
+            UnsafeBufferPointer(start: cursorPointer, count: countResult.windowCount)
+        )
+        guard finalCursors == Array(countResult.windowOffsets.dropFirst()) else {
+            throw SurfaceIntegrityProcessorError.unableToProcessBufferData
+        }
+        let membershipPointer = membershipBuffer.contents().bindMemory(
+            to: UInt32.self,
+            capacity: countResult.membershipCount
+        )
+        let meshIndices = Array(
+            UnsafeBufferPointer(start: membershipPointer, count: countResult.membershipCount)
+        )
+        return SlidingWindowMembershipCSR(
+            windowOffsets: countResult.windowOffsets,
+            meshIndices: meshIndices
+        )
+    }
+
     private static func exclusivePrefixSum(_ counts: [UInt32]) throws -> [UInt32] {
         var offsets: [UInt32] = [0]
         offsets.reserveCapacity(counts.count + 1)
