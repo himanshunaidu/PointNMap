@@ -159,7 +159,7 @@ public extension AttributeEstimationPipeline {
         guard let captureMeshData else {
             throw AttributeEstimationPipelineError.missingCaptureData
         }
-        guard surfaceIntegrityProcessor != nil else {
+        guard let surfaceIntegrityProcessor else {
             throw AttributeEstimationPipelineError.missingPreprocessors
         }
 
@@ -173,7 +173,7 @@ public extension AttributeEstimationPipeline {
         let damageDetectionResults = try getDamageDetectionResults(
             accessibilityFeature: accessibilityFeature
         )
-        let result = try SurfaceIntegrityProcessor.analyzeMeshWindows(
+        let result = try surfaceIntegrityProcessor.analyzeMeshWindows(
             meshContents: meshContents,
             plane: alignedPlane,
             damageDetectionResults: damageDetectionResults,

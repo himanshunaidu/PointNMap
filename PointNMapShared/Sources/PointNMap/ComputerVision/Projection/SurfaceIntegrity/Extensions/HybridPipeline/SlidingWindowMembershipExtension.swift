@@ -26,6 +26,72 @@ public struct SlidingWindowMembershipCountResult: Sendable, Equatable {
 }
 
 public extension SurfaceIntegrityProcessor {
+    /// Builds the existing dense grid contract from GPU-generated CSR memberships.
+    func computeSlidingWindowGridUsingMetalMembership(
+        meshCentroids: [SIMD3<Float>],
+        planeOrigin: SIMD3<Float>,
+        firstPlaneVector: SIMD3<Float>,
+        secondPlaneVector: SIMD3<Float>,
+        cellSize: Float = 0.27,
+        stride: Float = 0.09,
+        predictionCellSize: Float = 0.09,
+        includeEmptyWindows: Bool = true,
+        minMeshPoints: Int = 5
+    ) throws -> SlidingWindowGrid {
+        try Self.validateSlidingWindowConfiguration(
+            cellSize: cellSize,
+            stride: stride,
+            predictionCellSize: predictionCellSize,
+            minMeshPoints: minMeshPoints
+        )
+        let indexResult = try Self.computeGridIndices(
+            meshCentroids: meshCentroids,
+            planeOrigin: planeOrigin,
+            firstPlaneVector: firstPlaneVector,
+            secondPlaneVector: secondPlaneVector,
+            stride: stride
+        )
+        let boundsResult = try Self.computeGridBounds(
+            gridIndices: indexResult.gridIndices,
+            gridOriginU: indexResult.gridOriginU,
+            gridOriginV: indexResult.gridOriginV,
+            planeOrigin: planeOrigin,
+            firstPlaneVector: firstPlaneVector,
+            secondPlaneVector: secondPlaneVector,
+            cellSize: cellSize,
+            stride: stride
+        )
+        let membershipCSR = try computeSlidingWindowMembershipCSR(
+            uvCoordinates: indexResult.uvCoordinates,
+            gridOriginU: indexResult.gridOriginU,
+            gridOriginV: indexResult.gridOriginV,
+            gridShape: indexResult.gridShape,
+            cellSize: cellSize,
+            stride: stride
+        )
+
+        // Preserve the current downstream API until feature extraction consumes CSR directly.
+        let denseMemberships = (0..<membershipCSR.windowCount).map { windowIndex in
+            let start = Int(membershipCSR.windowOffsets[windowIndex])
+            let end = Int(membershipCSR.windowOffsets[windowIndex + 1])
+            return membershipCSR.meshIndices[start..<end].map(Int.init)
+        }
+
+        return try Self.buildSlidingWindowGrid(
+            indexResult: indexResult,
+            boundsResult: boundsResult,
+            denseMemberships: denseMemberships,
+            planeOrigin: planeOrigin,
+            firstPlaneVector: firstPlaneVector,
+            secondPlaneVector: secondPlaneVector,
+            cellSize: cellSize,
+            stride: stride,
+            predictionCellSize: predictionCellSize,
+            includeEmptyWindows: includeEmptyWindows,
+            minMeshPoints: minMeshPoints
+        )
+    }
+
     /// Counts centroid memberships on Metal. CSR scatter is intentionally deferred to a later stage.
     func computeSlidingWindowMembershipCounts(
         uvCoordinates: [SIMD2<Float>],

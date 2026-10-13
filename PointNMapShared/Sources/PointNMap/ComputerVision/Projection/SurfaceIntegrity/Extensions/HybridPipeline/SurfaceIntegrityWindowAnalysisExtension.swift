@@ -42,7 +42,7 @@ public struct SurfaceIntegrityWindowAnalysisResult: Sendable {
 }
 
 public extension SurfaceIntegrityProcessor {
-    static func analyzeMeshWindows(
+    func analyzeMeshWindows(
         meshContents: MeshContents,
         plane: Plane,
         damageDetectionResults: [DamageDetectionResult],
@@ -71,14 +71,14 @@ public extension SurfaceIntegrityProcessor {
                 SIMD2<Float>(Float(rectangle.maxX), Float(rectangle.maxY)),
                 SIMD2<Float>(Float(rectangle.minX), Float(rectangle.maxY))
             ]
-            let worldPolygon = try projectPolygon(
+            let worldPolygon = try Self.projectPolygon(
                 imagePolygon,
                 depthMapProcessor: depthMapProcessor,
                 cameraIntrinsics: captureData.cameraIntrinsics,
                 cameraTransform: captureData.cameraTransform,
                 imageSize: imageSize
             )
-            damagePolygonsOnPlane.append(projectPolygonToPlane(worldPolygon, plane: plane))
+            damagePolygonsOnPlane.append(Self.projectPolygonToPlane(worldPolygon, plane: plane))
         }
 
         let cameraPosition4 = captureData.cameraTransform.columns.3
@@ -106,7 +106,7 @@ public extension SurfaceIntegrityProcessor {
         )
     }
 
-    static func analyzeMeshWindows(
+    func analyzeMeshWindows(
         meshPolygons: [MeshPolygon],
         plane: Plane,
         damagePolygonsOnPlane: [[SIMD2<Float>]],
@@ -137,7 +137,7 @@ public extension SurfaceIntegrityProcessor {
         )
     }
 
-    static func analyzeMeshWindows(
+    func analyzeMeshWindows(
         meshPolygons: [MeshPolygon],
         planeOrigin: SIMD3<Float>,
         firstPlaneVector: SIMD3<Float>,
@@ -159,25 +159,25 @@ public extension SurfaceIntegrityProcessor {
 
         // Invalid polygon normals are removed before grid creation so membership indices
         // remain aligned with every per-polygon feature array.
-        let surfaceDetails = try getSurfaceDetailsFromMesh(
+        let surfaceDetails = try Self.getSurfaceDetailsFromMesh(
             centroids: meshPolygons.map(\.centroid),
             normals: meshPolygons.map(\.normal),
             areas: meshPolygons.map(\.area),
             planeNormal: planeNormal
         )
-        let heightResiduals = calculateHeightResiduals(
+        let heightResiduals = Self.calculateHeightResiduals(
             surfaceDetails: surfaceDetails,
             planeOrigin: planeOrigin,
             planeNormal: planeNormal
         )
-        let signedTiltData = try calculateSignedTiltData(
+        let signedTiltData = try Self.calculateSignedTiltData(
             surfaceDetails: surfaceDetails,
             firstPlaneVector: firstPlaneVector,
             secondPlaneVector: secondPlaneVector,
             planeNormal: planeNormal
         )
-        let grid = try computeSlidingWindowGrid(
-            meshCentroids: surfaceDetails.map(\.centroid),
+        let grid = try computeSlidingWindowGridUsingMetalMembership(
+            meshCentroids: surfaceDetails.map { $0.centroid },
             planeOrigin: planeOrigin,
             firstPlaneVector: firstPlaneVector,
             secondPlaneVector: secondPlaneVector,
@@ -187,7 +187,7 @@ public extension SurfaceIntegrityProcessor {
             includeEmptyWindows: includeEmptyWindows,
             minMeshPoints: minimumWindowPolygonCount
         )
-        let windowsOnPlane = projectGridWindowsToPlane(
+        let windowsOnPlane = Self.projectGridWindowsToPlane(
             grid.gridBounds3D,
             planeOrigin: planeOrigin,
             firstPlaneVector: firstPlaneVector,
@@ -201,12 +201,12 @@ public extension SurfaceIntegrityProcessor {
             let windowSurfaceDetails = surfaceDetailIndices.map { surfaceDetails[$0] }
             let windowHeightResiduals = surfaceDetailIndices.map { heightResiduals[$0] }
             let windowSignedTiltData = surfaceDetailIndices.map { signedTiltData[$0] }
-            let damageOverlap = checkOverlapBetweenPolygons(
+            let damageOverlap = Self.checkOverlapBetweenPolygons(
                 polygonBase: windowsOnPlane[index],
                 polygonsCompare: damagePolygonsOnPlane,
                 severityCompare: damageConfidenceScores
             )
-            let features = try processWindowFeatures(
+            let features = try Self.processWindowFeatures(
                 surfaceDetails: windowSurfaceDetails,
                 heightResiduals: windowHeightResiduals,
                 signedTiltData: windowSignedTiltData,

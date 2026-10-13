@@ -558,7 +558,7 @@ public extension SurfaceIntegrityProcessor {
         )
     }
 
-    private static func validateSlidingWindowConfiguration(
+    static func validateSlidingWindowConfiguration(
         cellSize: Float,
         stride: Float,
         predictionCellSize: Float,
@@ -579,7 +579,7 @@ public extension SurfaceIntegrityProcessor {
         }
     }
 
-    private static func buildSlidingWindowGrid(
+    static func buildSlidingWindowGrid(
         indexResult: SlidingWindowGridIndexResult,
         boundsResult: SlidingWindowBoundsResult,
         denseMemberships: [[Int]],
