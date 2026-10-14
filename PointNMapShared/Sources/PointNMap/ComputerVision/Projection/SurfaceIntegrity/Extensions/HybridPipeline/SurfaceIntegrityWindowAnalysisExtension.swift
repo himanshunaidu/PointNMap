@@ -29,6 +29,8 @@ public struct SurfaceIntegrityWindowAnalysis: Sendable {
     public let surfaceDetailIndices: [Int]
     public let damageOverlapRatio: Float
     public let maximumDamageConfidence: Float
+    public let surfaceDisruptionProbability: Double
+    public let surfaceDisruptionLogit: Double
     public let hasSurfaceDisruption: Bool
     public let features: SurfaceIntegrityWindowFeatures
 }
@@ -48,6 +50,8 @@ public extension SurfaceIntegrityProcessor {
         damageDetectionResults: [DamageDetectionResult],
         captureData: any CaptureMeshDataProtocol,
         configuration: SurfaceIntegrityFeatureConfiguration = .pythonModelDefault,
+        predictionModel: any SurfaceIntegrityWindowPredicting =
+            SurfaceIntegrityAnalysisModelZoo.placeholderLogisticRegression,
         cellSize: Float = 0.27,
         stride: Float = 0.09,
         predictionCellSize: Float = 0.09,
@@ -98,6 +102,7 @@ public extension SurfaceIntegrityProcessor {
             damageConfidenceScores: damageDetectionResults.map { Float($0.confidence) },
             heightFromGround: heightFromGround,
             configuration: configuration,
+            predictionModel: predictionModel,
             cellSize: cellSize,
             stride: stride,
             predictionCellSize: predictionCellSize,
@@ -113,6 +118,8 @@ public extension SurfaceIntegrityProcessor {
         damageConfidenceScores: [Float],
         heightFromGround: Float?,
         configuration: SurfaceIntegrityFeatureConfiguration = .pythonModelDefault,
+        predictionModel: any SurfaceIntegrityWindowPredicting =
+            SurfaceIntegrityAnalysisModelZoo.placeholderLogisticRegression,
         cellSize: Float = 0.27,
         stride: Float = 0.09,
         predictionCellSize: Float = 0.09,
@@ -129,6 +136,7 @@ public extension SurfaceIntegrityProcessor {
             damageConfidenceScores: damageConfidenceScores,
             heightFromGround: heightFromGround,
             configuration: configuration,
+            predictionModel: predictionModel,
             cellSize: cellSize,
             stride: stride,
             predictionCellSize: predictionCellSize,
@@ -147,6 +155,8 @@ public extension SurfaceIntegrityProcessor {
         damageConfidenceScores: [Float],
         heightFromGround: Float?,
         configuration: SurfaceIntegrityFeatureConfiguration = .pythonModelDefault,
+        predictionModel: any SurfaceIntegrityWindowPredicting =
+            SurfaceIntegrityAnalysisModelZoo.placeholderLogisticRegression,
         cellSize: Float = 0.27,
         stride: Float = 0.09,
         predictionCellSize: Float = 0.09,
@@ -218,8 +228,10 @@ public extension SurfaceIntegrityProcessor {
                     )
                 }
             } catch {
-                print("[WINDOW_FEATURE:GPU] success=false fallback=cpu error=\(error.localizedDescription)")
+                print("[WINDOW_FEATURE:GPU] success=false fallback=zero error=\(error.localizedDescription)")
             }
+        } else {
+            print("[WINDOW_FEATURE:GPU] success=false fallback=zero error=missing_gpu_membership")
         }
 
         var windows: [SurfaceIntegrityWindowAnalysis] = []
@@ -236,14 +248,23 @@ public extension SurfaceIntegrityProcessor {
             if let stagedFeatures {
                 features = stagedFeatures[index]
             } else {
-                features = try Self.processWindowFeatures(
-                    surfaceDetails: surfaceDetailIndices.map { surfaceDetails[$0] },
-                    heightResiduals: surfaceDetailIndices.map { heightResiduals[$0] },
-                    signedTiltData: surfaceDetailIndices.map { signedTiltData[$0] },
+                features = Self.makeUnavailableWindowFeatures(
                     heightFromGround: heightFromGround,
-                    configuration: configuration,
-                    polygonIndices: surfaceDetailIndices
+                    configuration: configuration
                 )
+            }
+            let prediction: SurfaceIntegrityPrediction
+            if stagedFeatures != nil {
+                var modelFeatures: [SurfaceIntegrityModelFeature: Double] = [
+                    .damageOverlapRatio: Double(damageOverlap.overlapRatio),
+                    .maximumDamageConfidence: Double(damageOverlap.maximumSeverity)
+                ]
+                for (feature, value) in features.values {
+                    modelFeatures[.windowFeature(feature)] = Double(value)
+                }
+                prediction = try predictionModel.predict(features: modelFeatures)
+            } else {
+                prediction = Self.unavailableSurfaceIntegrityPrediction
             }
 
             windows.append(
@@ -254,7 +275,9 @@ public extension SurfaceIntegrityProcessor {
                     surfaceDetailIndices: surfaceDetailIndices,
                     damageOverlapRatio: damageOverlap.overlapRatio,
                     maximumDamageConfidence: damageOverlap.maximumSeverity,
-                    hasSurfaceDisruption: damageOverlap.overlapRatio > 0.25,
+                    surfaceDisruptionProbability: prediction.probability,
+                    surfaceDisruptionLogit: prediction.logit,
+                    hasSurfaceDisruption: prediction.isDisrupted,
                     features: features
                 )
             )
@@ -267,5 +290,23 @@ public extension SurfaceIntegrityProcessor {
             signedTiltData: signedTiltData,
             windows: windows
         )
+    }
+
+    static func makeUnavailableWindowFeatures(
+        heightFromGround: Float?,
+        configuration: SurfaceIntegrityFeatureConfiguration
+    ) -> SurfaceIntegrityWindowFeatures {
+        var values = Dictionary(
+            uniqueKeysWithValues: configuration.allColumns.map { ($0, Float.zero) }
+        )
+        values[.heightFromGround] = heightFromGround ?? .nan
+        return SurfaceIntegrityWindowFeatures(
+            values: values,
+            orderedColumns: configuration.allColumns
+        )
+    }
+
+    static var unavailableSurfaceIntegrityPrediction: SurfaceIntegrityPrediction {
+        SurfaceIntegrityPrediction(probability: 0, isDisrupted: false, logit: .nan)
     }
 }
