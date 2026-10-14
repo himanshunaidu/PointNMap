@@ -20,6 +20,7 @@ public extension AttributeEstimationPipeline {
         public var meshContents: MeshContents? = nil
         public var meshAlignedPlane: Plane? = nil
         public var meshProjectedPlane: ProjectedPlane? = nil
+        public var damageDetectionResults: [DamageDetectionResult]? = nil
         
         /// Additional lazy properties for caching can be added here as needed.
         public var surfaceNormalsGrid: SurfaceNormalsForPointsGrid? = nil
@@ -47,6 +48,7 @@ public extension AttributeEstimationPipeline {
         self.prerequisiteCache.meshContents = nil
         self.prerequisiteCache.meshAlignedPlane = nil
         self.prerequisiteCache.meshProjectedPlane = nil
+        self.prerequisiteCache.damageDetectionResults = nil
         self.prerequisiteCache.surfaceIntegrityWindowAnalysis = nil
     }
 }
@@ -54,7 +56,7 @@ public extension AttributeEstimationPipeline {
 /**
  Extension for caching counterparts of world point extraction and plane calculation.
  */
-extension AttributeEstimationPipeline {
+public extension AttributeEstimationPipeline {
     /// Caching counterpart of getWorldPoints
     func getCachedWorldPoints(
         accessibilityFeature: any EditableAccessibilityFeatureProtocol
@@ -100,6 +102,15 @@ extension AttributeEstimationPipeline {
                 accessibilityFeature: accessibilityFeature,
                 plane: plane
             )
+        }
+    }
+
+    /// Damage detection is capture-scoped and can be shared by every attribute for a feature.
+    func getCachedDamageDetectionResults(
+        accessibilityFeature: any EditableAccessibilityFeatureProtocol
+    ) throws -> [DamageDetectionResult] {
+        try prerequisiteCache.getOrCompute(\.damageDetectionResults) {
+            try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
         }
     }
 }
@@ -170,7 +181,7 @@ public extension AttributeEstimationPipeline {
             accessibilityFeature: accessibilityFeature,
             meshPolygons: meshContents.polygons
         )
-        let damageDetectionResults = try getDamageDetectionResults(
+        let damageDetectionResults = try getCachedDamageDetectionResults(
             accessibilityFeature: accessibilityFeature
         )
         let result = try surfaceIntegrityProcessor.analyzeMeshWindows(
