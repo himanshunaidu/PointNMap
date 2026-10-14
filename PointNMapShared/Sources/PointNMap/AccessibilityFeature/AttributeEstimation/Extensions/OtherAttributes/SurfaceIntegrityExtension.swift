@@ -30,7 +30,7 @@ public extension AttributeEstimationPipeline {
         guard let surfaceIntegrityProcessor = self.surfaceIntegrityProcessor else {
             throw AttributeEstimationPipelineError.missingPreprocessors
         }
-        let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
+        let damageDetectionResults = try getCachedDamageDetectionResults(accessibilityFeature: accessibilityFeature)
         let worldPoints: [WorldPoint] = try self.getCachedWorldPoints(
             accessibilityFeature: accessibilityFeature
         )
@@ -74,7 +74,7 @@ public extension AttributeEstimationPipeline {
         guard let surfaceIntegrityProcessor = self.surfaceIntegrityProcessor else {
             throw AttributeEstimationPipelineError.missingPreprocessors
         }
-        let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
+        let damageDetectionResults = try getCachedDamageDetectionResults(accessibilityFeature: accessibilityFeature)
         let meshContents: MeshContents = try self.getCachedMeshContents(
             accessibilityFeature: accessibilityFeature
         )
@@ -175,7 +175,7 @@ public extension AttributeEstimationPipeline {
         guard let surfaceIntegrityProcessor = self.surfaceIntegrityProcessor else {
             throw AttributeEstimationPipelineError.missingPreprocessors
         }
-        let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
+        let damageDetectionResults = try getCachedDamageDetectionResults(accessibilityFeature: accessibilityFeature)
         let worldPoints: [WorldPoint] = try self.getCachedWorldPoints(
             accessibilityFeature: accessibilityFeature
         )
@@ -217,7 +217,7 @@ public extension AttributeEstimationPipeline {
         guard let surfaceIntegrityProcessor = self.surfaceIntegrityProcessor else {
             throw AttributeEstimationPipelineError.missingPreprocessors
         }
-        let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
+        let damageDetectionResults = try getCachedDamageDetectionResults(accessibilityFeature: accessibilityFeature)
         let meshContents: MeshContents = try self.getCachedMeshContents(
             accessibilityFeature: accessibilityFeature
         )
@@ -323,7 +323,7 @@ extension AttributeEstimationPipeline {
         guard let surfaceIntegrityProcessor = self.surfaceIntegrityProcessor else {
             throw AttributeEstimationPipelineError.missingPreprocessors
         }
-        let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
+        let damageDetectionResults = try getCachedDamageDetectionResults(accessibilityFeature: accessibilityFeature)
         let worldPoints: [WorldPoint] = try self.getCachedWorldPoints(
             accessibilityFeature: accessibilityFeature
         )
@@ -390,7 +390,7 @@ extension AttributeEstimationPipeline {
         guard let surfaceIntegrityProcessor = self.surfaceIntegrityProcessor else {
             throw AttributeEstimationPipelineError.missingPreprocessors
         }
-        let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
+        let damageDetectionResults = try getCachedDamageDetectionResults(accessibilityFeature: accessibilityFeature)
         let worldPoints: [WorldPoint] = try self.getCachedWorldPoints(
             accessibilityFeature: accessibilityFeature
         )
@@ -413,7 +413,7 @@ extension AttributeEstimationPipeline {
         guard let surfaceIntegrityProcessor = self.surfaceIntegrityProcessor else {
             throw AttributeEstimationPipelineError.missingPreprocessors
         }
-        let damageDetectionResults = try getDamageDetectionResults(accessibilityFeature: accessibilityFeature)
+        let damageDetectionResults = try getCachedDamageDetectionResults(accessibilityFeature: accessibilityFeature)
         let meshContents: MeshContents = try self.getCachedMeshContents(
             accessibilityFeature: accessibilityFeature
         )
