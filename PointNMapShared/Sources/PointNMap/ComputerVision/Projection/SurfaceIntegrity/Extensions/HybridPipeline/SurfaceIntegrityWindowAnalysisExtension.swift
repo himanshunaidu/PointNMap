@@ -51,7 +51,7 @@ public extension SurfaceIntegrityProcessor {
         captureData: any CaptureMeshDataProtocol,
         configuration: SurfaceIntegrityFeatureConfiguration = .pythonModelDefault,
         predictionModel: any SurfaceIntegrityWindowPredicting =
-            SurfaceIntegrityAnalysisModelZoo.placeholderLogisticRegression,
+            SurfaceIntegrityAnalysisModelZoo.placeholderLogisticRegression2,
         cellSize: Float = 0.27,
         stride: Float = 0.09,
         predictionCellSize: Float = 0.09,
@@ -119,7 +119,7 @@ public extension SurfaceIntegrityProcessor {
         heightFromGround: Float?,
         configuration: SurfaceIntegrityFeatureConfiguration = .pythonModelDefault,
         predictionModel: any SurfaceIntegrityWindowPredicting =
-            SurfaceIntegrityAnalysisModelZoo.placeholderLogisticRegression,
+            SurfaceIntegrityAnalysisModelZoo.placeholderLogisticRegression2,
         cellSize: Float = 0.27,
         stride: Float = 0.09,
         predictionCellSize: Float = 0.09,
@@ -156,7 +156,7 @@ public extension SurfaceIntegrityProcessor {
         heightFromGround: Float?,
         configuration: SurfaceIntegrityFeatureConfiguration = .pythonModelDefault,
         predictionModel: any SurfaceIntegrityWindowPredicting =
-            SurfaceIntegrityAnalysisModelZoo.placeholderLogisticRegression,
+            SurfaceIntegrityAnalysisModelZoo.placeholderLogisticRegression2,
         cellSize: Float = 0.27,
         stride: Float = 0.09,
         predictionCellSize: Float = 0.09,
@@ -236,6 +236,8 @@ public extension SurfaceIntegrityProcessor {
 
         var windows: [SurfaceIntegrityWindowAnalysis] = []
         windows.reserveCapacity(grid.gridIndices.count)
+        var modelPredictionDuration: TimeInterval = 0
+        var modelPredictionCount = 0
         for index in grid.gridIndices.indices {
             // Metal scatter ordering is intentionally unspecified; canonicalize the CPU bridge.
             let surfaceDetailIndices = grid.windowToMeshIndices[index].sorted()
@@ -262,7 +264,10 @@ public extension SurfaceIntegrityProcessor {
                 for (feature, value) in features.values {
                     modelFeatures[.windowFeature(feature)] = Double(value)
                 }
+                let predictionStart = ProcessInfo.processInfo.systemUptime
                 prediction = try predictionModel.predict(features: modelFeatures)
+                modelPredictionDuration += ProcessInfo.processInfo.systemUptime - predictionStart
+                modelPredictionCount += 1
             } else {
                 prediction = Self.unavailableSurfaceIntegrityPrediction
             }
@@ -282,6 +287,15 @@ public extension SurfaceIntegrityProcessor {
                 )
             )
         }
+        let modelPredictionMilliseconds = modelPredictionDuration * 1_000
+        let averageMicroseconds = modelPredictionCount > 0
+            ? modelPredictionDuration * 1_000_000 / Double(modelPredictionCount)
+            : 0
+        print(
+            "[SURFACE_INTEGRITY:MODEL] window_count=\(modelPredictionCount) "
+                + "duration_ms=\(modelPredictionMilliseconds) "
+                + "average_us_per_window=\(averageMicroseconds)"
+        )
 
         return SurfaceIntegrityWindowAnalysisResult(
             grid: grid,
