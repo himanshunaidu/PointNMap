@@ -77,15 +77,19 @@ public extension SurfaceIntegrityProcessor {
                 values[.averagePolygonArea] = global.totalArea / Float(global.count)
                 values[.polygonDensity] = global.totalArea > 0
                     ? Float(global.count) / global.totalArea : 0
-            }
-            for (slot, descriptor) in plan.primaryDescriptors.enumerated()
-                where descriptor.destinationFeatureSlot != UInt32.max {
-                values[columns[Int(descriptor.destinationFeatureSlot)]] =
-                    orderStatistics.primaryValues[originalWindow * plan.primaryDescriptors.count + slot]
-            }
-            for (slot, descriptor) in plan.madDescriptors.enumerated() {
-                values[columns[Int(descriptor.destinationFeatureSlot)]] =
-                    orderStatistics.madValues[originalWindow * plan.madDescriptors.count + slot]
+                for (slot, descriptor) in plan.primaryDescriptors.enumerated()
+                    where descriptor.destinationFeatureSlot != UInt32.max {
+                    values[columns[Int(descriptor.destinationFeatureSlot)]] =
+                        orderStatistics.primaryValues[
+                            originalWindow * plan.primaryDescriptors.count + slot
+                        ]
+                }
+                for (slot, descriptor) in plan.madDescriptors.enumerated() {
+                    values[columns[Int(descriptor.destinationFeatureSlot)]] =
+                        orderStatistics.madValues[
+                            originalWindow * plan.madDescriptors.count + slot
+                        ]
+                }
             }
             matrix.append(contentsOf: columns.map { values[$0] ?? 0 })
         }
