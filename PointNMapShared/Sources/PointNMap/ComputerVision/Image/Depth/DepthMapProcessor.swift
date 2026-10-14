@@ -11,6 +11,8 @@ import CoreVideo
 public enum DepthMapProcessorError: Error, LocalizedError {
     case unableToAccessDepthData
     case invalidDepth
+    case invalidNormalizedPoint
+    case invalidDepthDimensions
     
     public var errorDescription: String? {
         switch self {
@@ -18,6 +20,10 @@ public enum DepthMapProcessorError: Error, LocalizedError {
             return "Unable to access depth data from the depth map."
         case .invalidDepth:
             return "The depth value retrieved is invalid."
+        case .invalidNormalizedPoint:
+            return "Normalized depth coordinates must be finite and within the range zero up to one."
+        case .invalidDepthDimensions:
+            return "Depth-map dimensions must be greater than zero."
         }
     }
 }
@@ -58,6 +64,85 @@ public struct DepthMapProcessor {
         let depthIndex = depthIndexRow * (depthBytesPerRow / MemoryLayout<Float>.size) + depthIndexCol
         let depthAtPoint = depthBuffer[depthIndex]
         return depthAtPoint
+    }
+
+    /**
+        Returns the average valid depth in a circular pixel neighborhood, or `nil` when the
+        neighborhood contains no finite, positive depth samples.
+     */
+    public func getDepthAtPointInRadius(point: CGPoint, radius: Int = 3) throws -> Float? {
+        guard radius >= 0 else {
+            throw DepthMapProcessorError.invalidDepth
+        }
+        CVPixelBufferLockBaseAddress(depthBuffer, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(depthBuffer, .readOnly) }
+
+        guard let depthBaseAddress = CVPixelBufferGetBaseAddress(depthBuffer) else {
+            throw DepthMapProcessorError.unableToAccessDepthData
+        }
+        let depthValues = depthBaseAddress.assumingMemoryBound(to: Float.self)
+        let valuesPerRow = CVPixelBufferGetBytesPerRow(depthBuffer) / MemoryLayout<Float>.size
+        let centerX = Int(point.x)
+        let centerY = Int(point.y)
+        let squaredRadius = radius * radius
+        var depthSum: Float = 0
+        var validDepthCount = 0
+
+        for yOffset in -radius...radius {
+            for xOffset in -radius...radius where xOffset * xOffset + yOffset * yOffset <= squaredRadius {
+                let x = centerX + xOffset
+                let y = centerY + yOffset
+                guard x >= 0, x < depthWidth, y >= 0, y < depthHeight else {
+                    continue
+                }
+                let depth = depthValues[y * valuesPerRow + x]
+                guard depth.isFinite, depth > 0 else {
+                    continue
+                }
+                depthSum += depth
+                validDepthCount += 1
+            }
+        }
+
+        guard validDepthCount > 0 else {
+            return nil
+        }
+        return depthSum / Float(validDepthCount)
+    }
+
+    /**
+        Samples the native depth map using an image-relative point. The normalized coordinate
+        remains valid when the camera image and depth map have different resolutions.
+     */
+    public func getDepthAtNormalizedPointInRadius(
+        point: CGPoint,
+        radius: Int = 3
+    ) throws -> Float? {
+        let depthPoint = try Self.depthPoint(
+            fromNormalizedPoint: point,
+            depthWidth: depthWidth,
+            depthHeight: depthHeight
+        )
+        return try getDepthAtPointInRadius(point: depthPoint, radius: radius)
+    }
+
+    public static func depthPoint(
+        fromNormalizedPoint point: CGPoint,
+        depthWidth: Int,
+        depthHeight: Int
+    ) throws -> CGPoint {
+        guard depthWidth > 0, depthHeight > 0 else {
+            throw DepthMapProcessorError.invalidDepthDimensions
+        }
+        guard point.x.isFinite, point.y.isFinite,
+              point.x >= 0, point.x < 1,
+              point.y >= 0, point.y < 1 else {
+            throw DepthMapProcessorError.invalidNormalizedPoint
+        }
+        return CGPoint(
+            x: point.x * CGFloat(depthWidth),
+            y: point.y * CGFloat(depthHeight)
+        )
     }
     
     public func getDepthsAtPoints(points: [CGPoint]) throws -> [Float] {

@@ -210,3 +210,38 @@ typedef struct StdPolygonParams {
     MTL_FLOAT4X4    viewMatrix;
     MTL_FLOAT3X3    cameraIntrinsics;
 } StdPolygonParams;
+
+typedef struct SurfaceIntegrityPackedPolygonFeaturesGPU {
+    float area;
+    float normalDeviation;
+    float heightResidual;
+    float absoluteHeightResidual;
+    float signedTiltU;
+    float signedTiltV;
+    float signedTiltMagnitude;
+    float reserved;
+} SurfaceIntegrityPackedPolygonFeaturesGPU;
+
+typedef struct SurfaceIntegrityWindowReductionGPU {
+    MTL_UINT count;
+    float totalArea;
+    float mean;
+    float centeredMoment2Sum;
+    float centeredMoment3Sum;
+    float centeredMoment4Sum;
+    float minimum;
+    float maximum;
+} SurfaceIntegrityWindowReductionGPU;
+
+typedef struct SurfaceIntegrityTailDescriptorGPU {
+    MTL_UINT source;
+    float threshold;
+} SurfaceIntegrityTailDescriptorGPU;
+
+typedef struct SurfaceIntegrityOrderStatisticDescriptorGPU {
+    MTL_UINT source;
+    MTL_UINT operation;
+    float percentile;
+    MTL_UINT dependencySlot;
+    MTL_UINT destinationFeatureSlot;
+} SurfaceIntegrityOrderStatisticDescriptorGPU;

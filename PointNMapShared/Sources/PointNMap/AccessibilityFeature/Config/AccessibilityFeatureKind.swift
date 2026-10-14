@@ -39,6 +39,7 @@ public enum AccessibilityFeatureKind: String, Identifiable, Codable, CaseIterabl
             .width, .runningSlope, .crossSlope,
 //            .surfaceIntegrity,
             .surfaceDisruption, .heightFromGround,
+            .surfaceDisruptionArea, .surfaceDisruptionLength,
             .widthLegacy, .runningSlopeLegacy, .crossSlopeLegacy,
             .widthFromImage, .runningSlopeFromImage, .crossSlopeFromImage
         ]

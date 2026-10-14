@@ -22,7 +22,7 @@ public struct PointNMapConstants {
     public struct DamageDetectionConstants {
         /// Model-specific SharedAppConstants
         public static let damageDetectionModelURL: URL? = PointNMapSharedResources.bundle.url(
-            forResource: "v8n_175_16_960", withExtension: "mlmodelc"
+            forResource: "yolov8x_class_agnostic", withExtension: "mlmodelc"
         )
         public static let inputSize: CGSize = CGSize(width: 640, height: 640)
     }
