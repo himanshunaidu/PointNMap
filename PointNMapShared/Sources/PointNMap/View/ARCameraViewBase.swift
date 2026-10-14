@@ -128,7 +128,7 @@ class ARCameraBaseManagerStatusViewModel: ObservableObject {
 public struct ARCameraViewBase: View {
     public let selectedClasses: [AccessibilityFeatureClass]
     public let selectedAttributesByClass: [AccessibilityFeatureClass: Set<AccessibilityFeatureAttribute>]
-    /// MARK: Extra callback if required. Else, the view will handle the flow to annotation view internally
+    /// Called after the user finishes annotating the captured data.
     private let onCaptureComplete: ((CaptureData) -> Void)?
     /// MARK: Extra shared settings
     @EnvironmentObject public var sharedBaseSettings: SharedBaseSettings
@@ -147,6 +147,7 @@ public struct ARCameraViewBase: View {
     @State private var showARCameraLearnMoreSheet = false
     
     @State private var showAnnotationView = false
+    @State private var completedCaptureData: CaptureData?
     
     public init(
         selectedClasses: [AccessibilityFeatureClass],
@@ -278,10 +279,12 @@ public struct ARCameraViewBase: View {
             Text(managerConfigureStatusViewModel.errorMessage)
         })
         .fullScreenCover(isPresented: $showAnnotationView) {
-            if let captureLocation = locationManager.currentLocation?.coordinate {
+            if let captureLocation = locationManager.currentLocation?.coordinate,
+               let completedCaptureData {
                 AnnotationViewBase(
                     selectedClasses: selectedClasses, selectedAttributesByClass: selectedAttributesByClass,
-                    captureLocation: captureLocation
+                    captureLocation: captureLocation, captureData: completedCaptureData,
+                    onCaptureComplete: onCaptureComplete
                 )
             } else {
                 InvalidContentView(
@@ -361,12 +364,8 @@ public struct ARCameraViewBase: View {
                     captureImageData: captureData.imageData, captureMeshData: captureData.meshData,
                     location: locationManager.currentLocation?.coordinate, heading: locationManager.currentHeading?.trueHeading
                 )
-                if let onCaptureComplete = onCaptureComplete {
-                    onCaptureComplete(captureData)
-                    dismiss()
-                } else {
-                    showAnnotationView = true
-                }
+                completedCaptureData = captureData
+                showAnnotationView = true
             } catch ARCameraManagerError.finalSessionMeshUnavailable {
                 setHintText(ARCameraViewBaseConstants.Texts.cameraHintNoMeshText)
             } catch ARCameraManagerError.finalSessionNoSegmentationClass,
