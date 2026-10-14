@@ -296,7 +296,7 @@ public extension SurfaceIntegrityProcessor {
     }
 }
 
-private extension SurfaceIntegrityProcessor {
+extension SurfaceIntegrityProcessor {
     static func sourceIndex(_ source: SurfaceIntegrityFeatureValueSource) -> Int {
         switch source {
         case .normalDeviation: 0

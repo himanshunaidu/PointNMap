@@ -84,6 +84,7 @@ public struct SurfaceIntegrityProcessor {
     let surfaceIntegrityWindowCenteredMomentsPipeline: MTLComputePipelineState
     let surfaceIntegrityWindowEntropyPipeline: MTLComputePipelineState
     let surfaceIntegrityWindowTailPipeline: MTLComputePipelineState
+    let surfaceIntegrityWeightedSelectionPipeline: MTLComputePipelineState
     let textureLoader: MTKTextureLoader
     
     let ciContext: CIContext
@@ -146,13 +147,18 @@ public struct SurfaceIntegrityProcessor {
               let entropyFunction = library.makeFunction(name: "computeSurfaceIntegrityWindowEntropy"),
               let entropyPipeline = try? device.makeComputePipelineState(function: entropyFunction),
               let tailFunction = library.makeFunction(name: "computeSurfaceIntegrityWindowTails"),
-              let tailPipeline = try? device.makeComputePipelineState(function: tailFunction) else {
+              let tailPipeline = try? device.makeComputePipelineState(function: tailFunction),
+              let weightedSelectionFunction = library.makeFunction(name: "selectSurfaceIntegrityWeightedPercentiles"),
+              let weightedSelectionPipeline = try? device.makeComputePipelineState(
+                function: weightedSelectionFunction
+              ) else {
             throw SurfaceIntegrityProcessorError.metalInitializationFailed
         }
         self.surfaceIntegrityWindowReductionPipeline = reductionPipeline
         self.surfaceIntegrityWindowCenteredMomentsPipeline = centeredMomentsPipeline
         self.surfaceIntegrityWindowEntropyPipeline = entropyPipeline
         self.surfaceIntegrityWindowTailPipeline = tailPipeline
+        self.surfaceIntegrityWeightedSelectionPipeline = weightedSelectionPipeline
     }
     
     /**

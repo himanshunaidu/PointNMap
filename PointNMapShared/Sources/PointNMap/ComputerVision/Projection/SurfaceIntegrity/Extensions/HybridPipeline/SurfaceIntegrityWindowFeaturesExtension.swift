@@ -199,10 +199,12 @@ public extension SurfaceIntegrityProcessor {
         heightResiduals: [Float],
         signedTiltData: [SignedTiltData],
         heightFromGround: Float?,
-        configuration: SurfaceIntegrityFeatureConfiguration = .pythonModelDefault
+        configuration: SurfaceIntegrityFeatureConfiguration = .pythonModelDefault,
+        polygonIndices: [Int]? = nil
     ) throws -> SurfaceIntegrityWindowFeatures {
         guard surfaceDetails.count == heightResiduals.count,
-              surfaceDetails.count == signedTiltData.count else {
+              surfaceDetails.count == signedTiltData.count,
+              polygonIndices == nil || polygonIndices?.count == surfaceDetails.count else {
             throw SurfaceIntegrityWindowFeatureError.mismatchedInputCounts
         }
 
@@ -217,6 +219,7 @@ public extension SurfaceIntegrityProcessor {
         }
 
         let areas = surfaceDetails.map(\.area)
+        let resolvedPolygonIndices = polygonIndices ?? Array(surfaceDetails.indices)
         let groupValues = makeGroupValues(
             surfaceDetails: surfaceDetails,
             heightResiduals: heightResiduals,
@@ -227,7 +230,10 @@ public extension SurfaceIntegrityProcessor {
             guard let values = groupValues[group.source] else {
                 continue
             }
-            addFeatures(for: group, values: values, weights: areas, to: &features)
+            addFeatures(
+                for: group, values: values, weights: areas,
+                polygonIndices: resolvedPolygonIndices, to: &features
+            )
         }
 
         let totalArea = areas.reduce(0, +)
@@ -244,16 +250,42 @@ public extension SurfaceIntegrityProcessor {
         weights: [Float],
         percentile: Float
     ) -> Float {
+        weightedPercentile(
+            values: values,
+            weights: weights,
+            polygonIndices: Array(values.indices),
+            percentile: percentile
+        )
+    }
+
+    static func weightedPercentile(
+        values: [Float],
+        weights: [Float],
+        polygonIndices: [Int],
+        percentile: Float
+    ) -> Float {
         guard !values.isEmpty, values.count == weights.count else {
             return .nan
         }
+        guard values.count == polygonIndices.count else {
+            return .nan
+        }
 
-        let sorted = zip(values, weights).sorted { $0.0 < $1.0 }
+        var sorted: [(value: Float, weight: Float, polygonIndex: Int)] = []
+        sorted.reserveCapacity(values.count)
+        for index in values.indices {
+            sorted.append((values[index], weights[index], polygonIndices[index]))
+        }
+        sorted.sort {
+            $0.value == $1.value
+                ? $0.polygonIndex < $1.polygonIndex
+                : $0.value < $1.value
+        }
         var cumulativeWeights: [Double] = []
         cumulativeWeights.reserveCapacity(sorted.count)
         var totalWeight = 0.0
         for item in sorted {
-            totalWeight += Double(item.1)
+            totalWeight += Double(item.weight)
             cumulativeWeights.append(totalWeight)
         }
         guard totalWeight > 0 else {
@@ -262,10 +294,10 @@ public extension SurfaceIntegrityProcessor {
 
         let position = Double(percentile) / 100 * totalWeight
         guard position > cumulativeWeights[0] else {
-            return sorted[0].0
+            return sorted[0].value
         }
         guard position < totalWeight else {
-            return sorted[sorted.count - 1].0
+            return sorted[sorted.count - 1].value
         }
 
         let upperIndex = cumulativeWeights.firstIndex(where: { $0 >= position })
@@ -274,12 +306,12 @@ public extension SurfaceIntegrityProcessor {
         let lowerPosition = cumulativeWeights[lowerIndex]
         let upperPosition = cumulativeWeights[upperIndex]
         guard upperPosition > lowerPosition else {
-            return sorted[upperIndex].0
+            return sorted[upperIndex].value
         }
 
         let fraction = (position - lowerPosition) / (upperPosition - lowerPosition)
-        let lowerValue = Double(sorted[lowerIndex].0)
-        let upperValue = Double(sorted[upperIndex].0)
+        let lowerValue = Double(sorted[lowerIndex].value)
+        let upperValue = Double(sorted[upperIndex].value)
         return Float(lowerValue + fraction * (upperValue - lowerValue))
     }
 
@@ -287,11 +319,33 @@ public extension SurfaceIntegrityProcessor {
         weightedPercentile(values: values, weights: weights, percentile: 50)
     }
 
+    static func weightedMedian(
+        values: [Float], weights: [Float], polygonIndices: [Int]
+    ) -> Float {
+        weightedPercentile(
+            values: values, weights: weights,
+            polygonIndices: polygonIndices, percentile: 50
+        )
+    }
+
     static func weightedMedianAbsoluteDeviation(values: [Float], weights: [Float]) -> Float {
         let median = weightedMedian(values: values, weights: weights)
         return weightedMedian(
             values: values.map { abs($0 - median) },
             weights: weights
+        )
+    }
+
+    static func weightedMedianAbsoluteDeviation(
+        values: [Float], weights: [Float], polygonIndices: [Int]
+    ) -> Float {
+        let median = weightedMedian(
+            values: values, weights: weights, polygonIndices: polygonIndices
+        )
+        return weightedMedian(
+            values: values.map { abs($0 - median) },
+            weights: weights,
+            polygonIndices: polygonIndices
         )
     }
 
@@ -337,6 +391,7 @@ private extension SurfaceIntegrityProcessor {
         for group: SurfaceIntegrityFeatureGroupConfiguration,
         values: [Float],
         weights: [Float],
+        polygonIndices: [Int],
         to features: inout [SurfaceIntegrityWindowFeature: Float]
     ) {
         for feature in group.centralTendencyFeatures {
@@ -345,12 +400,16 @@ private extension SurfaceIntegrityProcessor {
             case .mean:
                 value = mean(values)
             case .median:
-                value = weightedMedian(values: values, weights: weights)
+                value = weightedMedian(
+                    values: values, weights: weights, polygonIndices: polygonIndices
+                )
             case .standardDeviation:
                 value = populationStandardDeviation(values)
             case .medianAbsoluteDeviation:
                 value = zeroIfNaN(
-                    weightedMedianAbsoluteDeviation(values: values, weights: weights)
+                    weightedMedianAbsoluteDeviation(
+                        values: values, weights: weights, polygonIndices: polygonIndices
+                    )
                 )
             }
             features[SurfaceIntegrityWindowFeature("\(group.label)_\(feature.rawValue)")] = value
@@ -361,6 +420,7 @@ private extension SurfaceIntegrityProcessor {
                 weightedPercentile(
                     values: values,
                     weights: weights,
+                    polygonIndices: polygonIndices,
                     percentile: Float(percentile)
                 )
         }

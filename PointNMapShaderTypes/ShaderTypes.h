@@ -237,3 +237,11 @@ typedef struct SurfaceIntegrityTailDescriptorGPU {
     MTL_UINT source;
     float threshold;
 } SurfaceIntegrityTailDescriptorGPU;
+
+typedef struct SurfaceIntegrityOrderStatisticDescriptorGPU {
+    MTL_UINT source;
+    MTL_UINT operation;
+    float percentile;
+    MTL_UINT dependencySlot;
+    MTL_UINT destinationFeatureSlot;
+} SurfaceIntegrityOrderStatisticDescriptorGPU;

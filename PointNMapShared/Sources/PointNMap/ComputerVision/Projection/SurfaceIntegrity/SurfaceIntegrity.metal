@@ -301,6 +301,169 @@ kernel void computeSurfaceIntegrityWindowTails(
         totalWeights[0] > 0.0f ? matchingWeights[0] / totalWeights[0] : 0.0f;
 }
 
+inline uint surfaceIntegritySortableFloatKey(float value) {
+    uint bits = as_type<uint>(value);
+    return (bits & 0x80000000u) != 0 ? ~bits : (bits ^ 0x80000000u);
+}
+
+inline float surfaceIntegrityFloatFromSortableKey(uint key) {
+    uint bits = (key & 0x80000000u) != 0 ? (key ^ 0x80000000u) : ~key;
+    return as_type<float>(bits);
+}
+
+inline float surfaceIntegrityOrderStatisticValue(
+    SurfaceIntegrityPackedPolygonFeaturesGPU packed,
+    SurfaceIntegrityOrderStatisticDescriptorGPU descriptor,
+    uint window,
+    device const float* dependencyValues,
+    uint dependencyStride
+) {
+    float value = surfaceIntegrityValue(packed, descriptor.source);
+    if (descriptor.operation == 1u) {
+        float median = dependencyValues[window * dependencyStride + descriptor.dependencySlot];
+        return abs(value - median);
+    }
+    return value;
+}
+
+kernel void selectSurfaceIntegrityWeightedPercentiles(
+    device const uint* offsets [[buffer(0)]],
+    device const uint* meshIndices [[buffer(1)]],
+    device const SurfaceIntegrityPackedPolygonFeaturesGPU* polygonFeatures [[buffer(2)]],
+    device const SurfaceIntegrityOrderStatisticDescriptorGPU* descriptors [[buffer(3)]],
+    constant uint& windowCount [[buffer(4)]],
+    constant uint& polygonCount [[buffer(5)]],
+    constant uint& descriptorCount [[buffer(6)]],
+    device float* output [[buffer(7)]],
+    device atomic_uint* status [[buffer(8)]],
+    device const float* dependencyValues [[buffer(9)]],
+    constant uint& dependencyStride [[buffer(10)]],
+    uint tid [[thread_index_in_threadgroup]],
+    uint3 group [[threadgroup_position_in_grid]],
+    uint3 threadsPerGroup [[threads_per_threadgroup]]
+) {
+    threadgroup float partialWeights[256];
+    threadgroup uint partialCounts[256];
+    threadgroup ulong predecessorKeys[256];
+    threadgroup ulong selectedKey;
+    threadgroup float targetPosition;
+    threadgroup float weightBelow;
+    uint window = group.x;
+    uint descriptorIndex = group.y;
+    if (window >= windowCount || descriptorIndex >= descriptorCount) return;
+    SurfaceIntegrityOrderStatisticDescriptorGPU descriptor = descriptors[descriptorIndex];
+
+    float localTotal = 0.0f;
+    for (uint position = offsets[window] + tid; position < offsets[window + 1]; position += threadsPerGroup.x) {
+        uint polygon = meshIndices[position];
+        if (polygon >= polygonCount) {
+            atomic_store_explicit(status, 1u, memory_order_relaxed);
+            continue;
+        }
+        SurfaceIntegrityPackedPolygonFeaturesGPU packed = polygonFeatures[polygon];
+        float value = surfaceIntegrityOrderStatisticValue(
+            packed, descriptor, window, dependencyValues, dependencyStride
+        );
+        if (!isfinite(value) || !isfinite(packed.area) || packed.area < 0.0f) {
+            atomic_store_explicit(status, 1u, memory_order_relaxed);
+            continue;
+        }
+        localTotal += packed.area;
+    }
+    partialWeights[tid] = localTotal;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    for (uint offset = threadsPerGroup.x / 2; offset > 0; offset /= 2) {
+        if (tid < offset) partialWeights[tid] += partialWeights[tid + offset];
+        threadgroup_barrier(mem_flags::mem_threadgroup);
+    }
+    float totalWeight = partialWeights[0];
+    if (totalWeight <= 0.0f) {
+        if (tid == 0) output[window * descriptorCount + descriptorIndex] = NAN;
+        return;
+    }
+    if (tid == 0) {
+        selectedKey = 0ul;
+        weightBelow = 0.0f;
+        targetPosition = clamp(descriptor.percentile, 0.0f, 100.0f) * 0.01f * totalWeight;
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+
+    for (int bit = 63; bit >= 0; --bit) {
+        ulong higherMask = bit == 63 ? 0ul : (~0ul << uint(bit + 1));
+        float zeroWeight = 0.0f;
+        uint zeroCount = 0;
+        for (uint position = offsets[window] + tid; position < offsets[window + 1]; position += threadsPerGroup.x) {
+            uint polygon = meshIndices[position];
+            if (polygon >= polygonCount) continue;
+            SurfaceIntegrityPackedPolygonFeaturesGPU packed = polygonFeatures[polygon];
+            float value = surfaceIntegrityOrderStatisticValue(
+                packed, descriptor, window, dependencyValues, dependencyStride
+            );
+            if (!isfinite(value) || !isfinite(packed.area) || packed.area < 0.0f) continue;
+            ulong key = (ulong(surfaceIntegritySortableFloatKey(value)) << 32) | ulong(polygon);
+            if ((key & higherMask) == (selectedKey & higherMask)
+                && ((key >> uint(bit)) & 1ul) == 0ul) {
+                zeroWeight += packed.area;
+                zeroCount += 1;
+            }
+        }
+        partialWeights[tid] = zeroWeight;
+        partialCounts[tid] = zeroCount;
+        threadgroup_barrier(mem_flags::mem_threadgroup);
+        for (uint offset = threadsPerGroup.x / 2; offset > 0; offset /= 2) {
+            if (tid < offset) {
+                partialWeights[tid] += partialWeights[tid + offset];
+                partialCounts[tid] += partialCounts[tid + offset];
+            }
+            threadgroup_barrier(mem_flags::mem_threadgroup);
+        }
+        if (tid == 0) {
+            bool chooseOne = partialCounts[0] == 0
+                || targetPosition > weightBelow + partialWeights[0];
+            if (chooseOne) {
+                selectedKey |= 1ul << uint(bit);
+                weightBelow += partialWeights[0];
+            }
+        }
+        threadgroup_barrier(mem_flags::mem_threadgroup);
+    }
+
+    float selectedWeight = 0.0f;
+    ulong localPredecessor = 0ul;
+    for (uint position = offsets[window] + tid; position < offsets[window + 1]; position += threadsPerGroup.x) {
+        uint polygon = meshIndices[position];
+        if (polygon >= polygonCount) continue;
+        SurfaceIntegrityPackedPolygonFeaturesGPU packed = polygonFeatures[polygon];
+        float value = surfaceIntegrityOrderStatisticValue(
+            packed, descriptor, window, dependencyValues, dependencyStride
+        );
+        if (!isfinite(value) || !isfinite(packed.area) || packed.area < 0.0f) continue;
+        ulong key = (ulong(surfaceIntegritySortableFloatKey(value)) << 32) | ulong(polygon);
+        if (key == selectedKey) selectedWeight += packed.area;
+        if (key < selectedKey) localPredecessor = max(localPredecessor, key);
+    }
+    partialWeights[tid] = selectedWeight;
+    predecessorKeys[tid] = localPredecessor;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    for (uint offset = threadsPerGroup.x / 2; offset > 0; offset /= 2) {
+        if (tid < offset) {
+            partialWeights[tid] += partialWeights[tid + offset];
+            predecessorKeys[tid] = max(predecessorKeys[tid], predecessorKeys[tid + offset]);
+        }
+        threadgroup_barrier(mem_flags::mem_threadgroup);
+    }
+    if (tid == 0) {
+        float upperValue = surfaceIntegrityFloatFromSortableKey(uint(selectedKey >> 32));
+        float result = upperValue;
+        if (weightBelow > 0.0f && partialWeights[0] > 0.0f && targetPosition < totalWeight) {
+            float lowerValue = surfaceIntegrityFloatFromSortableKey(uint(predecessorKeys[0] >> 32));
+            float fraction = clamp((targetPosition - weightBelow) / partialWeights[0], 0.0f, 1.0f);
+            result = mix(lowerValue, upperValue, fraction);
+        }
+        output[window * descriptorCount + descriptorIndex] = result;
+    }
+}
+
 // Needed for mesh normals which are not pre-aligned to reference direction
 inline float3 alignNormalWithReference(float3 normal, float3 reference) {
     if (dot(normal, reference) < 0.0) {
