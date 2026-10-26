@@ -323,6 +323,31 @@ public extension AccessibilityFeatureAttribute {
  Extension to convert AccessibilityFeatureAttribute.Value to and from primitive types.
  */
 public extension AccessibilityFeatureAttribute.Value {
+    internal func roundedForFinalAttribute() -> Self {
+        func rounded(_ value: Double) -> Double {
+            guard value.isFinite else { return value }
+            let scale = pow(10.0, Double(PointNMapConstants.finalAttributePrecision))
+            let scaledValue = value * scale
+            guard scale.isFinite, scale != 0, scaledValue.isFinite else {
+                return value
+            }
+            return scaledValue.rounded() / scale
+        }
+
+        switch self {
+        case .length(let measurement):
+            let meters = measurement.converted(to: .meters).value
+            return .length(Measurement(value: rounded(meters), unit: .meters))
+        case .angle(let measurement):
+            let degrees = measurement.converted(to: .degrees).value
+            return .angle(Measurement(value: rounded(degrees), unit: .degrees))
+        case .number(let value):
+            return .number(rounded(value))
+        case .flag, .categorical:
+            return self
+        }
+    }
+
     func toDouble() -> Double? {
         switch self {
         case .length(let measurement):

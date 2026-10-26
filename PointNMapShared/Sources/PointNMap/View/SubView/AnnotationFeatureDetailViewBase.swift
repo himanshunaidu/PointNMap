@@ -36,26 +36,24 @@ public enum AnnotationFeatureDetailViewConstants {
     }
 }
 
-func annotationFeatureDetailIsEdited(
-    currentValue: AccessibilityFeatureAttribute.Value?,
-    calculatedValue: AccessibilityFeatureAttribute.Value?
-) -> Bool {
-    guard currentValue != nil else { return false }
-    return currentValue != calculatedValue
-}
-
 func annotationFeatureDetailNumericEstimate(
     _ calculatedValue: AccessibilityFeatureAttribute.Value?
 ) -> Double? {
-    calculatedValue?.toDouble()
+    guard let estimate = calculatedValue?.toDouble(), estimate.isFinite else {
+        return nil
+    }
+    return estimate
 }
 
 func annotationFeatureDetailCanUseEstimate(
     currentValue: AccessibilityFeatureAttribute.Value?,
     calculatedValue: AccessibilityFeatureAttribute.Value?
 ) -> Bool {
-    annotationFeatureDetailNumericEstimate(calculatedValue) != nil
-        && currentValue != calculatedValue
+    guard annotationFeatureDetailNumericEstimate(calculatedValue) != nil else {
+        return false
+    }
+    return currentValue?.roundedForFinalAttribute()
+        != calculatedValue?.roundedForFinalAttribute()
 }
 
 /**
@@ -384,17 +382,10 @@ public struct AnnotationFeatureDetailViewBase<
         let currentValue = accessibilityFeature.attributeValues[attribute] ?? nil
         let calculatedValue = accessibilityFeature.calculatedAttributeValues[attribute] ?? nil
         let appEstimate = annotationFeatureDetailNumericEstimate(calculatedValue)
-        let isEdited = annotationFeatureDetailIsEdited(
-            currentValue: currentValue,
-            calculatedValue: calculatedValue
-        )
         let canUseAppEstimate = annotationFeatureDetailCanUseEstimate(
             currentValue: currentValue,
             calculatedValue: calculatedValue
         )
-        let fieldLayout = dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
-            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8))
         let estimateLayout = dynamicTypeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
             : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8))
@@ -414,13 +405,7 @@ public struct AnnotationFeatureDetailViewBase<
                 }
             }
 
-            fieldLayout {
-                numberTextField(attribute: attribute)
-
-                if isEdited {
-                    editedStatusView
-                }
-            }
+            numberTextField(attribute: attribute)
 
             estimateLayout {
                 appEstimateView(appEstimate)
@@ -458,31 +443,20 @@ public struct AnnotationFeatureDetailViewBase<
                     }
                 }
             ),
-            format: .number
+            format: .number.precision(
+                .fractionLength(0...PointNMapConstants.finalAttributePrecision)
+            )
         )
         .textFieldStyle(.roundedBorder)
         .keyboardType(.decimalPad)
         .accessibilityLabel(Text(attribute.displayName))
     }
 
-    private var editedStatusView: some View {
-        Text("Edited", bundle: #bundle, comment: "Status indicating that an estimated attribute value was changed")
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.red)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .overlay {
-                Capsule()
-                    .stroke(.tertiary, lineWidth: 1)
-            }
-            .accessibilityLabel(Text("Edited", bundle: #bundle))
-    }
-
     @ViewBuilder
     private func appEstimateView(_ appEstimate: Double?) -> some View {
         if let appEstimate {
             Text(
-                "App estimate: \(appEstimate, format: .number.precision(.fractionLength(0...7)))",
+                "App estimate: \(appEstimate, format: .number.precision(.fractionLength(0...PointNMapConstants.finalAttributePrecision)))",
                 bundle: #bundle,
                 comment: "The numeric attribute value estimated by the app"
             )
@@ -523,6 +497,7 @@ public struct AnnotationFeatureDetailViewBase<
         .buttonStyle(.plain)
         .foregroundStyle(.tint)
         .disabled(!canUseAppEstimate)
+        .accessibilityLabel(Text("Use app estimate", bundle: #bundle))
         .accessibilityHint(
             Text(
                 "Replaces the edited value with the value estimated by the app",

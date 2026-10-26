@@ -124,7 +124,7 @@ open class EditableAccessibilityFeature: EditableAccessibilityFeatureProtocol {
             calculatedAttributeValues[attribute] = value
         }
         if isFinal {
-            attributeValues[attribute] = value
+            attributeValues[attribute] = value.roundedForFinalAttribute()
         }
     }
     
