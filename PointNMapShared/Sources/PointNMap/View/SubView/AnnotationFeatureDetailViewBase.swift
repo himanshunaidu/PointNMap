@@ -161,7 +161,6 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.width.displayName)) {
                         numberTextFieldView(attribute: .width)
-                            .focused($focusedField, equals: .width)
                     }
                 }
                 
@@ -169,7 +168,6 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.runningSlope.displayName)) {
                         numberTextFieldView(attribute: .runningSlope)
-                            .focused($focusedField, equals: .runningSlope)
                     }
                 }
                 
@@ -177,7 +175,6 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.crossSlope.displayName)) {
                         numberTextFieldView(attribute: .crossSlope)
-                            .focused($focusedField, equals: .crossSlope)
                     }
                 }
                 
@@ -193,28 +190,24 @@ public struct AnnotationFeatureDetailViewBase<
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceDisruption)) {
                     Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruption.displayName)) {
                         numberTextFieldView(attribute: .surfaceDisruption)
-                            .focused($focusedField, equals: .surfaceDisruption)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.heightFromGround)) {
                     Section(header: Text(AccessibilityFeatureAttribute.heightFromGround.displayName)) {
                         numberTextFieldView(attribute: .heightFromGround)
-                            .focused($focusedField, equals: .heightFromGround)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceDisruptionArea)) {
                     Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruptionArea.displayName)) {
                         numberTextFieldView(attribute: .surfaceDisruptionArea)
-                            .focused($focusedField, equals: .surfaceDisruptionArea)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceDisruptionLength)) {
                     Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruptionLength.displayName)) {
                         numberTextFieldView(attribute: .surfaceDisruptionLength)
-                            .focused($focusedField, equals: .surfaceDisruptionLength)
                     }
                 }
                 
@@ -242,7 +235,6 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.widthLegacy.displayName)) {
                         numberTextFieldView(attribute: .widthLegacy)
-                            .focused($focusedField, equals: .widthLegacy)
                     }
                 }
                 
@@ -250,7 +242,6 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.runningSlopeLegacy.displayName)) {
                         numberTextFieldView(attribute: .runningSlopeLegacy)
-                            .focused($focusedField, equals: .runningSlopeLegacy)
                     }
                 }
                 
@@ -258,14 +249,12 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.crossSlopeLegacy.displayName)) {
                         numberTextFieldView(attribute: .crossSlopeLegacy)
-                            .focused($focusedField, equals: .crossSlopeLegacy)
                     }
                 }
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.widthFromImage))
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.widthFromImage.displayName)) {
                         numberTextFieldView(attribute: .widthFromImage)
-                            .focused($focusedField, equals: .widthFromImage)
                     }
                 }
                 
@@ -273,7 +262,6 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.runningSlopeFromImage.displayName)) {
                         numberTextFieldView(attribute: .runningSlopeFromImage)
-                            .focused($focusedField, equals: .runningSlopeFromImage)
                     }
                 }
                 
@@ -281,7 +269,6 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.crossSlopeFromImage.displayName)) {
                         numberTextFieldView(attribute: .crossSlopeFromImage)
-                            .focused($focusedField, equals: .crossSlopeFromImage)
                     }
                 }
                 
@@ -291,87 +278,73 @@ public struct AnnotationFeatureDetailViewBase<
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampWidth)) {
                     Section(header: Text(AccessibilityFeatureAttribute.rampWidth.displayName)) {
                         numberTextFieldView(attribute: .rampWidth)
-                            .focused($focusedField, equals: .rampWidth)
                     }
                 }
                 // ramp length
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampLength)) {
                     Section(header: Text(AccessibilityFeatureAttribute.rampLength.displayName)) {
                         numberTextFieldView(attribute: .rampLength)
-                            .focused($focusedField, equals: .rampLength)
                     }
                 }
                 // ramp running slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampRunningSlope)) {
                     Section(header: Text(AccessibilityFeatureAttribute.rampRunningSlope.displayName)) {
                         numberTextFieldView(attribute: .rampRunningSlope)
-                            .focused($focusedField, equals: .rampRunningSlope)
                     }
                 }
                 // ramp cross slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampCrossSlope)) {
                     Section(header: Text(AccessibilityFeatureAttribute.rampCrossSlope.displayName)) {
                         numberTextFieldView(attribute: .rampCrossSlope)
-                            .focused($focusedField, equals: .rampCrossSlope)
                     }
                 }
                 // left flare slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.leftFlareSlope)) {
                     Section(header: Text(AccessibilityFeatureAttribute.leftFlareSlope.displayName)) {
                         numberTextFieldView(attribute: .leftFlareSlope)
-                            .focused($focusedField, equals: .leftFlareSlope)
                     }
                 }
                 // right flare slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rightFlareSlope)) {
                     Section(header: Text(AccessibilityFeatureAttribute.rightFlareSlope.displayName)) {
                         numberTextFieldView(attribute: .rightFlareSlope)
-                            .focused($focusedField, equals: .rightFlareSlope)
                     }
                 }
                 // counter slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.counterSlope)) {
                     Section(header: Text(AccessibilityFeatureAttribute.counterSlope.displayName)) {
                         numberTextFieldView(attribute: .counterSlope)
-                            .focused($focusedField, equals: .counterSlope)
                     }
                 }
                 // turning space width
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceWidth)) {
                     Section(header: Text(AccessibilityFeatureAttribute.turningSpaceWidth.displayName)) {
                         numberTextFieldView(attribute: .turningSpaceWidth)
-                            .focused($focusedField, equals: .turningSpaceWidth)
                     }
                 }
                 // turning space length
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceLength)) {
                     Section(header: Text(AccessibilityFeatureAttribute.turningSpaceLength.displayName)) {
                         numberTextFieldView(attribute: .turningSpaceLength)
-                            .focused($focusedField, equals: .turningSpaceLength)
                     }
                 }
                 // turning space running slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceRunningSlope)) {
                     Section(header: Text(AccessibilityFeatureAttribute.turningSpaceRunningSlope.displayName)) {
                         numberTextFieldView(attribute: .turningSpaceRunningSlope)
-                            .focused($focusedField, equals: .turningSpaceRunningSlope)
                     }
                 }
                 // turning space cross slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceCrossSlope)) {
                     Section(header: Text(AccessibilityFeatureAttribute.turningSpaceCrossSlope.displayName)) {
                         numberTextFieldView(attribute: .turningSpaceCrossSlope)
-                            .focused($focusedField, equals: .turningSpaceCrossSlope)
                     }
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
         }
         .onAppear {
             self.statusViewModel.configure(accessibilityFeature: accessibilityFeature)
-            focusedField = nil
-        }
-        .onTapGesture {
-            // Dismiss the keyboard when tapping outside of a TextField
             focusedField = nil
         }
     }
@@ -447,8 +420,13 @@ public struct AnnotationFeatureDetailViewBase<
                 .fractionLength(0...PointNMapConstants.finalAttributePrecision)
             )
         )
+        .focused($focusedField, equals: attribute)
         .textFieldStyle(.roundedBorder)
-        .keyboardType(.decimalPad)
+        .keyboardType(.numbersAndPunctuation)
+        .submitLabel(.done)
+        .onSubmit {
+            focusedField = nil
+        }
         .accessibilityLabel(Text(attribute.displayName))
     }
 
