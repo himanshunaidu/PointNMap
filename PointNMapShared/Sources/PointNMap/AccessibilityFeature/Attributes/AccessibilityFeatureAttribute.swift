@@ -63,6 +63,28 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
         case flag
         case categorical(typeID: String)
     }
+
+    public struct NumericConstraints: Sendable, Equatable {
+        public let minimum: Double?
+        public let maximum: Double?
+
+        public static let nonNegative = NumericConstraints(minimum: 0, maximum: nil)
+
+        public init(minimum: Double?, maximum: Double?) {
+            self.minimum = minimum
+            self.maximum = maximum
+        }
+
+        public func contains(_ value: Double) -> Bool {
+            if let minimum, value < minimum {
+                return false
+            }
+            if let maximum, value > maximum {
+                return false
+            }
+            return true
+        }
+    }
     
     public enum Value: Sendable, Codable, Equatable, CustomStringConvertible {
         case length(Measurement<UnitLength>)
@@ -109,6 +131,21 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
         let name: String
         let unit: Dimension?
         let valueType: ValueType
+        let numericConstraints: NumericConstraints?
+
+        init(
+            id: Int,
+            name: String,
+            unit: Dimension?,
+            valueType: ValueType,
+            numericConstraints: NumericConstraints? = nil
+        ) {
+            self.id = id
+            self.name = name
+            self.unit = unit
+            self.valueType = valueType
+            self.numericConstraints = numericConstraints
+        }
     }
     
     private var metadata: Metadata {
@@ -117,16 +154,19 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
             return Metadata(
                 id: 10, name: "Width", unit: UnitLength.meters,
                 valueType: .length,
+                numericConstraints: .nonNegative
             )
         case .runningSlope:
             return Metadata(
                 id: 20, name: "Running Slope", unit: UnitAngle.degrees,
                 valueType: .angle,
+                numericConstraints: .nonNegative
             )
         case .crossSlope:
             return Metadata(
                 id: 30, name: "Cross Slope", unit: UnitAngle.degrees,
                 valueType: .angle,
+                numericConstraints: .nonNegative
             )
         case .surfaceIntegrity:
             return Metadata(
@@ -136,22 +176,26 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
         case .surfaceDisruption:
             return Metadata(
                 id: 41, name: "Surface Disruption", unit: nil,
-                valueType: .number
+                valueType: .number,
+                numericConstraints: .nonNegative
             )
         case .heightFromGround:
             return Metadata(
                 id: 42, name: "Height from Ground", unit: UnitLength.meters,
                 valueType: .length,
+                numericConstraints: .nonNegative
             )
         case .surfaceDisruptionArea:
             return Metadata(
                 id: 43, name: "Surface Disruption Area", unit: UnitArea.squareMeters,
                 valueType: .length,
+                numericConstraints: .nonNegative
             )
         case .surfaceDisruptionLength:
             return Metadata(
                 id: 44, name: "Surface Disruption Length", unit: UnitLength.meters,
                 valueType: .length,
+                numericConstraints: .nonNegative
             )
         case .lidarDepth:
             return Metadata(
@@ -172,6 +216,7 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
             return Metadata(
                 id: 15, name: "Width Legacy", unit: UnitLength.meters,
                 valueType: .length,
+                numericConstraints: .nonNegative
             )
         case .runningSlopeLegacy:
             return Metadata(
@@ -187,6 +232,7 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
             return Metadata(
                 id: 16, name: "Width from Image", unit: UnitLength.meters,
                 valueType: .length,
+                numericConstraints: .nonNegative
             )
         case .runningSlopeFromImage:
             return Metadata(
@@ -237,11 +283,13 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
             return Metadata(
                 id: 160, name: "Turning Space Width", unit: UnitLength.meters,
                 valueType: .length,
+                numericConstraints: .nonNegative
             )
         case .turningSpaceLength:
             return Metadata(
                 id: 170, name: "Turning Space Length", unit: UnitLength.meters,
                 valueType: .length,
+                numericConstraints: .nonNegative
             )
         case .turningSpaceRunningSlope:
             return Metadata(
@@ -270,6 +318,10 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
     
     public var valueType: ValueType {
         return metadata.valueType
+    }
+
+    public var numericConstraints: NumericConstraints? {
+        return metadata.numericConstraints
     }
     
     public var displayName: String {
@@ -315,6 +367,29 @@ public extension AccessibilityFeatureAttribute {
             return cat.typeID == expectedID
         default:
             return false
+        }
+    }
+
+    func validate(_ value: Value) throws {
+        guard isCompatible(with: value) else {
+            throw AccessibilityFeatureError.attributeValueMismatch(attribute: self, value: value)
+        }
+        guard let numericValue = value.toDouble() else {
+            return
+        }
+        guard numericValue.isFinite else {
+            throw AccessibilityFeatureError.attributeValueNotFinite(
+                attribute: self,
+                value: numericValue
+            )
+        }
+        guard numericConstraints?.contains(numericValue) ?? true else {
+            throw AccessibilityFeatureError.attributeValueOutOfRange(
+                attribute: self,
+                value: numericValue,
+                minimum: numericConstraints?.minimum,
+                maximum: numericConstraints?.maximum
+            )
         }
     }
 }

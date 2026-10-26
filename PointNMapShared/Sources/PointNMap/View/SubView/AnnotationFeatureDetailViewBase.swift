@@ -46,14 +46,17 @@ func annotationFeatureDetailNumericEstimate(
 }
 
 func annotationFeatureDetailCanUseEstimate(
+    attribute: AccessibilityFeatureAttribute,
     currentValue: AccessibilityFeatureAttribute.Value?,
     calculatedValue: AccessibilityFeatureAttribute.Value?
 ) -> Bool {
-    guard annotationFeatureDetailNumericEstimate(calculatedValue) != nil else {
+    guard let calculatedValue,
+          annotationFeatureDetailNumericEstimate(calculatedValue) != nil,
+          (try? attribute.validate(calculatedValue)) != nil else {
         return false
     }
     return currentValue?.roundedForFinalAttribute()
-        != calculatedValue?.roundedForFinalAttribute()
+        != calculatedValue.roundedForFinalAttribute()
 }
 
 /**
@@ -356,6 +359,7 @@ public struct AnnotationFeatureDetailViewBase<
         let calculatedValue = accessibilityFeature.calculatedAttributeValues[attribute] ?? nil
         let appEstimate = annotationFeatureDetailNumericEstimate(calculatedValue)
         let canUseAppEstimate = annotationFeatureDetailCanUseEstimate(
+            attribute: attribute,
             currentValue: currentValue,
             calculatedValue: calculatedValue
         )
@@ -413,6 +417,7 @@ public struct AnnotationFeatureDetailViewBase<
                         numericRefreshTrigger += 1
                     } catch {
                         setAttributeStatusErrorText(for: attribute, message: "\(error.localizedDescription)")
+                        numericRefreshTrigger += 1
                     }
                 }
             ),

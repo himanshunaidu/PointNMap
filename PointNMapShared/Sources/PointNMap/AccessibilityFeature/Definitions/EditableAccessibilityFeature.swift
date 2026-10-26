@@ -117,9 +117,7 @@ open class EditableAccessibilityFeature: EditableAccessibilityFeatureProtocol {
         isCalculated: Bool = false,
         isFinal: Bool = true
     ) throws {
-        guard attribute.isCompatible(with: value) else {
-            throw AccessibilityFeatureError.attributeValueMismatch(attribute: attribute, value: value)
-        }
+        try attribute.validate(value)
         if isCalculated {
             calculatedAttributeValues[attribute] = value
         }
@@ -147,9 +145,7 @@ open class EditableAccessibilityFeature: EditableAccessibilityFeatureProtocol {
         _ value: AccessibilityFeatureAttribute.Value,
         for attribute: AccessibilityFeatureAttribute
     ) throws {
-        guard attribute.isCompatible(with: value) else {
-            throw AccessibilityFeatureError.attributeValueMismatch(attribute: attribute, value: value)
-        }
+        try attribute.validate(value)
         experimentalAttributeValues[attribute] = value
     }
     
