@@ -36,6 +36,28 @@ public enum AnnotationFeatureDetailViewConstants {
     }
 }
 
+func annotationFeatureDetailIsEdited(
+    currentValue: AccessibilityFeatureAttribute.Value?,
+    calculatedValue: AccessibilityFeatureAttribute.Value?
+) -> Bool {
+    guard currentValue != nil else { return false }
+    return currentValue != calculatedValue
+}
+
+func annotationFeatureDetailNumericEstimate(
+    _ calculatedValue: AccessibilityFeatureAttribute.Value?
+) -> Double? {
+    calculatedValue?.toDouble()
+}
+
+func annotationFeatureDetailCanUseEstimate(
+    currentValue: AccessibilityFeatureAttribute.Value?,
+    calculatedValue: AccessibilityFeatureAttribute.Value?
+) -> Bool {
+    annotationFeatureDetailNumericEstimate(calculatedValue) != nil
+        && currentValue != calculatedValue
+}
+
 /**
     A view that displays detailed information about an accessibility feature annotation.
     Sub-view of the `AnnotationView`.
@@ -99,7 +121,9 @@ public struct AnnotationFeatureDetailViewBase<
     @StateObject private var statusViewModel = AnnotationFeatureDetailViewBase.StatusViewModel()
     @FocusState private var focusedField: AccessibilityFeatureAttribute?
     /// Note: Fields such as pickers don't have built-in ways to update their UI based on user input. Hence we need to trigger a refresh manually when their value changes.
-    @State private var refreshTrigger: Int = 0
+    @State private var pickerRefreshTrigger: Int = 0
+    @State private var numericRefreshTrigger: Int = 0
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     
     public init(
         accessibilityFeature: Feature,
@@ -164,7 +188,7 @@ public struct AnnotationFeatureDetailViewBase<
                     Section(header: Text(AccessibilityFeatureAttribute.surfaceIntegrity.displayName)) {
                         pickerView(attribute: .surfaceIntegrity)
                             .focused($focusedField, equals: .surfaceIntegrity)
-                            .id(refreshTrigger) // Refresh the Picker view when refreshTrigger changes
+                            .id(pickerRefreshTrigger) // Refresh the Picker view when its value changes
                     }
                 }
                 
@@ -172,7 +196,6 @@ public struct AnnotationFeatureDetailViewBase<
                     Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruption.displayName)) {
                         numberTextFieldView(attribute: .surfaceDisruption)
                             .focused($focusedField, equals: .surfaceDisruption)
-                            .id(refreshTrigger) // Refresh the Picker view when refreshTrigger changes
                     }
                 }
                 
@@ -358,7 +381,26 @@ public struct AnnotationFeatureDetailViewBase<
     @ViewBuilder
     private func numberTextFieldView(attribute: AccessibilityFeatureAttribute) -> some View {
         let attributeStatus = statusViewModel.attributeStatusMap[attribute] ?? .init(isError: false, errorMessage: "")
-        VStack {
+        let currentValue = accessibilityFeature.attributeValues[attribute] ?? nil
+        let calculatedValue = accessibilityFeature.calculatedAttributeValues[attribute] ?? nil
+        let appEstimate = annotationFeatureDetailNumericEstimate(calculatedValue)
+        let isEdited = annotationFeatureDetailIsEdited(
+            currentValue: currentValue,
+            calculatedValue: calculatedValue
+        )
+        let canUseAppEstimate = annotationFeatureDetailCanUseEstimate(
+            currentValue: currentValue,
+            calculatedValue: calculatedValue
+        )
+        let fieldLayout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8))
+        let estimateLayout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8))
+        let _ = numericRefreshTrigger
+
+        VStack(alignment: .leading, spacing: 8) {
             if (attributeStatus.isError) {
                 /// A red colored error message
                 HStack {
@@ -371,34 +413,122 @@ public struct AnnotationFeatureDetailViewBase<
                     Spacer()
                 }
             }
-            TextField(
-                attribute.displayName,
-                value: Binding(
-                    get: {
-                        guard let attributeValue = accessibilityFeature.attributeValues[attribute],
-                              let attributeValue,
-                              let attributeBindableValue = attributeValue.toDouble() else {
-                            return 0.0
-                        }
-                        return attributeBindableValue
-                    },
-                    set: { newValue in
-                        do {
-                            let newDoubleValue = Double(newValue)
-                            guard let newAttributeValue = attribute.value(from: newDoubleValue) else {
-                                return
-                            }
-                            try accessibilityFeature.setAttributeValue(newAttributeValue, for: attribute)
-                        } catch {
-                            setAttributeStatusErrorText(for: attribute, message: "\(error.localizedDescription)")
-                        }
-                    }
-                ),
-                format: .number
-            )
-            .textFieldStyle(.roundedBorder)
-            .keyboardType(.decimalPad)
+
+            fieldLayout {
+                numberTextField(attribute: attribute)
+
+                if isEdited {
+                    editedStatusView
+                }
+            }
+
+            estimateLayout {
+                appEstimateView(appEstimate)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                useAppEstimateButton(
+                    attribute: attribute,
+                    calculatedValue: calculatedValue,
+                    canUseAppEstimate: canUseAppEstimate
+                )
+            }
         }
+    }
+
+    private func numberTextField(attribute: AccessibilityFeatureAttribute) -> some View {
+        TextField(
+            attribute.displayName,
+            value: Binding(
+                get: {
+                    guard let attributeValue = accessibilityFeature.attributeValues[attribute],
+                          let attributeValue,
+                          let attributeBindableValue = attributeValue.toDouble() else {
+                        return 0.0
+                    }
+                    return attributeBindableValue
+                },
+                set: { newValue in
+                    do {
+                        guard let newAttributeValue = attribute.value(from: newValue) else {
+                            return
+                        }
+                        try accessibilityFeature.setAttributeValue(newAttributeValue, for: attribute)
+                        numericRefreshTrigger += 1
+                    } catch {
+                        setAttributeStatusErrorText(for: attribute, message: "\(error.localizedDescription)")
+                    }
+                }
+            ),
+            format: .number
+        )
+        .textFieldStyle(.roundedBorder)
+        .keyboardType(.decimalPad)
+        .accessibilityLabel(Text(attribute.displayName))
+    }
+
+    private var editedStatusView: some View {
+        Text("Edited", bundle: #bundle, comment: "Status indicating that an estimated attribute value was changed")
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.red)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .overlay {
+                Capsule()
+                    .stroke(.tertiary, lineWidth: 1)
+            }
+            .accessibilityLabel(Text("Edited", bundle: #bundle))
+    }
+
+    @ViewBuilder
+    private func appEstimateView(_ appEstimate: Double?) -> some View {
+        if let appEstimate {
+            Text(
+                "App estimate: \(appEstimate, format: .number.precision(.fractionLength(0...7)))",
+                bundle: #bundle,
+                comment: "The numeric attribute value estimated by the app"
+            )
+        } else {
+            Text(
+                "App estimate: Unavailable",
+                bundle: #bundle,
+                comment: "Shown when the app could not estimate a numeric attribute value"
+            )
+        }
+    }
+
+    private func useAppEstimateButton(
+        attribute: AccessibilityFeatureAttribute,
+        calculatedValue: AccessibilityFeatureAttribute.Value?,
+        canUseAppEstimate: Bool
+    ) -> some View {
+        Button {
+            guard let calculatedValue else { return }
+
+            do {
+                try accessibilityFeature.setAttributeValue(calculatedValue, for: attribute)
+                numericRefreshTrigger += 1
+            } catch {
+                setAttributeStatusErrorText(for: attribute, message: "\(error.localizedDescription)")
+            }
+        } label: {
+//            Label {
+//                Text(
+//                    "Use app estimate",
+//                    bundle: #bundle,
+//                    comment: "Button that restores an app-estimated numeric attribute value"
+//                )
+//            } icon: {
+            Image(systemName: "arrow.counterclockwise.circle")
+//            }
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.tint)
+        .disabled(!canUseAppEstimate)
+        .accessibilityHint(
+            Text(
+                "Replaces the edited value with the value estimated by the app",
+                bundle: #bundle
+            )
+        )
     }
     
     @ViewBuilder
@@ -474,7 +604,7 @@ public struct AnnotationFeatureDetailViewBase<
                     do {
                         let newCategoricalValue: AccessibilityFeatureAttribute.Value = .categorical(newValue)
                         try accessibilityFeature.setAttributeValue(newCategoricalValue, for: attribute)
-                        refreshTrigger += 1 // Trigger a refresh to update the Picker's displayed value
+                        pickerRefreshTrigger += 1 // Trigger a refresh to update the Picker's displayed value
                     } catch {
                         setAttributeStatusErrorText(for: attribute, message: "\(error.localizedDescription)")
                     }
