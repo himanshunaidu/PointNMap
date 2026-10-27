@@ -443,12 +443,14 @@ public struct AnnotationFeatureDetailViewBase<
                 bundle: #bundle,
                 comment: "The numeric attribute value estimated by the app"
             )
+            .foregroundStyle(.secondary)
         } else {
             Text(
                 "App estimate: Unavailable",
                 bundle: #bundle,
                 comment: "Shown when the app could not estimate a numeric attribute value"
             )
+            .foregroundStyle(.secondary)
         }
     }
 
@@ -475,6 +477,9 @@ public struct AnnotationFeatureDetailViewBase<
 //                )
 //            } icon: {
             Image(systemName: "arrow.counterclockwise.circle")
+                .font(.title2)
+                .frame(width: 30, height: 30)
+                .contentShape(Rectangle())
 //            }
         }
         .buttonStyle(.plain)
