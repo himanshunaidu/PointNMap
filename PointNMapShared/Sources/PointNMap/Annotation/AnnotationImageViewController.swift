@@ -11,9 +11,21 @@ import Combine
 @MainActor
 public protocol AnnotationImageProcessingOutputConsumer: AnyObject {
     func annotationOutputImage(
-        _ delegate: AnnotationImageProcessingDelegate,
-        image: CIImage?, overlayImage: CIImage?, overlay2Image: CIImage?, overlay3Image: CIImage?
+        _ delegate: AnnotationImageProcessingDelegate, cameraImage: CIImage?,
+        segmentationOverlayImage: CIImage?, featureGeometryOverlayImage: CIImage?,
+        surfaceAnalysisOverlayImage: CIImage?
     )
+    func annotationSelectionSpotlightImage(
+        _ delegate: AnnotationImageProcessingDelegate,
+        selectionSpotlightOverlayImage: CIImage?
+    )
+}
+
+public extension AnnotationImageProcessingOutputConsumer {
+    func annotationSelectionSpotlightImage(
+        _ delegate: AnnotationImageProcessingDelegate,
+        selectionSpotlightOverlayImage: CIImage?
+    ) {}
 }
 
 public protocol AnnotationImageProcessingDelegate: AnyObject {
@@ -28,7 +40,7 @@ public class AnnotationImageViewController<Feature: EditableAccessibilityFeature
     
     private let subView = UIView()
     
-    private let imageView: UIImageView = {
+    private let cameraImageView: UIImageView = {
         let iv = UIImageView()
         iv.contentMode = .scaleAspectFit
         iv.clipsToBounds = true
@@ -38,7 +50,7 @@ public class AnnotationImageViewController<Feature: EditableAccessibilityFeature
         iv.translatesAutoresizingMaskIntoConstraints = false
         return iv
     }()
-    private let overlayView: UIImageView = {
+    private let segmentationOverlayImageView: UIImageView = {
         let iv = UIImageView()
         iv.contentMode = .scaleAspectFit
         iv.clipsToBounds = true
@@ -48,7 +60,7 @@ public class AnnotationImageViewController<Feature: EditableAccessibilityFeature
         iv.translatesAutoresizingMaskIntoConstraints = false
         return iv
     }()
-    private let overlay2View: UIImageView = {
+    private let featureGeometryOverlayImageView: UIImageView = {
         let iv = UIImageView()
         iv.contentMode = .scaleAspectFit
         iv.clipsToBounds = true
@@ -58,7 +70,17 @@ public class AnnotationImageViewController<Feature: EditableAccessibilityFeature
         iv.translatesAutoresizingMaskIntoConstraints = false
         return iv
     }()
-    private let overlay3View: UIImageView = {
+    private let surfaceAnalysisOverlayImageView: UIImageView = {
+        let iv = UIImageView()
+        iv.contentMode = .scaleAspectFit
+        iv.clipsToBounds = true
+        iv.layer.cornerRadius = 12
+        iv.backgroundColor = UIColor(white: 0, alpha: 0.0)
+        iv.isUserInteractionEnabled = false
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
+    }()
+    private let selectionSpotlightOverlayImageView: UIImageView = {
         let iv = UIImageView()
         iv.contentMode = .scaleAspectFit
         iv.clipsToBounds = true
@@ -92,14 +114,16 @@ public class AnnotationImageViewController<Feature: EditableAccessibilityFeature
         ]
         NSLayoutConstraint.activate(subViewBoundsConstraints)
         
-        subView.addSubview(imageView)
-        constraintChildViewToParent(childView: imageView, parentView: subView)
-        subView.addSubview(overlayView)
-        constraintChildViewToParent(childView: overlayView, parentView: subView)
-        subView.addSubview(overlay2View)
-        constraintChildViewToParent(childView: overlay2View, parentView: subView)
-        subView.addSubview(overlay3View)
-        constraintChildViewToParent(childView: overlay3View, parentView: subView)
+        subView.addSubview(cameraImageView)
+        constraintChildViewToParent(childView: cameraImageView, parentView: subView)
+        subView.addSubview(segmentationOverlayImageView)
+        constraintChildViewToParent(childView: segmentationOverlayImageView, parentView: subView)
+        subView.addSubview(featureGeometryOverlayImageView)
+        constraintChildViewToParent(childView: featureGeometryOverlayImageView, parentView: subView)
+        subView.addSubview(surfaceAnalysisOverlayImageView)
+        constraintChildViewToParent(childView: surfaceAnalysisOverlayImageView, parentView: subView)
+        subView.addSubview(selectionSpotlightOverlayImageView)
+        constraintChildViewToParent(childView: selectionSpotlightOverlayImageView, parentView: subView)
         
         annotationImageManager.outputConsumer = self
         annotationImageManager.setOrientation(getOrientation())
@@ -130,26 +154,34 @@ public class AnnotationImageViewController<Feature: EditableAccessibilityFeature
     }
     
     public func annotationOutputImage(
-        _ delegate: AnnotationImageProcessingDelegate,
-        image: CIImage?, overlayImage: CIImage?, overlay2Image: CIImage?, overlay3Image: CIImage?
+        _ delegate: AnnotationImageProcessingDelegate, cameraImage: CIImage?,
+        segmentationOverlayImage: CIImage?, featureGeometryOverlayImage: CIImage?,
+        surfaceAnalysisOverlayImage: CIImage?
     ) {
-        if let img = image {
-            let uiImage = UIImage(ciImage: img)
-            imageView.image = uiImage
+        if let cameraImage {
+            cameraImageView.image = UIImage(ciImage: cameraImage)
         }
-        if let overlayImg = overlayImage {
-            let uiOverlayImage = UIImage(ciImage: overlayImg)
-            overlayView.image = uiOverlayImage
+        if let segmentationOverlayImage {
+            self.segmentationOverlayImageView.image = UIImage(ciImage: segmentationOverlayImage)
         }
-        if let overlay2Img = overlay2Image {
-            let uiOverlay2Image = UIImage(ciImage: overlay2Img)
-            overlay2View.image = uiOverlay2Image
+        if let featureGeometryOverlayImage {
+            self.featureGeometryOverlayImageView.image = UIImage(ciImage: featureGeometryOverlayImage)
         }
-        if let overlay3Img = overlay3Image {
-            let uiOverlay3Image = UIImage(ciImage: overlay3Img)
-            overlay3View.image = uiOverlay3Image
+        if let surfaceAnalysisOverlayImage {
+            self.surfaceAnalysisOverlayImageView.image = UIImage(ciImage: surfaceAnalysisOverlayImage)
         } else {
-            overlay3View.image = nil
+            surfaceAnalysisOverlayImageView.image = nil
+        }
+    }
+
+    public func annotationSelectionSpotlightImage(
+        _ delegate: AnnotationImageProcessingDelegate,
+        selectionSpotlightOverlayImage: CIImage?
+    ) {
+        if let selectionSpotlightOverlayImage {
+            self.selectionSpotlightOverlayImageView.image = UIImage(ciImage: selectionSpotlightOverlayImage)
+        } else {
+            self.selectionSpotlightOverlayImageView.image = nil
         }
     }
     

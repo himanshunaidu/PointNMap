@@ -557,18 +557,14 @@ public struct AnnotationViewBase: View {
             guard let currentClass = featureClassSelectionViewModel.currentClass else {
                 throw AnnotationViewBaseError.invalidCaptureDataRecord
             }
-            var accessibilityFeatures: [EditableAccessibilityFeature]
-            var featureSelectedStatus: [UUID: Bool] = [:]
+            var selection: AnnotationImageSelection<EditableAccessibilityFeature>?
             var updateFeatureResults: AnnotationImageFeatureUpdateResults? = nil
-            if let currentFeature = featureSelectionViewModel.currentFeature {
-                accessibilityFeatures = [currentFeature]
-                featureSelectedStatus[currentFeature.id] = true /// Selected and highlighted
-                if let oldIndex = oldIndex, oldIndex != featureSelectionViewModel.currentIndex,
-                   oldIndex >= 0, oldIndex < featureSelectionViewModel.instances.count {
-                    let oldFeature = featureSelectionViewModel.instances[oldIndex]
-                    accessibilityFeatures.append(oldFeature)
-                    featureSelectedStatus[oldFeature.id] = false /// Selected, but not highlighted
-                }
+            if let currentFeature = featureSelectionViewModel.currentFeature,
+               let currentIndex = featureSelectionViewModel.currentIndex {
+                selection = AnnotationImageSelection(
+                    feature: currentFeature,
+                    index: currentIndex
+                )
                 if currentClass.kind.attributes.contains(where: {
                     $0 == .width || $0 == .runningSlope || $0 == .crossSlope || $0 == .surfaceIntegrity
                 }) {
@@ -580,17 +576,10 @@ public struct AnnotationViewBase: View {
                         updateFeatureResults = try makeVisualizationResults(for: currentFeature)
                     }
                 }
-            } else {
-                accessibilityFeatures = featureSelectionViewModel.instances
-                featureSelectedStatus = featureSelectionViewModel.instances.reduce(into: [:]) { dict, feature in
-                    dict[feature.id] = false /// Selected, but not highlighted
-                }
             }
-//            let isSelected = featureSelectionViewModel.currentFeature != nil
             try manager.updateFeature(
                 accessibilityFeatureClass: currentClass,
-                accessibilityFeatures: accessibilityFeatures,
-                featureSelectedStatus: featureSelectedStatus,
+                selection: selection,
                 updateFeatureResults: updateFeatureResults
             )
         } catch {
