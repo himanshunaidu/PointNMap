@@ -7,6 +7,13 @@
 
 public protocol AnnotationOptionProtocol: RawRepresentable, CaseIterable, Hashable where RawValue == String {}
 
+public enum AnnotationDecision: String, CaseIterable, Hashable, Sendable {
+    case keep
+    case discard
+
+    public static let `default`: AnnotationDecision = .keep
+}
+
 public enum AnnotationOptionFeature: String, CaseIterable, Hashable, AnnotationOptionProtocol {
     case agree = "I agree with this feature annotation"
     case discard = "I wish to discard this feature annotation"

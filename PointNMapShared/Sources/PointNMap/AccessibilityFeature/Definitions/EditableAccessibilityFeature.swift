@@ -10,6 +10,10 @@ import CoreLocation
 public protocol EditableAccessibilityFeatureProtocol: AccessibilityFeatureProtocol, DetectedFeatureProtocol {
     var id: UUID { get }
     var selectedAnnotationOption: AnnotationOption { get set }
+    var groupAnnotationDecision: AnnotationDecision? { get set }
+    var individualAnnotationDecision: AnnotationDecision? { get set }
+    var effectiveAnnotationDecision: AnnotationDecision { get }
+    var isAnnotationDecisionException: Bool { get }
     var locationDetails: LocationDetails? { get set }
     var calculatedAttributeValues: [AccessibilityFeatureAttribute: AccessibilityFeatureAttribute.Value?] { get set }
     var attributeValues: [AccessibilityFeatureAttribute: AccessibilityFeatureAttribute.Value?] { get set }
@@ -20,6 +24,8 @@ public protocol EditableAccessibilityFeatureProtocol: AccessibilityFeatureProtoc
         detectedAccessibilityFeature: DetectedAccessibilityFeature
     )
     func setAnnotationOption(_ option: AnnotationOption)
+    func setGroupAnnotationDecision(_ decision: AnnotationDecision?)
+    func setIndividualAnnotationDecision(_ decision: AnnotationDecision?)
     func getLastLocationCoordinate() -> CLLocationCoordinate2D?
     func setLocationDetails(locationDetails: LocationDetails)
     func setAttributeValue(
@@ -51,6 +57,20 @@ open class EditableAccessibilityFeature: EditableAccessibilityFeatureProtocol {
     public let contourDetails: ContourDetails
     
     public var selectedAnnotationOption: AnnotationOption = .individualOption(.default)
+
+    public var groupAnnotationDecision: AnnotationDecision?
+    public var individualAnnotationDecision: AnnotationDecision?
+
+    public var effectiveAnnotationDecision: AnnotationDecision {
+        individualAnnotationDecision ?? groupAnnotationDecision ?? .default
+    }
+
+    public var isAnnotationDecisionException: Bool {
+        guard let groupAnnotationDecision, let individualAnnotationDecision else {
+            return false
+        }
+        return groupAnnotationDecision != individualAnnotationDecision
+    }
     
     public var locationDetails: LocationDetails?
     
@@ -65,6 +85,14 @@ open class EditableAccessibilityFeature: EditableAccessibilityFeatureProtocol {
         self.id = id
         self.accessibilityFeatureClass = detectedAccessibilityFeature.accessibilityFeatureClass
         self.contourDetails = detectedAccessibilityFeature.contourDetails
+
+        if accessibilityFeatureClass.kind.isUniquePerCapture {
+            groupAnnotationDecision = nil
+            individualAnnotationDecision = .keep
+        } else {
+            groupAnnotationDecision = .keep
+            individualAnnotationDecision = nil
+        }
         
         self.locationDetails = nil
         
@@ -91,6 +119,13 @@ open class EditableAccessibilityFeature: EditableAccessibilityFeatureProtocol {
         self.id = id
         self.contourDetails = contourDetails
         self.accessibilityFeatureClass = accessibilityFeatureClass
+        if accessibilityFeatureClass.kind.isUniquePerCapture {
+            groupAnnotationDecision = nil
+            individualAnnotationDecision = .keep
+        } else {
+            groupAnnotationDecision = .keep
+            individualAnnotationDecision = nil
+        }
         self.locationDetails = locationDetails
         self.calculatedAttributeValues = calculatedAttributeValues
         self.attributeValues = attributeValues
@@ -99,6 +134,21 @@ open class EditableAccessibilityFeature: EditableAccessibilityFeatureProtocol {
     
     public func setAnnotationOption(_ option: AnnotationOption) {
         self.selectedAnnotationOption = option
+        guard case .individualOption(let individualOption) = option else { return }
+        switch individualOption {
+        case .agree:
+            individualAnnotationDecision = .keep
+        case .discard:
+            individualAnnotationDecision = .discard
+        }
+    }
+
+    public func setGroupAnnotationDecision(_ decision: AnnotationDecision?) {
+        groupAnnotationDecision = decision
+    }
+
+    public func setIndividualAnnotationDecision(_ decision: AnnotationDecision?) {
+        individualAnnotationDecision = decision
     }
     
     public func getLastLocationCoordinate() -> CLLocationCoordinate2D? {
