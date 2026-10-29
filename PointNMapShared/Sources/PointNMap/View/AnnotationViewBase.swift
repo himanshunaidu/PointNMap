@@ -20,6 +20,16 @@ enum AnnotationViewBaseConstants {
         static let nextText = "Next"
         
         static let selectObjectText = "Select an object"
+        static let allText = "All"
+        static let individualText = "Individual"
+        static let detailsText = "Details"
+        static let keepText = "Keep"
+        static let discardText = "Discard"
+        static let fromGroupText = "Group"
+        static let individualChoiceText = "Override"
+        static let useGroupDecisionText = "Use group decision"
+        static let reviewRulePrefixText = "Review rule:"
+        static let sidewalkReviewRuleText = "Keep if the highlighted sidewalk mostly matches the real sidewalk. Small gaps are okay; large missing areas or major spillover are not."
         
         static let loadingPageText = "Loading. Please wait..."
         
@@ -138,17 +148,64 @@ class AnnotationFeatureClassSelectionViewBaseModel: ObservableObject {
     }
 }
 
+enum AnnotationViewBaseReviewScope: Hashable {
+    case all
+    case individual
+}
+
+struct AnnotationViewBaseDecisionSummary: Equatable {
+    let keptCount: Int
+    let discardedCount: Int
+    let exceptionCount: Int
+}
+
 class AnnotationFeatureSelectionViewBaseModel: ObservableObject {
     @Published var instances: [EditableAccessibilityFeature] = []
     @Published var currentIndex: Int? = nil
     @Published var currentFeature: EditableAccessibilityFeature? = nil
+    @Published var reviewScope: AnnotationViewBaseReviewScope = .all
+
+    private var lastSelectedFeatureID: UUID?
+
+    var groupDecision: AnnotationDecision {
+        instances.first?.groupAnnotationDecision ?? .keep
+    }
+
+    var decisionSummary: AnnotationViewBaseDecisionSummary {
+        instances.reduce(
+            into: AnnotationViewBaseDecisionSummary(
+                keptCount: 0,
+                discardedCount: 0,
+                exceptionCount: 0
+            )
+        ) { summary, feature in
+            switch feature.effectiveAnnotationDecision {
+            case .keep:
+                summary = AnnotationViewBaseDecisionSummary(
+                    keptCount: summary.keptCount + 1,
+                    discardedCount: summary.discardedCount,
+                    exceptionCount: summary.exceptionCount
+                        + (feature.isAnnotationDecisionException ? 1 : 0)
+                )
+            case .discard:
+                summary = AnnotationViewBaseDecisionSummary(
+                    keptCount: summary.keptCount,
+                    discardedCount: summary.discardedCount + 1,
+                    exceptionCount: summary.exceptionCount
+                        + (feature.isAnnotationDecisionException ? 1 : 0)
+                )
+            }
+        }
+    }
     
     func setInstances(_ instances: [EditableAccessibilityFeature], currentClass: AccessibilityFeatureClass) throws {
         self.instances = instances
-        /// If the class is sidewalk, we always select the first instance, as there should be only one sidewalk instance.
-        if (currentClass.kind == .sidewalk) {
-            try setIndex(index: 0)
+        lastSelectedFeatureID = instances.first?.id
+        if currentClass.kind.isUniquePerCapture {
+            reviewScope = .individual
+            try setIndex(index: instances.isEmpty ? nil : 0)
         } else {
+            reviewScope = .all
             try setIndex(index: nil)
         }
     }
@@ -164,6 +221,48 @@ class AnnotationFeatureSelectionViewBaseModel: ObservableObject {
         }
         self.currentIndex = index
         self.currentFeature = instances[index]
+        lastSelectedFeatureID = instances[index].id
+    }
+
+    func setReviewScope(
+        _ scope: AnnotationViewBaseReviewScope,
+        currentClass: AccessibilityFeatureClass
+    ) throws {
+        guard !currentClass.kind.isUniquePerCapture else {
+            reviewScope = .individual
+            if currentFeature == nil, !instances.isEmpty {
+                try setIndex(index: 0)
+            }
+            return
+        }
+
+        reviewScope = scope
+        switch scope {
+        case .all:
+            try setIndex(index: nil)
+        case .individual:
+            let restoredIndex = lastSelectedFeatureID.flatMap { featureID in
+                instances.firstIndex(where: { $0.id == featureID })
+            } ?? instances.indices.first
+            try setIndex(index: restoredIndex)
+        }
+    }
+
+    func setGroupDecision(_ decision: AnnotationDecision) {
+        objectWillChange.send()
+        instances.forEach { $0.setGroupAnnotationDecision(decision) }
+    }
+
+    func setIndividualDecision(_ decision: AnnotationDecision) {
+        guard let currentFeature else { return }
+        objectWillChange.send()
+        currentFeature.setIndividualAnnotationDecision(decision)
+    }
+
+    func clearIndividualDecision() {
+        guard let currentFeature else { return }
+        objectWillChange.send()
+        currentFeature.setIndividualAnnotationDecision(nil)
     }
     
     func setCurrent(index: Int?, instances: [EditableAccessibilityFeature], currentClass: AccessibilityFeatureClass) throws {
@@ -294,7 +393,10 @@ public struct AnnotationViewBase: View {
             {
                 AnnotationFeatureDetailViewBase(
                     accessibilityFeature: currentFeature,
-                    title: "\(currentFeature.accessibilityFeatureClass.name.capitalized): \(currentFeatureIndex)"
+                    title: instanceDisplayName(
+                        for: currentFeature.accessibilityFeatureClass,
+                        index: currentFeatureIndex
+                    )
                 ) { feature in
                     EmptyView()
                 }
@@ -331,45 +433,61 @@ public struct AnnotationViewBase: View {
     }
     
     @ViewBuilder
-    private func orientationStack<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        manager.interfaceOrientation.isLandscape ?
-        AnyLayout(HStackLayout())(content) :
-        AnyLayout(VStackLayout())(content)
-    }
-    
-    @ViewBuilder
     private func mainContent(currentClass: AccessibilityFeatureClass) -> some View {
-        let isDisabledFeatureDetailButton = featureSelectionViewModel.currentFeature == nil
-        orientationStack {
-            HostedAnnotationImageViewController(annotationImageManager: manager)
-            
-            VStack {
+        GeometryReader { geometry in
+            let isLandscape = manager.interfaceOrientation.isLandscape
+            let layout = isLandscape
+                ? AnyLayout(HStackLayout(spacing: 0))
+                : AnyLayout(VStackLayout(spacing: 0))
+
+            layout {
+                annotationImageView
+                    .frame(
+                        width: isLandscape ? geometry.size.width / 2 : geometry.size.width,
+                        height: isLandscape ? geometry.size.height : geometry.size.height / 2
+                    )
+
+                annotationPane(currentClass: currentClass)
+                    .frame(
+                        width: isLandscape ? geometry.size.width / 2 : geometry.size.width,
+                        height: isLandscape ? geometry.size.height : geometry.size.height / 2
+                    )
+            }
+        }
+    }
+
+    private var annotationImageView: some View {
+        HostedAnnotationImageViewController<EditableAccessibilityFeature>(annotationImageManager: manager)
+            .clipped()
+    }
+
+    private func annotationPane(currentClass: AccessibilityFeatureClass) -> some View {
+        VStack(spacing: 0) {
+            ScrollView(.vertical) {
+                annotationControls(currentClass: currentClass)
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
+            }
+
+            Divider()
+
+            confirmAnnotationButton
+                .frame(maxWidth: .infinity)
+                .background(.background)
+                .shadow(color: .black.opacity(0.08), radius: 4, y: -2)
+        }
+    }
+
+    @ViewBuilder
+    private func annotationControls(currentClass: AccessibilityFeatureClass) -> some View {
+        if featureSelectionViewModel.instances.isEmpty {
+            emptyInstancesView(currentClass: currentClass)
+        } else {
+            VStack(spacing: 12) {
                 HStack {
                     Spacer()
                     Text("\(AnnotationViewBaseConstants.Texts.currentClassPrefixText): \(currentClass.name)")
-                    Spacer()
-                }
-                
-                HStack {
-                    Spacer()
-                    CustomPicker (
-                        label: AnnotationViewBaseConstants.Texts.selectObjectText,
-                        selection: $featureSelectionViewModel.currentIndex,
-                        isContainsAll: currentClass.kind != .sidewalk
-                    ) {
-                        ForEach(featureSelectionViewModel.instances.indices, id: \.self) { featureIndex in
-                            Text("\(currentClass.name.capitalized): \(featureIndex)")
-                                .tag(featureIndex as Int?)
-                        }
-                    }
-                    Button(action: {
-                        isShowingAnnotationFeatureDetailView = true
-                    }) {
-                        Image(systemName: AnnotationViewBaseConstants.Images.ellipsisIcon)
-                    }
-                    .buttonStyle(.bordered)
-                    .padding(.horizontal, 5)
-                    .disabled(isDisabledFeatureDetailButton)
+                        .font(.headline)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
@@ -387,62 +505,294 @@ public struct AnnotationViewBase: View {
                         .padding(.trailing, 10)
                     }
                 )
-                
-                ProgressBar(value: 0)
-                
-                HStack {
-                    Spacer()
-                    annotationOptionsView(currentClass: currentClass)
-                    Spacer()
+
+                Divider()
+
+                if currentClass.kind == .sidewalk {
+                    sidewalkReviewRuleView
                 }
-                .padding()
-                
-                Button(action: {
-                    confirmAnnotation()
-                }) {
-                    Text(isCurrentIndexLast() ? AnnotationViewBaseConstants.Texts.finishText : AnnotationViewBaseConstants.Texts.nextText)
-                        .padding()
+
+                if !currentClass.kind.isUniquePerCapture {
+                    reviewScopePicker(currentClass: currentClass)
+                }
+
+                if currentClass.kind.isUniquePerCapture
+                    || featureSelectionViewModel.reviewScope == .individual {
+                    individualSelectionView(currentClass: currentClass)
+                }
+
+                if !currentClass.kind.isUniquePerCapture
+                    && featureSelectionViewModel.reviewScope == .individual {
+                    effectiveDecisionView()
+                    Text("Override for this \(currentClass.name.capitalized)")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                annotationOptionsView(currentClass: currentClass)
+                decisionSummaryView(currentClass: currentClass)
+            }
+        }
+    }
+
+    private func emptyInstancesView(currentClass: AccessibilityFeatureClass) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "square.dashed")
+                .font(.largeTitle)
+                .foregroundStyle(.secondary)
+
+            Text("No instances of \(currentClass.name.capitalized) were present.")
+                .font(.headline)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+    }
+
+    private var sidewalkReviewRuleView: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "info.circle.fill")
+                .font(.title2)
+                .foregroundStyle(.blue)
+
+            (
+                Text("\(AnnotationViewBaseConstants.Texts.reviewRulePrefixText) ")
+                    .fontWeight(.semibold)
+                + Text(AnnotationViewBaseConstants.Texts.sidewalkReviewRuleText)
+            )
+            .font(.subheadline)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.blue.opacity(0.1))
+        )
+    }
+
+    private var confirmAnnotationButton: some View {
+        let isLastClass = isCurrentIndexLast()
+
+        return Button(action: {
+            confirmAnnotation()
+        }) {
+            HStack(spacing: 8) {
+                Text(isLastClass
+                     ? AnnotationViewBaseConstants.Texts.finishText
+                     : AnnotationViewBaseConstants.Texts.nextText)
+                Image(systemName: isLastClass ? "checkmark.seal.fill" : "arrow.right")
+            }
+            .font(.headline.weight(.semibold))
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(.tint, in: RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    private func reviewScopePicker(currentClass: AccessibilityFeatureClass) -> some View {
+        Picker(
+            AnnotationViewBaseConstants.Texts.selectObjectText,
+            selection: Binding(
+                get: { featureSelectionViewModel.reviewScope },
+                set: { scope in
+                    do {
+                        try featureSelectionViewModel.setReviewScope(scope, currentClass: currentClass)
+                    } catch {
+                        managerStatusViewModel.update(
+                            isFailed: true,
+                            error: error,
+                            shouldDismiss: false
+                        )
+                    }
+                }
+            )
+        ) {
+            Text("\(AnnotationViewBaseConstants.Texts.allText) (\(featureSelectionViewModel.instances.count))")
+                .tag(AnnotationViewBaseReviewScope.all)
+            Text(AnnotationViewBaseConstants.Texts.individualText)
+                .tag(AnnotationViewBaseReviewScope.individual)
+        }
+        .pickerStyle(.segmented)
+    }
+
+    private func individualSelectionView(currentClass: AccessibilityFeatureClass) -> some View {
+        HStack(spacing: 8) {
+            if currentClass.kind.isUniquePerCapture {
+                Text(instanceDisplayName(for: currentClass, index: 0))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Picker(
+                    AnnotationViewBaseConstants.Texts.selectObjectText,
+                    selection: $featureSelectionViewModel.currentIndex
+                ) {
+                    ForEach(featureSelectionViewModel.instances.indices, id: \.self) { featureIndex in
+                        Text(instanceDisplayName(for: currentClass, index: featureIndex))
+                            .tag(featureIndex as Int?)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            Button {
+                isShowingAnnotationFeatureDetailView = true
+            } label: {
+                Label(
+                    AnnotationViewBaseConstants.Texts.detailsText,
+                    systemImage: "doc.text"
+                )
+            }
+            .buttonStyle(.bordered)
+            .disabled(featureSelectionViewModel.currentFeature == nil)
+        }
+    }
+
+    @ViewBuilder
+    private func annotationOptionsView(currentClass: AccessibilityFeatureClass) -> some View {
+        if currentClass.kind.isUniquePerCapture
+            || featureSelectionViewModel.reviewScope == .individual {
+            let selectedDecision = currentClass.kind.isUniquePerCapture
+                ? featureSelectionViewModel.currentFeature?.effectiveAnnotationDecision
+                : featureSelectionViewModel.currentFeature?.individualAnnotationDecision
+            HStack(spacing: 8) {
+                decisionButton(
+                    title: AnnotationViewBaseConstants.Texts.keepText,
+                    systemImage: AnnotationViewBaseConstants.Images.checkIcon,
+                    decision: .keep,
+                    selectedDecision: selectedDecision
+                ) {
+                    featureSelectionViewModel.setIndividualDecision(.keep)
+                }
+                decisionButton(
+                    title: AnnotationViewBaseConstants.Texts.discardText,
+                    systemImage: "trash",
+                    decision: .discard,
+                    selectedDecision: selectedDecision
+                ) {
+                    featureSelectionViewModel.setIndividualDecision(.discard)
+                }
+            }
+        } else {
+            HStack(spacing: 8) {
+                decisionButton(
+                    title: "\(AnnotationViewBaseConstants.Texts.keepText) All",
+                    systemImage: AnnotationViewBaseConstants.Images.checkIcon,
+                    decision: .keep,
+                    selectedDecision: featureSelectionViewModel.groupDecision
+                ) {
+                    featureSelectionViewModel.setGroupDecision(.keep)
+                }
+                decisionButton(
+                    title: "\(AnnotationViewBaseConstants.Texts.discardText) All",
+                    systemImage: "trash",
+                    decision: .discard,
+                    selectedDecision: featureSelectionViewModel.groupDecision
+                ) {
+                    featureSelectionViewModel.setGroupDecision(.discard)
                 }
             }
         }
     }
-    
-    private func annotationOptionsView(currentClass: AccessibilityFeatureClass) -> some View {
+
+    private func decisionButton(
+        title: String,
+        systemImage: String,
+        decision: AnnotationDecision,
+        selectedDecision: AnnotationDecision?,
+        action: @escaping () -> Void
+    ) -> some View {
+        let isSelected = selectedDecision == decision
+        let decisionColor: Color = decision == .keep ? .green : .red
+
+        return Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.subheadline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .foregroundStyle(decisionColor)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(decisionColor.opacity(isSelected ? 0.18 : 0.08))
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(
+                            decisionColor.opacity(isSelected ? 1 : 0.3),
+                            lineWidth: isSelected ? 2 : 1
+                        )
+                }
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func effectiveDecisionView() -> some View {
         if let currentFeature = featureSelectionViewModel.currentFeature {
-            let annotationOptions: [AnnotationOption] = AnnotationOptionFeature.allCases.map { .individualOption($0) }
-            return VStack(spacing: 10) {
-                ForEach(annotationOptions, id: \.self) { option in
-                    Button(action: {
-                        featureSelectionViewModel.setOptionOnFeature(option: option)
-                    }) {
-                        Text(option.rawValue)
-                            .font(.subheadline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(currentFeature.selectedAnnotationOption == option ? Color.blue : Color.gray)
-                            .foregroundStyle(.white)
-                            .cornerRadius(10)
+            let decision = currentFeature.effectiveAnnotationDecision
+            let decisionColor: Color = decision == .keep ? .green : .red
+            let sourceText = currentFeature.individualAnnotationDecision == nil
+                ? AnnotationViewBaseConstants.Texts.fromGroupText
+                : AnnotationViewBaseConstants.Texts.individualChoiceText
+
+            HStack(spacing: 12) {
+                Label {
+                    HStack(spacing: 4) {
+                        Text(decision == .keep
+                             ? AnnotationViewBaseConstants.Texts.keepText
+                             : AnnotationViewBaseConstants.Texts.discardText)
+                            .fontWeight(.semibold)
+                        Text("(\(sourceText))")
+                            .foregroundStyle(.secondary)
                     }
+                } icon: {
+                    Image(systemName: decision == .keep
+                          ? AnnotationViewBaseConstants.Images.checkIcon
+                          : "trash")
                 }
+                .foregroundStyle(decisionColor)
+
+                Spacer(minLength: 0)
+
+                Button(AnnotationViewBaseConstants.Texts.useGroupDecisionText) {
+                    featureSelectionViewModel.clearIndividualDecision()
+                }
+                .buttonStyle(.bordered)
+                .disabled(currentFeature.individualAnnotationDecision == nil)
             }
-        } else {
-            let annotationOptions: [AnnotationOption] = AnnotationOptionFeatureClass.allCases.map { .classOption($0) }
-            return VStack(spacing: 10) {
-                ForEach(annotationOptions, id: \.self) { option in
-                    Button(action: {
-                        featureClassSelectionViewModel.setOption(option: option)
-                    }) {
-                        Text(option.rawValue)
-                            .font(.subheadline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(featureClassSelectionViewModel.selectedAnnotationOption == option ? Color.blue : Color.gray)
-                            .foregroundStyle(.white)
-                            .cornerRadius(10)
-                    }
-                }
+            .font(.subheadline)
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(decisionColor.opacity(0.1))
+            )
+        }
+    }
+
+    private func decisionSummaryView(currentClass: AccessibilityFeatureClass) -> some View {
+        let summary = featureSelectionViewModel.decisionSummary
+        return HStack(spacing: 8) {
+            Text("\(summary.keptCount) kept")
+                .foregroundStyle(.green)
+            Text("·")
+            Text("\(summary.discardedCount) discarded")
+                .foregroundStyle(.red)
+            if !currentClass.kind.isUniquePerCapture {
+                Text("·")
+                Text("\(summary.exceptionCount) exceptions")
+                    .foregroundStyle(.secondary)
             }
         }
+        .font(.subheadline.weight(.semibold))
+    }
+
+    private func instanceDisplayName(
+        for featureClass: AccessibilityFeatureClass,
+        index: Int
+    ) -> String {
+        "\(featureClass.name.capitalized) #\(index + 1)"
     }
     
     private func isCurrentIndexValid() -> Bool {
@@ -557,18 +907,14 @@ public struct AnnotationViewBase: View {
             guard let currentClass = featureClassSelectionViewModel.currentClass else {
                 throw AnnotationViewBaseError.invalidCaptureDataRecord
             }
-            var accessibilityFeatures: [EditableAccessibilityFeature]
-            var featureSelectedStatus: [UUID: Bool] = [:]
+            var selection: AnnotationImageSelection<EditableAccessibilityFeature>?
             var updateFeatureResults: AnnotationImageFeatureUpdateResults? = nil
-            if let currentFeature = featureSelectionViewModel.currentFeature {
-                accessibilityFeatures = [currentFeature]
-                featureSelectedStatus[currentFeature.id] = true /// Selected and highlighted
-                if let oldIndex = oldIndex, oldIndex != featureSelectionViewModel.currentIndex,
-                   oldIndex >= 0, oldIndex < featureSelectionViewModel.instances.count {
-                    let oldFeature = featureSelectionViewModel.instances[oldIndex]
-                    accessibilityFeatures.append(oldFeature)
-                    featureSelectedStatus[oldFeature.id] = false /// Selected, but not highlighted
-                }
+            if let currentFeature = featureSelectionViewModel.currentFeature,
+               let currentIndex = featureSelectionViewModel.currentIndex {
+                selection = AnnotationImageSelection(
+                    feature: currentFeature,
+                    index: currentIndex
+                )
                 if currentClass.kind.attributes.contains(where: {
                     $0 == .width || $0 == .runningSlope || $0 == .crossSlope || $0 == .surfaceIntegrity
                 }) {
@@ -580,17 +926,10 @@ public struct AnnotationViewBase: View {
                         updateFeatureResults = try makeVisualizationResults(for: currentFeature)
                     }
                 }
-            } else {
-                accessibilityFeatures = featureSelectionViewModel.instances
-                featureSelectedStatus = featureSelectionViewModel.instances.reduce(into: [:]) { dict, feature in
-                    dict[feature.id] = false /// Selected, but not highlighted
-                }
             }
-//            let isSelected = featureSelectionViewModel.currentFeature != nil
             try manager.updateFeature(
                 accessibilityFeatureClass: currentClass,
-                accessibilityFeatures: accessibilityFeatures,
-                featureSelectedStatus: featureSelectedStatus,
+                selection: selection,
                 updateFeatureResults: updateFeatureResults
             )
         } catch {

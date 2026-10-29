@@ -81,6 +81,17 @@ public struct AnnotationImageFeatureUpdateResults: Sendable {
     }
 }
 
+public struct AnnotationImageSelection<Feature: EditableAccessibilityFeature> {
+    public let feature: Feature
+    /// Zero-based index in the annotation view's ordered instance collection.
+    public let index: Int
+
+    public init(feature: Feature, index: Int) {
+        self.feature = feature
+        self.index = index
+    }
+}
+
 /**
     A class to manage annotation image processing including segmentation mask post-processing and feature detection.
  */
@@ -134,7 +145,11 @@ public final class AnnotationImageManager<
         Task {
             await MainActor.run {
                 self.outputConsumer?.annotationOutputImage(
-                    self, image: cameraOutputImage, overlayImage: nil, overlay2Image: nil, overlay3Image: nil
+                    self, cameraImage: cameraOutputImage, segmentationOverlayImage: nil,
+                    featureGeometryOverlayImage: nil, surfaceAnalysisOverlayImage: nil
+                )
+                self.outputConsumer?.annotationSelectionSpotlightImage(
+                    self, selectionSpotlightOverlayImage: nil
                 )
             }
         }
@@ -233,10 +248,13 @@ public final class AnnotationImageManager<
             await MainActor.run {
                 self.outputConsumer?.annotationOutputImage(
                     self,
-                    image: cameraOutputImage,
-                    overlayImage: segmentationOverlayOutputImage,
-                    overlay2Image: featuresOverlayOutputImage,
-                    overlay3Image: nil
+                    cameraImage: cameraOutputImage,
+                    segmentationOverlayImage: segmentationOverlayOutputImage,
+                    featureGeometryOverlayImage: featuresOverlayOutputImage,
+                    surfaceAnalysisOverlayImage: nil
+                )
+                self.outputConsumer?.annotationSelectionSpotlightImage(
+                    self, selectionSpotlightOverlayImage: nil
                 )
             }
         }
@@ -245,28 +263,25 @@ public final class AnnotationImageManager<
     
     public func updateFeature(
         accessibilityFeatureClass: AccessibilityFeatureClass,
-        accessibilityFeatures: [Feature],
-        featureSelectedStatus: [UUID: Bool],
+        selection: AnnotationImageSelection<Feature>?,
         updateFeatureResults: AnnotationImageFeatureUpdateResults?
     ) throws {
         guard isConfigured else {
             throw AnnotationImageManagerError.notConfigured
         }
-        guard var annotationImageResults = self.annotationImageResults,
+        guard let annotationImageResults = self.annotationImageResults,
               let cameraOutputImage = annotationImageResults.cameraOutputImage,
               let segmentationOverlayOutputImage = annotationImageResults.segmentationOverlayOutputImage,
-              let featuresSourceCGImage = annotationImageResults.featuresSourceCGImage,
+              let featureGeometryOverlayImage = annotationImageResults.featuresOverlayOutputImage,
               let captureImageData = self.captureImageData else {
             throw AnnotationImageManagerError.imageResultCacheFailed
         }
-        let updatedFeaturesOverlayResults = try updateFeaturesOverlayOutputImageWithSource(
-            sourceCGImage: featuresSourceCGImage,
-            accessibilityFeatures: accessibilityFeatures,
-            featureSelectedStatus: featureSelectedStatus
-        )
-        annotationImageResults.featuresSourceCGImage = updatedFeaturesOverlayResults.sourceCGImage
-        annotationImageResults.featuresOverlayOutputImage = updatedFeaturesOverlayResults.overlayImage
-        self.annotationImageResults = annotationImageResults
+        let selectionSpotlightOverlayImage = try selection.map {
+            try getSelectionSpotlightOverlayImage(
+                selection: $0,
+                size: captureImageData.originalSize
+            )
+        }
         /// Additional images for debugging
 //        let overlay3Image: CIImage? = self.getPlaneImage(
 //            captureImageData: captureImageData,
@@ -289,15 +304,15 @@ public final class AnnotationImageManager<
 //            }
 //            return nil
 //        }()
-        let overlay3Image: CIImage?
+        let surfaceAnalysisOverlayImage: CIImage?
         if let analysis = updateFeatureResults?.surfaceIntegrityWindowAnalysis {
-            overlay3Image = try getSurfaceDisruptionOverlayOutputImage(
+            surfaceAnalysisOverlayImage = try getSurfaceDisruptionOverlayOutputImage(
                 captureImageData: captureImageData,
                 analysis: analysis,
                 size: captureImageData.originalSize
             )
         } else {
-            overlay3Image = self.getDamageDetectionImage(
+            surfaceAnalysisOverlayImage = self.getDamageDetectionImage(
                 captureImageData: captureImageData,
                 size: captureImageData.originalSize,
                 updateFeatureResults: updateFeatureResults
@@ -307,10 +322,14 @@ public final class AnnotationImageManager<
             await MainActor.run {
                 self.outputConsumer?.annotationOutputImage(
                     self,
-                    image: cameraOutputImage,
-                    overlayImage: segmentationOverlayOutputImage,
-                    overlay2Image: updatedFeaturesOverlayResults.overlayImage,
-                    overlay3Image: overlay3Image
+                    cameraImage: cameraOutputImage,
+                    segmentationOverlayImage: segmentationOverlayOutputImage,
+                    featureGeometryOverlayImage: featureGeometryOverlayImage,
+                    surfaceAnalysisOverlayImage: surfaceAnalysisOverlayImage
+                )
+                self.outputConsumer?.annotationSelectionSpotlightImage(
+                    self,
+                    selectionSpotlightOverlayImage: selectionSpotlightOverlayImage
                 )
             }
         }
@@ -488,48 +507,24 @@ public extension AnnotationImageManager {
         )
         return (sourceCGImage: raterizedFeaturesImage, overlayImage: overlayImage)
     }
-    
-    private func updateFeaturesOverlayOutputImageWithSource(
-        sourceCGImage: CGImage,
-        accessibilityFeatures: [Feature],
-        featureSelectedStatus: [UUID: Bool]
-    ) throws -> (sourceCGImage: CGImage, overlayImage: CIImage) {
+
+    private func getSelectionSpotlightOverlayImage(
+        selection: AnnotationImageSelection<Feature>,
+        size: CGSize
+    ) throws -> CIImage {
         guard let captureImageData = self.captureImageData else {
             throw AnnotationImageManagerError.captureDataNotAvailable
         }
-        let size = CGSize(width: sourceCGImage.width, height: sourceCGImage.height)
-        
-        let isNotSelectedColor: UIColor? = nil
-        let notSelectedFeatures = accessibilityFeatures.filter { feature in
-            return !(featureSelectedStatus[feature.id] ?? false)
-        }
-        guard let updatedImageWithNotSelectedFeatures = ContourFeatureRasterizer.updateRasterizedFeatures(
-            baseImage: sourceCGImage,
-            detectedFeature: notSelectedFeatures, size: size,
-            polygonConfig: RasterizeConfig(draw: true, color: isNotSelectedColor, width: 10),
-            boundsConfig: RasterizeConfig(draw: false, color: isNotSelectedColor, width: 0),
-            centroidConfig: RasterizeConfig(draw: true, color: isNotSelectedColor, width: 20)
+        guard let rasterizedSelectionSpotlight = ContourFeatureRasterizer.rasterizeSelectionSpotlight(
+            detectedFeature: selection.feature,
+            size: size
         ) else {
             throw AnnotationImageManagerError.featureRasterizationFailed
         }
-        let isSelectedColor: UIColor? = .white
-        let selectedFeatures = accessibilityFeatures.filter { feature in
-            return featureSelectedStatus[feature.id] ?? false
-        }
-        guard let updatedImageWithSelectedFeatures = ContourFeatureRasterizer.updateRasterizedFeatures(
-            baseImage: updatedImageWithNotSelectedFeatures,
-            detectedFeature: selectedFeatures, size: size,
-            polygonConfig: RasterizeConfig(draw: true, color: isSelectedColor, width: 10),
-            boundsConfig: RasterizeConfig(draw: false, color: isSelectedColor, width: 0),
-            centroidConfig: RasterizeConfig(draw: true, color: isSelectedColor, width: 20)
-        ) else {
-            throw AnnotationImageManagerError.featureRasterizationFailed
-        }
-        let overlayImage = try createFeaturesOverlayFromSource(
-            raterizedFeaturesImage: updatedImageWithSelectedFeatures,
+        return try createFeaturesOverlayFromSource(
+            raterizedFeaturesImage: rasterizedSelectionSpotlight,
             interfaceOrientation: captureImageData.interfaceOrientation
         )
-        return (sourceCGImage: updatedImageWithSelectedFeatures, overlayImage: overlayImage)
     }
     
     private func createFeaturesOverlayFromSource(
