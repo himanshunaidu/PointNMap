@@ -37,6 +37,9 @@ public protocol AnnotationImageProcessingDelegate: AnyObject {
 
 public class AnnotationImageViewController<Feature: EditableAccessibilityFeature>: UIViewController, AnnotationImageProcessingOutputConsumer {
     public var annotationImageManager: AnnotationImageManager<Feature>
+
+    private var isSegmentationOverlayVisible: Bool
+    private var isSurfaceAnalysisOverlayVisible: Bool
     
     private let subView = UIView()
     
@@ -91,8 +94,14 @@ public class AnnotationImageViewController<Feature: EditableAccessibilityFeature
         return iv
     }()
     
-    public init(annotationImageManager: AnnotationImageManager<Feature>) {
+    public init(
+        annotationImageManager: AnnotationImageManager<Feature>,
+        isSegmentationOverlayVisible: Bool = true,
+        isSurfaceAnalysisOverlayVisible: Bool = true
+    ) {
         self.annotationImageManager = annotationImageManager
+        self.isSegmentationOverlayVisible = isSegmentationOverlayVisible
+        self.isSurfaceAnalysisOverlayVisible = isSurfaceAnalysisOverlayVisible
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -124,6 +133,8 @@ public class AnnotationImageViewController<Feature: EditableAccessibilityFeature
         constraintChildViewToParent(childView: surfaceAnalysisOverlayImageView, parentView: subView)
         subView.addSubview(selectionSpotlightOverlayImageView)
         constraintChildViewToParent(childView: selectionSpotlightOverlayImageView, parentView: subView)
+
+        applyOverlayVisibility()
         
         annotationImageManager.outputConsumer = self
         annotationImageManager.setOrientation(getOrientation())
@@ -137,6 +148,20 @@ public class AnnotationImageViewController<Feature: EditableAccessibilityFeature
             childView.leadingAnchor.constraint(equalTo: parentView.leadingAnchor),
             childView.trailingAnchor.constraint(equalTo: parentView.trailingAnchor)
         ])
+    }
+
+    public func setOverlayVisibility(
+        isSegmentationOverlayVisible: Bool,
+        isSurfaceAnalysisOverlayVisible: Bool
+    ) {
+        self.isSegmentationOverlayVisible = isSegmentationOverlayVisible
+        self.isSurfaceAnalysisOverlayVisible = isSurfaceAnalysisOverlayVisible
+        applyOverlayVisibility()
+    }
+
+    private func applyOverlayVisibility() {
+        segmentationOverlayImageView.isHidden = !isSegmentationOverlayVisible
+        surfaceAnalysisOverlayImageView.isHidden = !isSurfaceAnalysisOverlayVisible
     }
     
     public func getOrientation() -> UIInterfaceOrientation {
@@ -201,17 +226,33 @@ public class AnnotationImageViewController<Feature: EditableAccessibilityFeature
 
 public struct HostedAnnotationImageViewController<Feature: EditableAccessibilityFeature>: UIViewControllerRepresentable{
     public var annotationImageManager: AnnotationImageManager<Feature>
+    public var isSegmentationOverlayVisible: Bool
+    public var isSurfaceAnalysisOverlayVisible: Bool
     
-    public init(annotationImageManager: AnnotationImageManager<Feature>) {
+    public init(
+        annotationImageManager: AnnotationImageManager<Feature>,
+        isSegmentationOverlayVisible: Bool = true,
+        isSurfaceAnalysisOverlayVisible: Bool = true
+    ) {
         self.annotationImageManager = annotationImageManager
+        self.isSegmentationOverlayVisible = isSegmentationOverlayVisible
+        self.isSurfaceAnalysisOverlayVisible = isSurfaceAnalysisOverlayVisible
     }
     
     public func makeUIViewController(context: Context) -> AnnotationImageViewController<Feature> {
-        let vc = AnnotationImageViewController(annotationImageManager: annotationImageManager)
+        let vc = AnnotationImageViewController(
+            annotationImageManager: annotationImageManager,
+            isSegmentationOverlayVisible: isSegmentationOverlayVisible,
+            isSurfaceAnalysisOverlayVisible: isSurfaceAnalysisOverlayVisible
+        )
         return vc
     }
     
     public func updateUIViewController(_ uiViewController: AnnotationImageViewController<Feature>, context: Context) {
+        uiViewController.setOverlayVisibility(
+            isSegmentationOverlayVisible: isSegmentationOverlayVisible,
+            isSurfaceAnalysisOverlayVisible: isSurfaceAnalysisOverlayVisible
+        )
     }
     
     public static func dismantleUIViewController(_ uiViewController: AnnotationImageViewController<Feature>, coordinator: ()) {

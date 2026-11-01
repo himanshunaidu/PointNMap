@@ -329,6 +329,8 @@ public struct AnnotationViewBase: View {
     @State private var isShowingAnnotationFeatureDetailView: Bool = false
     @State private var temporaryVisualizationFeatureID: UUID?
     @State private var temporaryVisualizationResults: AnnotationImageFeatureUpdateResults?
+    @State private var isSegmentationOverlayVisible = true
+    @State private var isSurfaceAnalysisOverlayVisible = true
     
 //    var selectFeatureInfoTipBase = SelectFeatureInfoTipBase()
     @State private var showSelectFeatureLearnMoreSheet = false
@@ -441,7 +443,7 @@ public struct AnnotationViewBase: View {
                 : AnyLayout(VStackLayout(spacing: 0))
 
             layout {
-                annotationImageView
+                annotationImageView(currentClass: currentClass)
                     .frame(
                         width: isLandscape ? geometry.size.width / 2 : geometry.size.width,
                         height: isLandscape ? geometry.size.height : geometry.size.height / 2
@@ -456,9 +458,22 @@ public struct AnnotationViewBase: View {
         }
     }
 
-    private var annotationImageView: some View {
-        HostedAnnotationImageViewController<EditableAccessibilityFeature>(annotationImageManager: manager)
+    private func annotationImageView(currentClass: AccessibilityFeatureClass) -> some View {
+        VStack(spacing: 0) {
+            HostedAnnotationImageViewController<EditableAccessibilityFeature>(
+                annotationImageManager: manager,
+                isSegmentationOverlayVisible: isSegmentationOverlayVisible,
+                isSurfaceAnalysisOverlayVisible: isSurfaceAnalysisOverlayVisible
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
+
+            AnnotationOverlayLegendView(
+                featureClass: currentClass,
+                isSegmentationOverlayVisible: $isSegmentationOverlayVisible,
+                isSurfaceAnalysisOverlayVisible: $isSurfaceAnalysisOverlayVisible
+            )
+        }
     }
 
     private func annotationPane(currentClass: AccessibilityFeatureClass) -> some View {
@@ -849,6 +864,9 @@ public struct AnnotationViewBase: View {
     }
     
     private func handleOnClassChange() {
+        isSegmentationOverlayVisible = true
+        isSurfaceAnalysisOverlayVisible = true
+
         do {
             guard let currentClass = featureClassSelectionViewModel.currentClass else {
                 throw AnnotationViewBaseError.invalidCaptureDataRecord

@@ -74,6 +74,11 @@ public enum AccessibilityFeatureKind: String, Identifiable, Codable, CaseIterabl
             return false
         }
     }
+
+    /// Indicates whether this feature kind can display a surface-disruption analysis overlay.
+    public var hasSurfaceDisruption: Bool {
+        self == .sidewalk
+    }
     
     /// MARK: Temporary property to restrict maximum number of instances per feature
     public var maxInstancesPerCapture: Int? {
