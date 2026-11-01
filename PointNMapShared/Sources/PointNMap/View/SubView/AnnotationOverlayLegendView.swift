@@ -22,8 +22,10 @@ public struct AnnotationOverlayLegendView: View {
 
     public var body: some View {
         HStack(spacing: 8) {
+            Spacer()
             overlayButton(
-                title: "Segmentation",
+//                title: "Segmentation",
+                title: featureClass.name.capitalized,
                 color: Color(
                     red: Double(featureClass.color.red),
                     green: Double(featureClass.color.green),
@@ -44,6 +46,7 @@ public struct AnnotationOverlayLegendView: View {
                     isSurfaceAnalysisOverlayVisible.toggle()
                 }
             }
+            Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 8)
