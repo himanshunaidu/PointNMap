@@ -36,6 +36,29 @@ public enum AnnotationFeatureDetailViewConstants {
     }
 }
 
+func annotationFeatureDetailNumericEstimate(
+    _ calculatedValue: AccessibilityFeatureAttribute.Value?
+) -> Double? {
+    guard let estimate = calculatedValue?.toDouble(), estimate.isFinite else {
+        return nil
+    }
+    return estimate
+}
+
+func annotationFeatureDetailCanUseEstimate(
+    attribute: AccessibilityFeatureAttribute,
+    currentValue: AccessibilityFeatureAttribute.Value?,
+    calculatedValue: AccessibilityFeatureAttribute.Value?
+) -> Bool {
+    guard let calculatedValue,
+          annotationFeatureDetailNumericEstimate(calculatedValue) != nil,
+          (try? attribute.validate(calculatedValue)) != nil else {
+        return false
+    }
+    return currentValue?.roundedForFinalAttribute()
+        != calculatedValue.roundedForFinalAttribute()
+}
+
 /**
     A view that displays detailed information about an accessibility feature annotation.
     Sub-view of the `AnnotationView`.
@@ -99,7 +122,9 @@ public struct AnnotationFeatureDetailViewBase<
     @StateObject private var statusViewModel = AnnotationFeatureDetailViewBase.StatusViewModel()
     @FocusState private var focusedField: AccessibilityFeatureAttribute?
     /// Note: Fields such as pickers don't have built-in ways to update their UI based on user input. Hence we need to trigger a refresh manually when their value changes.
-    @State private var refreshTrigger: Int = 0
+    @State private var pickerRefreshTrigger: Int = 0
+    @State private var numericRefreshTrigger: Int = 0
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     
     public init(
         accessibilityFeature: Feature,
@@ -139,7 +164,6 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.width.displayName)) {
                         numberTextFieldView(attribute: .width)
-                            .focused($focusedField, equals: .width)
                     }
                 }
                 
@@ -147,7 +171,6 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.runningSlope.displayName)) {
                         numberTextFieldView(attribute: .runningSlope)
-                            .focused($focusedField, equals: .runningSlope)
                     }
                 }
                 
@@ -155,7 +178,6 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.crossSlope.displayName)) {
                         numberTextFieldView(attribute: .crossSlope)
-                            .focused($focusedField, equals: .crossSlope)
                     }
                 }
                 
@@ -164,36 +186,31 @@ public struct AnnotationFeatureDetailViewBase<
                     Section(header: Text(AccessibilityFeatureAttribute.surfaceIntegrity.displayName)) {
                         pickerView(attribute: .surfaceIntegrity)
                             .focused($focusedField, equals: .surfaceIntegrity)
-                            .id(refreshTrigger) // Refresh the Picker view when refreshTrigger changes
+                            .id(pickerRefreshTrigger) // Refresh the Picker view when its value changes
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceDisruption)) {
                     Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruption.displayName)) {
                         numberTextFieldView(attribute: .surfaceDisruption)
-                            .focused($focusedField, equals: .surfaceDisruption)
-                            .id(refreshTrigger) // Refresh the Picker view when refreshTrigger changes
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.heightFromGround)) {
                     Section(header: Text(AccessibilityFeatureAttribute.heightFromGround.displayName)) {
                         numberTextFieldView(attribute: .heightFromGround)
-                            .focused($focusedField, equals: .heightFromGround)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceDisruptionArea)) {
                     Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruptionArea.displayName)) {
                         numberTextFieldView(attribute: .surfaceDisruptionArea)
-                            .focused($focusedField, equals: .surfaceDisruptionArea)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceDisruptionLength)) {
                     Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruptionLength.displayName)) {
                         numberTextFieldView(attribute: .surfaceDisruptionLength)
-                            .focused($focusedField, equals: .surfaceDisruptionLength)
                     }
                 }
                 
@@ -221,7 +238,6 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.widthLegacy.displayName)) {
                         numberTextFieldView(attribute: .widthLegacy)
-                            .focused($focusedField, equals: .widthLegacy)
                     }
                 }
                 
@@ -229,7 +245,6 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.runningSlopeLegacy.displayName)) {
                         numberTextFieldView(attribute: .runningSlopeLegacy)
-                            .focused($focusedField, equals: .runningSlopeLegacy)
                     }
                 }
                 
@@ -237,14 +252,12 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.crossSlopeLegacy.displayName)) {
                         numberTextFieldView(attribute: .crossSlopeLegacy)
-                            .focused($focusedField, equals: .crossSlopeLegacy)
                     }
                 }
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.widthFromImage))
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.widthFromImage.displayName)) {
                         numberTextFieldView(attribute: .widthFromImage)
-                            .focused($focusedField, equals: .widthFromImage)
                     }
                 }
                 
@@ -252,7 +265,6 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.runningSlopeFromImage.displayName)) {
                         numberTextFieldView(attribute: .runningSlopeFromImage)
-                            .focused($focusedField, equals: .runningSlopeFromImage)
                     }
                 }
                 
@@ -260,7 +272,6 @@ public struct AnnotationFeatureDetailViewBase<
                 {
                     Section(header: Text(AccessibilityFeatureAttribute.crossSlopeFromImage.displayName)) {
                         numberTextFieldView(attribute: .crossSlopeFromImage)
-                            .focused($focusedField, equals: .crossSlopeFromImage)
                     }
                 }
                 
@@ -270,87 +281,73 @@ public struct AnnotationFeatureDetailViewBase<
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampWidth)) {
                     Section(header: Text(AccessibilityFeatureAttribute.rampWidth.displayName)) {
                         numberTextFieldView(attribute: .rampWidth)
-                            .focused($focusedField, equals: .rampWidth)
                     }
                 }
                 // ramp length
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampLength)) {
                     Section(header: Text(AccessibilityFeatureAttribute.rampLength.displayName)) {
                         numberTextFieldView(attribute: .rampLength)
-                            .focused($focusedField, equals: .rampLength)
                     }
                 }
                 // ramp running slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampRunningSlope)) {
                     Section(header: Text(AccessibilityFeatureAttribute.rampRunningSlope.displayName)) {
                         numberTextFieldView(attribute: .rampRunningSlope)
-                            .focused($focusedField, equals: .rampRunningSlope)
                     }
                 }
                 // ramp cross slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampCrossSlope)) {
                     Section(header: Text(AccessibilityFeatureAttribute.rampCrossSlope.displayName)) {
                         numberTextFieldView(attribute: .rampCrossSlope)
-                            .focused($focusedField, equals: .rampCrossSlope)
                     }
                 }
                 // left flare slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.leftFlareSlope)) {
                     Section(header: Text(AccessibilityFeatureAttribute.leftFlareSlope.displayName)) {
                         numberTextFieldView(attribute: .leftFlareSlope)
-                            .focused($focusedField, equals: .leftFlareSlope)
                     }
                 }
                 // right flare slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rightFlareSlope)) {
                     Section(header: Text(AccessibilityFeatureAttribute.rightFlareSlope.displayName)) {
                         numberTextFieldView(attribute: .rightFlareSlope)
-                            .focused($focusedField, equals: .rightFlareSlope)
                     }
                 }
                 // counter slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.counterSlope)) {
                     Section(header: Text(AccessibilityFeatureAttribute.counterSlope.displayName)) {
                         numberTextFieldView(attribute: .counterSlope)
-                            .focused($focusedField, equals: .counterSlope)
                     }
                 }
                 // turning space width
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceWidth)) {
                     Section(header: Text(AccessibilityFeatureAttribute.turningSpaceWidth.displayName)) {
                         numberTextFieldView(attribute: .turningSpaceWidth)
-                            .focused($focusedField, equals: .turningSpaceWidth)
                     }
                 }
                 // turning space length
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceLength)) {
                     Section(header: Text(AccessibilityFeatureAttribute.turningSpaceLength.displayName)) {
                         numberTextFieldView(attribute: .turningSpaceLength)
-                            .focused($focusedField, equals: .turningSpaceLength)
                     }
                 }
                 // turning space running slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceRunningSlope)) {
                     Section(header: Text(AccessibilityFeatureAttribute.turningSpaceRunningSlope.displayName)) {
                         numberTextFieldView(attribute: .turningSpaceRunningSlope)
-                            .focused($focusedField, equals: .turningSpaceRunningSlope)
                     }
                 }
                 // turning space cross slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceCrossSlope)) {
                     Section(header: Text(AccessibilityFeatureAttribute.turningSpaceCrossSlope.displayName)) {
                         numberTextFieldView(attribute: .turningSpaceCrossSlope)
-                            .focused($focusedField, equals: .turningSpaceCrossSlope)
                     }
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
         }
         .onAppear {
             self.statusViewModel.configure(accessibilityFeature: accessibilityFeature)
-            focusedField = nil
-        }
-        .onTapGesture {
-            // Dismiss the keyboard when tapping outside of a TextField
             focusedField = nil
         }
     }
@@ -358,7 +355,20 @@ public struct AnnotationFeatureDetailViewBase<
     @ViewBuilder
     private func numberTextFieldView(attribute: AccessibilityFeatureAttribute) -> some View {
         let attributeStatus = statusViewModel.attributeStatusMap[attribute] ?? .init(isError: false, errorMessage: "")
-        VStack {
+        let currentValue = accessibilityFeature.attributeValues[attribute] ?? nil
+        let calculatedValue = accessibilityFeature.calculatedAttributeValues[attribute] ?? nil
+        let appEstimate = annotationFeatureDetailNumericEstimate(calculatedValue)
+        let canUseAppEstimate = annotationFeatureDetailCanUseEstimate(
+            attribute: attribute,
+            currentValue: currentValue,
+            calculatedValue: calculatedValue
+        )
+        let estimateLayout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8))
+        let _ = numericRefreshTrigger
+
+        VStack(alignment: .leading, spacing: 8) {
             if (attributeStatus.isError) {
                 /// A red colored error message
                 HStack {
@@ -371,34 +381,117 @@ public struct AnnotationFeatureDetailViewBase<
                     Spacer()
                 }
             }
-            TextField(
-                attribute.displayName,
-                value: Binding(
-                    get: {
-                        guard let attributeValue = accessibilityFeature.attributeValues[attribute],
-                              let attributeValue,
-                              let attributeBindableValue = attributeValue.toDouble() else {
-                            return 0.0
-                        }
-                        return attributeBindableValue
-                    },
-                    set: { newValue in
-                        do {
-                            let newDoubleValue = Double(newValue)
-                            guard let newAttributeValue = attribute.value(from: newDoubleValue) else {
-                                return
-                            }
-                            try accessibilityFeature.setAttributeValue(newAttributeValue, for: attribute)
-                        } catch {
-                            setAttributeStatusErrorText(for: attribute, message: "\(error.localizedDescription)")
-                        }
-                    }
-                ),
-                format: .number
-            )
-            .textFieldStyle(.roundedBorder)
-            .keyboardType(.decimalPad)
+
+            numberTextField(attribute: attribute)
+
+            estimateLayout {
+                appEstimateView(appEstimate)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                useAppEstimateButton(
+                    attribute: attribute,
+                    calculatedValue: calculatedValue,
+                    canUseAppEstimate: canUseAppEstimate
+                )
+            }
         }
+    }
+
+    private func numberTextField(attribute: AccessibilityFeatureAttribute) -> some View {
+        TextField(
+            attribute.displayName,
+            value: Binding(
+                get: {
+                    guard let attributeValue = accessibilityFeature.attributeValues[attribute],
+                          let attributeValue,
+                          let attributeBindableValue = attributeValue.toDouble() else {
+                        return 0.0
+                    }
+                    return attributeBindableValue
+                },
+                set: { newValue in
+                    do {
+                        guard let newAttributeValue = attribute.value(from: newValue) else {
+                            return
+                        }
+                        try accessibilityFeature.setAttributeValue(newAttributeValue, for: attribute)
+                        numericRefreshTrigger += 1
+                    } catch {
+                        setAttributeStatusErrorText(for: attribute, message: "\(error.localizedDescription)")
+                        numericRefreshTrigger += 1
+                    }
+                }
+            ),
+            format: .number.precision(
+                .fractionLength(0...PointNMapConstants.finalAttributePrecision)
+            )
+        )
+        .focused($focusedField, equals: attribute)
+        .textFieldStyle(.roundedBorder)
+        .keyboardType(.numbersAndPunctuation)
+        .submitLabel(.done)
+        .onSubmit {
+            focusedField = nil
+        }
+        .accessibilityLabel(Text(attribute.displayName))
+    }
+
+    @ViewBuilder
+    private func appEstimateView(_ appEstimate: Double?) -> some View {
+        if let appEstimate {
+            Text(
+                "App estimate: \(appEstimate, format: .number.precision(.fractionLength(0...PointNMapConstants.finalAttributePrecision)))",
+                bundle: #bundle,
+                comment: "The numeric attribute value estimated by the app"
+            )
+            .foregroundStyle(.secondary)
+        } else {
+            Text(
+                "App estimate: Unavailable",
+                bundle: #bundle,
+                comment: "Shown when the app could not estimate a numeric attribute value"
+            )
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    private func useAppEstimateButton(
+        attribute: AccessibilityFeatureAttribute,
+        calculatedValue: AccessibilityFeatureAttribute.Value?,
+        canUseAppEstimate: Bool
+    ) -> some View {
+        Button {
+            guard let calculatedValue else { return }
+
+            do {
+                try accessibilityFeature.setAttributeValue(calculatedValue, for: attribute)
+                numericRefreshTrigger += 1
+            } catch {
+                setAttributeStatusErrorText(for: attribute, message: "\(error.localizedDescription)")
+            }
+        } label: {
+//            Label {
+//                Text(
+//                    "Use app estimate",
+//                    bundle: #bundle,
+//                    comment: "Button that restores an app-estimated numeric attribute value"
+//                )
+//            } icon: {
+            Image(systemName: "arrow.counterclockwise.circle")
+                .font(.title2)
+                .frame(width: 30, height: 30)
+                .contentShape(Rectangle())
+//            }
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.tint)
+        .disabled(!canUseAppEstimate)
+        .accessibilityLabel(Text("Use app estimate", bundle: #bundle))
+        .accessibilityHint(
+            Text(
+                "Replaces the edited value with the value estimated by the app",
+                bundle: #bundle
+            )
+        )
     }
     
     @ViewBuilder
@@ -474,7 +567,7 @@ public struct AnnotationFeatureDetailViewBase<
                     do {
                         let newCategoricalValue: AccessibilityFeatureAttribute.Value = .categorical(newValue)
                         try accessibilityFeature.setAttributeValue(newCategoricalValue, for: attribute)
-                        refreshTrigger += 1 // Trigger a refresh to update the Picker's displayed value
+                        pickerRefreshTrigger += 1 // Trigger a refresh to update the Picker's displayed value
                     } catch {
                         setAttributeStatusErrorText(for: attribute, message: "\(error.localizedDescription)")
                     }

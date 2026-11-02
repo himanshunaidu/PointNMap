@@ -9,11 +9,31 @@ import CoreLocation
 
 public enum AccessibilityFeatureError: Error, LocalizedError {
     case attributeValueMismatch(attribute: AccessibilityFeatureAttribute, value: AccessibilityFeatureAttribute.Value)
+    case attributeValueNotFinite(attribute: AccessibilityFeatureAttribute, value: Double)
+    case attributeValueOutOfRange(
+        attribute: AccessibilityFeatureAttribute,
+        value: Double,
+        minimum: Double?,
+        maximum: Double?
+    )
     
     public var errorDescription: String? {
         switch self {
         case .attributeValueMismatch(let attribute, let value):
             return "The value \(value) does not match the expected type for attribute \(attribute)."
+        case .attributeValueNotFinite(let attribute, let value):
+            return "The value \(value) for \(attribute.displayName) must be a finite number."
+        case .attributeValueOutOfRange(let attribute, let value, let minimum, let maximum):
+            switch (minimum, maximum) {
+            case (.some(let minimum), .some(let maximum)):
+                return "The value \(value) for \(attribute.displayName) must be between \(minimum) and \(maximum)."
+            case (.some(let minimum), nil):
+                return "The value \(value) for \(attribute.displayName) must be at least \(minimum)."
+            case (nil, .some(let maximum)):
+                return "The value \(value) for \(attribute.displayName) must be at most \(maximum)."
+            case (nil, nil):
+                return "The value \(value) is not valid for \(attribute.displayName)."
+            }
         }
     }
 }

@@ -32,6 +32,45 @@ public struct ContourFeatureRasterizer {
         path.close()
         return path
     }
+
+    public static func rasterizeSelectionSpotlight(
+        detectedFeature: any DetectedFeatureProtocol,
+        size: CGSize,
+        dimmingAlpha: CGFloat = 0.25,
+        darkOutlineWidth: CGFloat = 18,
+        whiteOutlineWidth: CGFloat = 8
+    ) -> CGImage? {
+        UIGraphicsBeginImageContextWithOptions(size, false, 1.0)
+        defer { UIGraphicsEndImageContext() }
+        guard let context = UIGraphicsGetCurrentContext() else { return nil }
+
+        let imageBounds = CGRect(origin: .zero, size: size)
+        context.setFillColor(UIColor.black.withAlphaComponent(dimmingAlpha).cgColor)
+        context.fill(imageBounds)
+
+        let selectionPath = createPath(
+            points: detectedFeature.contourDetails.normalizedPoints,
+            size: size
+        )
+        context.saveGState()
+        context.setBlendMode(.clear)
+        context.addPath(selectionPath.cgPath)
+        context.fillPath()
+        context.restoreGState()
+
+        context.setBlendMode(.normal)
+        context.setStrokeColor(UIColor.black.withAlphaComponent(0.85).cgColor)
+        context.setLineWidth(darkOutlineWidth)
+        context.addPath(selectionPath.cgPath)
+        context.strokePath()
+
+        context.setStrokeColor(UIColor.white.cgColor)
+        context.setLineWidth(whiteOutlineWidth)
+        context.addPath(selectionPath.cgPath)
+        context.strokePath()
+
+        return UIGraphicsGetImageFromCurrentImageContext()?.cgImage
+    }
     
     public static func rasterizeFeatures(
         detectedFeatures: [any DetectedFeatureProtocol], size: CGSize,

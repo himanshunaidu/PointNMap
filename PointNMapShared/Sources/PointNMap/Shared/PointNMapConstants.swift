@@ -7,6 +7,9 @@
 import SwiftUI
 
 public struct PointNMapConstants {
+    /// TODO: Make final attribute precision configurable instead of hard-coding it here.
+    public static let finalAttributePrecision: Int = 4
+
     // Supported Classes
     public static let SelectedAccessibilityFeatureConfig: AccessibilityFeatureClassConfig = AccessibilityFeatureConfig.mapillaryCustom12Config
     

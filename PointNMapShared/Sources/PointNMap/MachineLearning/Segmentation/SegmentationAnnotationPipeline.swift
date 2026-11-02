@@ -251,6 +251,8 @@ public final class SegmentationAnnotationPipeline: ObservableObject {
                 )
             )
             detectedFeatures = [trapezoidFeature]
+        } else {
+            detectedFeatures = [largestFeature]
         }
         self.isProcessing = false
         return detectedFeatures
