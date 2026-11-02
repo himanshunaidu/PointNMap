@@ -134,7 +134,7 @@ public struct AnnotationHelpView: View {
     private var groupReviewSections: some View {
         Group {
             AnnotationHelpSectionView(title: "Choose what to review") {
-                Text("All sets one decision for the group. Individual lets you choose one detected instance.")
+                Text("'All' sets one decision for the group. 'Individual' lets you choose one detected instance.")
 
                 AnnotationHelpIllustration(
                     assetName: "annotation_help_scope",
