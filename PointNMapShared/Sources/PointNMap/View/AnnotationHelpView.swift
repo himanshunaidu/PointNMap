@@ -15,6 +15,7 @@ enum AnnotationHelpSection: Hashable {
     case inspectImage
     case checkResult
     case keepAndDiscardExamples
+    case multiInstanceExamples
     case surfaceDisruption
 }
 
@@ -46,7 +47,8 @@ public struct AnnotationHelpConfiguration {
                 .individualChoicesTakePriority,
                 .viewOrEditDetails,
                 .inspectImage,
-                .checkResult
+                .checkResult,
+                .multiInstanceExamples
             ])
         }
 
@@ -92,6 +94,8 @@ public struct AnnotationHelpView: View {
 
                     if configuration.isUniquePerCapture {
                         examplesSection
+                    } else {
+                        MultiInstanceExamplesSection()
                     }
 
                     if configuration.hasSurfaceDisruption {
@@ -237,6 +241,40 @@ public struct AnnotationHelpView: View {
 
             Text("A disruption prediction alone does not decide Keep or Discard.")
                 .foregroundStyle(.secondary)
+        }
+    }
+}
+
+private struct MultiInstanceExamplesSection: View {
+    var body: some View {
+        AnnotationHelpSectionView(title: "Keep and discard examples") {
+            Text("These examples use pole detections.")
+                .foregroundStyle(.secondary)
+
+            AnnotationHelpExample(
+                assetName: "annotation_multi_example_keep",
+                title: "Keep",
+                caption: "The mask follows the pole closely enough to provide a usable location.",
+                accessibilityDescription: "An accepted pole detection whose mask provides a usable location for the real pole."
+            )
+
+            Divider()
+
+            AnnotationHelpExample(
+                assetName: "annotation_multi_example_incorrect",
+                title: "Discard — incorrect detection",
+                caption: "Discard a mask that is far from the real object, or when the detected object does not exist.",
+                accessibilityDescription: "A rejected pole detection whose mask is far from the real pole or has no matching real object."
+            )
+
+            Divider()
+
+            AnnotationHelpExample(
+                assetName: "annotation_multi_example_duplicate",
+                title: "Discard — duplicate detection",
+                caption: "If two detections represent one pole, keep the better-localized instance and discard the duplicate.",
+                accessibilityDescription: "Two detections for one real pole, showing that the better-localized instance is kept and the duplicate is discarded."
+            )
         }
     }
 }
