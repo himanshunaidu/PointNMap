@@ -140,6 +140,7 @@ public struct AnnotationFeatureDetailViewBase<
         VStack {
             Text(title)
                 .font(.headline)
+                .accessibilityAddTraits(.isHeader)
                 .padding()
             
             Form {

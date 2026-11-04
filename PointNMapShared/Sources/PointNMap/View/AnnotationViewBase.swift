@@ -332,6 +332,7 @@ public struct AnnotationViewBase: View {
                     } label: {
                         Image(systemName: AnnotationViewBaseConstants.Images.closeIcon)
                     }
+                    .accessibilityLabel("Close annotation")
                 }
             }
         }
@@ -530,6 +531,7 @@ public struct AnnotationViewBase: View {
             Image(systemName: "square.dashed")
                 .font(.largeTitle)
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
 
             Text("No instances of \(currentClass.name.capitalized) were present.")
                 .font(.headline)
@@ -695,6 +697,7 @@ public struct AnnotationViewBase: View {
                 }
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
     @ViewBuilder
@@ -746,10 +749,12 @@ public struct AnnotationViewBase: View {
             Text("\(summary.keptCount) kept")
                 .foregroundStyle(.green)
             Text("·")
+                .accessibilityHidden(true)
             Text("\(summary.discardedCount) discarded")
                 .foregroundStyle(.red)
             if !currentClass.kind.isUniquePerCapture {
                 Text("·")
+                    .accessibilityHidden(true)
                 Text("\(summary.exceptionCount) exceptions")
                     .foregroundStyle(.secondary)
             }
