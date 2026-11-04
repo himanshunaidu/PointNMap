@@ -68,6 +68,8 @@ public struct CaptureControlPanel: View {
     private let captureAction: () -> Void
     private let helpAction: () -> Void
 
+    private let minimumPanelWidth: CGFloat = 280
+
     public init(
         state: CapturePresentationState,
         captureAction: @escaping () -> Void,
@@ -106,7 +108,7 @@ public struct CaptureControlPanel: View {
             }
             .frame(minHeight: 60)
         }
-        .frame(maxWidth: .infinity)
+        .frame(minWidth: minimumPanelWidth, maxWidth: .infinity)
         .padding(.horizontal, 16)
         .padding(.bottom, 20)
     }
@@ -120,8 +122,6 @@ public struct CaptureControlPanel: View {
 
 public struct CaptureStatusView: View {
     public let state: CapturePresentationState
-
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private let statusHeight: CGFloat = 72
 
@@ -143,7 +143,6 @@ public struct CaptureStatusView: View {
                     Text(state.explanation)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 3)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
