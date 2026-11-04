@@ -82,18 +82,18 @@ public struct CaptureControlPanel: View {
         VStack(spacing: 14) {
             CaptureStatusView(state: state)
 
-            HStack(spacing: 20) {
-                Button(action: captureAction) {
-                    Image(systemName: "camera.circle.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 60, height: 60)
-                        .foregroundStyle(state.isCaptureEnabled ? Color.accentColor : Color.secondary)
-                }
-                .disabled(!state.isCaptureEnabled)
-                .accessibilityLabel("Capture")
-                .accessibilityHint(captureAccessibilityHint)
-
+            Button(action: captureAction) {
+                Image(systemName: "camera.circle.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 60, height: 60)
+                    .foregroundStyle(state.isCaptureEnabled ? Color.accentColor : Color.secondary)
+            }
+            .disabled(!state.isCaptureEnabled)
+            .accessibilityLabel("Capture")
+            .accessibilityHint(captureAccessibilityHint)
+            .frame(maxWidth: .infinity)
+            .overlay(alignment: .trailing) {
                 Button(action: helpAction) {
                     Image(systemName: "info.circle")
                         .resizable()
@@ -106,7 +106,7 @@ public struct CaptureControlPanel: View {
             }
             .frame(minHeight: 60)
         }
-        .frame(maxWidth: 320)
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 16)
         .padding(.bottom, 20)
     }
@@ -123,32 +123,39 @@ public struct CaptureStatusView: View {
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
+    private let statusHeight: CGFloat = 72
+
     public init(state: CapturePresentationState) {
         self.state = state
     }
 
     public var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            indicator
-                .accessibilityHidden(true)
+        ScrollView(.vertical, showsIndicators: false) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                indicator
+                    .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(state.heading)
-                    .font(.headline)
-                    .foregroundStyle(state.isWarning ? .primary : .secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(state.heading)
+                        .font(.headline)
+                        .foregroundStyle(state.isWarning ? .primary : .secondary)
 
-                Text(state.explanation)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 3)
-                    .fixedSize(horizontal: false, vertical: true)
+                    Text(state.explanation)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, state.isWarning ? 12 : 0)
-        .padding(.vertical, state.isWarning ? 10 : 0)
-        .frame(maxWidth: 360, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, minHeight: statusHeight, maxHeight: statusHeight, alignment: .leading)
         .background(
-            state.isWarning ? Color.orange.opacity(0.14) : Color.clear,
+            state.isWarning ? Color.orange.opacity(0.14) : Color.green.opacity(0.14),// Color.clear,
             in: RoundedRectangle(cornerRadius: 10)
         )
         .accessibilityElement(children: .combine)
