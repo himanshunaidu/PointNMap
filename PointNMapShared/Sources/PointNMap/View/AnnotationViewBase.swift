@@ -7,7 +7,6 @@
 
 import SwiftUI
 import Combine
-import TipKit
 import CoreLocation
 import simd
 
@@ -48,23 +47,6 @@ enum AnnotationViewBaseConstants {
         static let apiChangesetUploadStatusAlertDismissButtonKey = "OK"
         static let apiChangesetUploadStatusAlertGenericMessageKey = "Failed to upload features. Press OK to dismiss this alert."
         static let apiChangesetUploadStatusAlertMessageSuffixKey = " feature(s) failed to upload. Press OK to dismiss this alert."
-        
-        /// SelectObjectInfoTip
-        static let selectFeatureInfoTipTitle = "Select a Feature"
-        static let selectFeatureInfoTipMessage = "Please select the individual feature that you want to annotate"
-        static let selectFeatureInfoTipLearnMoreButtonTitle = "Learn More"
-        
-        /// SelectObjectInfoLearnMoreSheetView
-        static let selectFeatureInfoLearnMoreSheetTitle = "Annotating an Individual Feature"
-        static let selectFeatureInfoLearnMoreSheetMessage = """
-        For each type of accessibility feature, the app can identify multiple feature instances within the same image. 
-        
-        **Select All**: Default option. You can annotate all features of a particular type together.
-        
-        **Individual**: You can select a particular feature from the dropdown menu if you wish to provide specific annotations for an individual feature.
-        
-        **Ellipsis [...]**: For each feature, you can also view its details by tapping the ellipsis button next to the dropdown menu.
-        """
     }
     
     enum Images {
@@ -105,28 +87,6 @@ enum AnnotationViewBaseError: Error, LocalizedError {
         case .uploadFailed:
             return "Failed to upload annotations."
         }
-    }
-}
-
-@available(iOS 17.0, *)
-struct SelectFeatureInfoTipBase: Tip {
-    
-    var title: Text {
-        Text(AnnotationViewBaseConstants.Texts.selectFeatureInfoTipTitle)
-    }
-    var message: Text? {
-        Text(AnnotationViewBaseConstants.Texts.selectFeatureInfoTipMessage)
-    }
-    var image: Image? {
-        Image(systemName: AnnotationViewBaseConstants.Images.infoIcon)
-            .resizable()
-    }
-    var actions: [Action] {
-        // Define a learn more button.
-        Action(
-            id: AnnotationViewBaseConstants.Texts.selectFeatureInfoTipLearnMoreButtonTitle,
-            title: AnnotationViewBaseConstants.Texts.selectFeatureInfoTipLearnMoreButtonTitle
-        )
     }
 }
 
@@ -332,8 +292,7 @@ public struct AnnotationViewBase: View {
     @State private var isSegmentationOverlayVisible = true
     @State private var isSurfaceAnalysisOverlayVisible = true
     
-//    var selectFeatureInfoTipBase = SelectFeatureInfoTipBase()
-    @State private var showSelectFeatureLearnMoreSheet = false
+    @State private var isShowingAnnotationHelp = false
     
     public var body: some View {
         NavigationStack {
@@ -408,9 +367,14 @@ public struct AnnotationViewBase: View {
                     .presentationDetents([.medium, .large])
             }
         }
-        .sheet(isPresented: $showSelectFeatureLearnMoreSheet) {
-            SelectFeatureLearnMoreSheetView()
-                .presentationDetents([.medium, .large])
+        .sheet(isPresented: $isShowingAnnotationHelp) {
+            if let currentClass = featureClassSelectionViewModel.currentClass {
+                AnnotationHelpView(
+                    configuration: AnnotationHelpConfiguration(featureClass: currentClass)
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
         }
         .alert(AnnotationViewBaseConstants.Texts.managerStatusAlertTitleKey, isPresented: $managerStatusViewModel.isFailed, actions: {
             Button(AnnotationViewBaseConstants.Texts.managerStatusAlertDismissButtonKey) {
@@ -511,12 +475,15 @@ public struct AnnotationViewBase: View {
                     HStack {
                         Spacer()
                         Button(action: {
-                            showSelectFeatureLearnMoreSheet = true
+                            isShowingAnnotationHelp = true
                         }) {
                             Image(systemName: AnnotationViewBaseConstants.Images.infoIcon)
                                 .resizable()
                                 .frame(width: 20, height: 20)
+                                .frame(minWidth: 44, minHeight: 44)
                         }
+                        .accessibilityLabel("Annotation help")
+                        .accessibilityHint("Explains annotation controls and review choices")
                         .padding(.trailing, 10)
                     }
                 )
@@ -1012,25 +979,3 @@ public struct AnnotationViewBase: View {
     }
 }
 
-struct SelectFeatureLearnMoreSheetView: View {
-    @Environment(\.dismiss)
-    var dismiss
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            //            Image(systemName: "number")
-            //                .resizable()
-            //                .scaledToFit()
-            //                .frame(width: 160)
-            //                .foregroundStyle(.accentColor)
-            Text(AnnotationViewBaseConstants.Texts.selectFeatureInfoLearnMoreSheetTitle)
-                .font(.headline)
-            Text(AnnotationViewBaseConstants.Texts.selectFeatureInfoLearnMoreSheetMessage)
-                .foregroundStyle(.secondary)
-            Button("Dismiss") {
-                dismiss()
-            }
-        }
-        .padding(.horizontal, 40)
-    }
-}
