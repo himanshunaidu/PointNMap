@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 public enum CapturePresentationState: Equatable, Sendable {
     case preparing
@@ -60,6 +61,13 @@ public enum CapturePresentationState: Equatable, Sendable {
         case .processing:
             return "Preparing your annotation."
         }
+    }
+
+    func accessibilityAnnouncement(after previousState: CapturePresentationState?) -> String? {
+        guard let previousState, previousState.heading != heading else {
+            return nil
+        }
+        return "Capture status: \(heading)"
     }
 }
 
@@ -123,10 +131,12 @@ public struct CaptureControlPanel: View {
 public struct CaptureStatusView: View {
     public let state: CapturePresentationState
 
+    @State private var previousState: CapturePresentationState
     private let statusHeight: CGFloat = 72
 
     public init(state: CapturePresentationState) {
         self.state = state
+        _previousState = State(initialValue: state)
     }
 
     public var body: some View {
@@ -158,6 +168,14 @@ public struct CaptureStatusView: View {
             in: RoundedRectangle(cornerRadius: 10)
         )
         .accessibilityElement(children: .combine)
+        .onChange(of: state) { newState in
+            let announcement = newState.accessibilityAnnouncement(after: previousState)
+            previousState = newState
+            guard let announcement else {
+                return
+            }
+            UIAccessibility.post(notification: .announcement, argument: announcement)
+        }
     }
 
     @ViewBuilder
