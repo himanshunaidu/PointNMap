@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import TipKit
 import CoreLocation
 import simd
 
@@ -27,8 +28,6 @@ enum AnnotationViewBaseConstants {
         static let fromGroupText = "Group"
         static let individualChoiceText = "Override"
         static let useGroupDecisionText = "Use group decision"
-        static let reviewRulePrefixText = "Review rule:"
-        static let sidewalkReviewRuleText = "Keep if the highlighted sidewalk mostly matches the real sidewalk. Small gaps are okay; large missing areas or major spillover are not."
         
         static let loadingPageText = "Loading. Please wait..."
         
@@ -488,11 +487,20 @@ public struct AnnotationViewBase: View {
                     }
                 )
 
-                Divider()
-
-                if currentClass.kind == .sidewalk {
-                    sidewalkReviewRuleView
+                if #available(iOS 17.0, *) {
+                    TipView(
+                        AnnotationReviewInfoTip(
+                            isUniquePerCapture: currentClass.kind.isUniquePerCapture
+                        ),
+                        arrowEdge: .top
+                    ) { action in
+                        if action.id == AnnotationReviewInfoTip.viewHelpActionID {
+                            isShowingAnnotationHelp = true
+                        }
+                    }
                 }
+
+                Divider()
 
                 if !currentClass.kind.isUniquePerCapture {
                     reviewScopePicker(currentClass: currentClass)
@@ -530,27 +538,6 @@ public struct AnnotationViewBase: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 24)
-    }
-
-    private var sidewalkReviewRuleView: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "info.circle.fill")
-                .font(.title2)
-                .foregroundStyle(.blue)
-
-            (
-                Text("\(AnnotationViewBaseConstants.Texts.reviewRulePrefixText) ")
-                    .fontWeight(.semibold)
-                + Text(AnnotationViewBaseConstants.Texts.sidewalkReviewRuleText)
-            )
-            .font(.subheadline)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.blue.opacity(0.1))
-        )
     }
 
     private var confirmAnnotationButton: some View {
@@ -978,4 +965,3 @@ public struct AnnotationViewBase: View {
         try featureClassSelectionViewModel.setCurrent(index: currentClassIndex + 1, classes: segmentedClasses)
     }
 }
-
