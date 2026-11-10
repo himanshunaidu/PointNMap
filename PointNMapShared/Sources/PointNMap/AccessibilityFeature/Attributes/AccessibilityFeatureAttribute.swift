@@ -159,20 +159,17 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
     public struct Metadata {
         let id: Int
         let name: String
-        let canonicalUnit: Dimension?
         let valueType: ValueType
         let numericConstraints: NumericConstraints?
 
         init(
             id: Int,
             name: String,
-            unit: Dimension?,
             valueType: ValueType,
             numericConstraints: NumericConstraints? = nil
         ) {
             self.id = id
             self.name = name
-            self.canonicalUnit = unit
             self.valueType = valueType
             self.numericConstraints = numericConstraints
         }
@@ -182,153 +179,153 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
         switch self {
         case .width:
             return Metadata(
-                id: 10, name: "Width", unit: UnitLength.meters,
+                id: 10, name: "Width",
                 valueType: .length,
                 numericConstraints: .nonNegative
             )
         case .runningSlope:
             return Metadata(
-                id: 20, name: "Running Slope", unit: UnitAngle.degrees,
+                id: 20, name: "Running Slope",
                 valueType: .angle,
                 numericConstraints: .nonNegative
             )
         case .crossSlope:
             return Metadata(
-                id: 30, name: "Cross Slope", unit: UnitAngle.degrees,
+                id: 30, name: "Cross Slope",
                 valueType: .angle,
                 numericConstraints: .nonNegative
             )
         case .surfaceIntegrity:
             return Metadata(
-                id: 40, name: "Surface Integrity", unit: nil,
+                id: 40, name: "Surface Integrity",
                 valueType: .categorical(typeID: SurfaceIntegrityStatus.typeID),
             )
         case .surfaceDisruption:
             return Metadata(
-                id: 41, name: "Surface Disruption", unit: nil,
+                id: 41, name: "Surface Disruption",
                 valueType: .number,
                 numericConstraints: .nonNegative
             )
         case .heightFromGround:
             return Metadata(
-                id: 42, name: "Height from Ground", unit: UnitLength.meters,
+                id: 42, name: "Height from Ground",
                 valueType: .length,
                 numericConstraints: .nonNegative
             )
         case .surfaceDisruptionArea:
             return Metadata(
-                id: 43, name: "Surface Disruption Area", unit: UnitArea.squareMeters,
+                id: 43, name: "Surface Disruption Area",
                 valueType: .area,
                 numericConstraints: .nonNegative
             )
         case .surfaceDisruptionLength:
             return Metadata(
-                id: 44, name: "Surface Disruption Length", unit: UnitLength.meters,
+                id: 44, name: "Surface Disruption Length",
                 valueType: .length,
                 numericConstraints: .nonNegative
             )
         case .lidarDepth:
             return Metadata(
-                id: 50, name: "LiDAR Depth", unit: UnitLength.meters,
+                id: 50, name: "LiDAR Depth",
                 valueType: .length,
             )
         case .latitudeDelta:
             return Metadata(
-                id: 60, name: "Latitude Delta", unit: UnitLength.meters,
+                id: 60, name: "Latitude Delta",
                 valueType: .length,
             )
         case .longitudeDelta:
             return Metadata(
-                id: 70, name: "Longitude Delta", unit: UnitLength.meters,
+                id: 70, name: "Longitude Delta",
                 valueType: .length,
             )
         case .widthLegacy:
             return Metadata(
-                id: 15, name: "Width Legacy", unit: UnitLength.meters,
+                id: 15, name: "Width Legacy",
                 valueType: .length,
                 numericConstraints: .nonNegative
             )
         case .runningSlopeLegacy:
             return Metadata(
-                id: 25, name: "Running Slope Legacy", unit: UnitAngle.degrees,
+                id: 25, name: "Running Slope Legacy",
                 valueType: .angle,
             )
         case .crossSlopeLegacy:
             return Metadata(
-                id: 35, name: "Cross Slope Legacy", unit: UnitAngle.degrees,
+                id: 35, name: "Cross Slope Legacy",
                 valueType: .angle,
             )
         case .widthFromImage:
             return Metadata(
-                id: 16, name: "Width from Image", unit: UnitLength.meters,
+                id: 16, name: "Width from Image",
                 valueType: .length,
                 numericConstraints: .nonNegative
             )
         case .runningSlopeFromImage:
             return Metadata(
-                id: 26, name: "Running Slope from Image", unit: UnitAngle.degrees,
+                id: 26, name: "Running Slope from Image",
                 valueType: .angle,
             )
         case .crossSlopeFromImage:
             return Metadata(
-                id: 36, name: "Cross Slope from Image", unit: UnitAngle.degrees,
+                id: 36, name: "Cross Slope from Image",
                 valueType: .angle,
             )
         case .rampWidth:
             return Metadata(
-                id: 110, name: "Ramp Width", unit: UnitLength.meters,
+                id: 110, name: "Ramp Width",
                 valueType: .length,
             )
         case .rampLength:
             return Metadata(
-                id: 120, name: "Ramp Length", unit: UnitLength.meters,
+                id: 120, name: "Ramp Length",
                 valueType: .length,
             )
         case .rampRunningSlope:
             return Metadata(
-                id: 130, name: "Ramp Running Slope", unit: UnitAngle.degrees,
+                id: 130, name: "Ramp Running Slope",
                 valueType: .angle,
             )
         case .rampCrossSlope:
             return Metadata(
-                id: 140, name: "Ramp Cross Slope", unit: UnitAngle.degrees,
+                id: 140, name: "Ramp Cross Slope",
                 valueType: .angle,
             )
         case .leftFlareSlope:
             return Metadata(
-                id: 141, name: "Left Flare Slope", unit: UnitAngle.degrees,
+                id: 141, name: "Left Flare Slope",
                 valueType: .angle,
             )
         case .rightFlareSlope:
             return Metadata(
-                id: 142, name: "Right Flare Slope", unit: UnitAngle.degrees,
+                id: 142, name: "Right Flare Slope",
                 valueType: .angle,
             )
         case .counterSlope:
             return Metadata(
-                id: 150, name: "Counter Slope", unit: UnitAngle.degrees,
+                id: 150, name: "Counter Slope",
                 valueType: .angle,
             )
         case .turningSpaceWidth:
             return Metadata(
-                id: 160, name: "Turning Space Width", unit: UnitLength.meters,
+                id: 160, name: "Turning Space Width",
                 valueType: .length,
                 numericConstraints: .nonNegative
             )
         case .turningSpaceLength:
             return Metadata(
-                id: 170, name: "Turning Space Length", unit: UnitLength.meters,
+                id: 170, name: "Turning Space Length",
                 valueType: .length,
                 numericConstraints: .nonNegative
             )
         case .turningSpaceRunningSlope:
             return Metadata(
-                id: 180, name: "Turning Space Running Slope", unit: UnitAngle.degrees,
+                id: 180, name: "Turning Space Running Slope",
                 valueType: .angle,
             )
         case .turningSpaceCrossSlope:
             return Metadata(
-                id: 190, name: "Turning Space Cross Slope", unit: UnitAngle.degrees,
+                id: 190, name: "Turning Space Cross Slope",
                 valueType: .angle,
             )
         }
@@ -343,7 +340,16 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
     }
     
     public var canonicalUnit: Dimension? {
-        return metadata.canonicalUnit
+        switch valueType {
+        case .length:
+            return PointNMapConstants.MeasurementUnits.canonicalLengthUnit
+        case .area:
+            return PointNMapConstants.MeasurementUnits.canonicalAreaUnit
+        case .angle:
+            return PointNMapConstants.MeasurementUnits.canonicalAngleUnit
+        case .number, .flag, .categorical:
+            return nil
+        }
     }
     
     public var valueType: ValueType {
@@ -355,11 +361,25 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
     }
     
     public var displayName: String {
-        if let unit = canonicalUnit {
-            return "\(name) (\(unit.symbol))"
-        } else {
-            return name
+        displayName(using: .default)
+    }
+
+    public func unit(using preferences: MeasurementUnitPreferences) -> Dimension? {
+        switch valueType {
+        case .length:
+            return preferences.length.unit
+        case .area:
+            return preferences.area.unit
+        case .angle:
+            return preferences.angle.unit
+        case .number, .flag, .categorical:
+            return nil
         }
+    }
+
+    public func displayName(using preferences: MeasurementUnitPreferences) -> String {
+        guard let unit = unit(using: preferences) else { return name }
+        return "\(name) (\(unit.symbol))"
     }
     
     public static func < (lhs: AccessibilityFeatureAttribute, rhs: AccessibilityFeatureAttribute) -> Bool {
@@ -430,6 +450,29 @@ public extension AccessibilityFeatureAttribute {
  Extension to convert AccessibilityFeatureAttribute.Value to and from primitive types.
  */
 public extension AccessibilityFeatureAttribute.Value {
+    func convertedForDisplay(using preferences: MeasurementUnitPreferences) -> Self {
+        switch self {
+        case .length(let measurement):
+            return .length(measurement.converted(to: preferences.length.unit))
+        case .area(let measurement):
+            return .area(measurement.converted(to: preferences.area.unit))
+        case .angle(let measurement):
+            return .angle(measurement.converted(to: preferences.angle.unit))
+        case .number, .flag, .categorical:
+            return self
+        }
+    }
+
+    func displayNumericValue(using preferences: MeasurementUnitPreferences) -> Double? {
+        switch convertedForDisplay(using: preferences) {
+        case .length(let measurement): return measurement.value
+        case .area(let measurement): return measurement.value
+        case .angle(let measurement): return measurement.value
+        case .number(let value): return value
+        case .flag, .categorical: return nil
+        }
+    }
+
     internal func roundedForFinalAttribute() -> Self {
         func rounded(_ value: Double) -> Double {
             guard value.isFinite else { return value }
@@ -443,14 +486,17 @@ public extension AccessibilityFeatureAttribute.Value {
 
         switch self {
         case .length(let measurement):
-            let meters = measurement.converted(to: .meters).value
-            return .length(Measurement(value: rounded(meters), unit: .meters))
+            let unit = PointNMapConstants.MeasurementUnits.canonicalLengthUnit
+            let value = measurement.converted(to: unit).value
+            return .length(Measurement(value: rounded(value), unit: unit))
         case .area(let measurement):
-            let squareMeters = measurement.converted(to: .squareMeters).value
-            return .area(Measurement(value: rounded(squareMeters), unit: .squareMeters))
+            let unit = PointNMapConstants.MeasurementUnits.canonicalAreaUnit
+            let value = measurement.converted(to: unit).value
+            return .area(Measurement(value: rounded(value), unit: unit))
         case .angle(let measurement):
-            let degrees = measurement.converted(to: .degrees).value
-            return .angle(Measurement(value: rounded(degrees), unit: .degrees))
+            let unit = PointNMapConstants.MeasurementUnits.canonicalAngleUnit
+            let value = measurement.converted(to: unit).value
+            return .angle(Measurement(value: rounded(value), unit: unit))
         case .number(let value):
             return .number(rounded(value))
         case .flag, .categorical:
@@ -461,11 +507,11 @@ public extension AccessibilityFeatureAttribute.Value {
     var canonicalNumericValue: Double? {
         switch self {
         case .length(let measurement):
-            return measurement.converted(to: .meters).value
+            return measurement.converted(to: PointNMapConstants.MeasurementUnits.canonicalLengthUnit).value
         case .area(let measurement):
-            return measurement.converted(to: .squareMeters).value
+            return measurement.converted(to: PointNMapConstants.MeasurementUnits.canonicalAreaUnit).value
         case .angle(let measurement):
-            return measurement.converted(to: .degrees).value
+            return measurement.converted(to: PointNMapConstants.MeasurementUnits.canonicalAngleUnit).value
         case .number(let value):
             return value
         case .flag:
@@ -478,11 +524,11 @@ public extension AccessibilityFeatureAttribute.Value {
     var primitiveValue: AccessibilityFeatureAttribute.PrimitiveValue {
         switch self {
         case .length(let measurement):
-            return .number(measurement.converted(to: .meters).value)
+            return .number(measurement.converted(to: PointNMapConstants.MeasurementUnits.canonicalLengthUnit).value)
         case .area(let measurement):
-            return .number(measurement.converted(to: .squareMeters).value)
+            return .number(measurement.converted(to: PointNMapConstants.MeasurementUnits.canonicalAreaUnit).value)
         case .angle(let measurement):
-            return .number(measurement.converted(to: .degrees).value)
+            return .number(measurement.converted(to: PointNMapConstants.MeasurementUnits.canonicalAngleUnit).value)
         case .number(let value):
             return .number(value)
         case .flag(let value):
@@ -495,13 +541,17 @@ public extension AccessibilityFeatureAttribute.Value {
 
 public extension AccessibilityFeatureAttribute {
     func value(from double: Double) -> Value? {
+        value(from: double, using: .default)
+    }
+
+    func value(from double: Double, using preferences: MeasurementUnitPreferences) -> Value? {
         switch self.valueType {
         case .length:
-            return .length(Measurement(value: double, unit: .meters))
+            return .length(Measurement(value: double, unit: preferences.length.unit))
         case .area:
-            return .area(Measurement(value: double, unit: .squareMeters))
+            return .area(Measurement(value: double, unit: preferences.area.unit))
         case .angle:
-            return .angle(Measurement(value: double, unit: .degrees))
+            return .angle(Measurement(value: double, unit: preferences.angle.unit))
         case .number:
             return .number(double)
         case .flag:

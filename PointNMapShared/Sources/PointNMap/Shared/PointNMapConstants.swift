@@ -10,6 +10,16 @@ public struct PointNMapConstants {
     /// TODO: Make final attribute precision configurable instead of hard-coding it here.
     public static let finalAttributePrecision: Int = 4
 
+    public struct MeasurementUnits {
+        public static let defaultLengthChoice: LengthUnitChoice = .meters
+        public static let defaultAreaChoice: AreaUnitChoice = .squareMeters
+        public static let defaultAngleChoice: AngleUnitChoice = .degrees
+
+        public static let canonicalLengthUnit: UnitLength = .meters
+        public static let canonicalAreaUnit: UnitArea = .squareMeters
+        public static let canonicalAngleUnit: UnitAngle = .degrees
+    }
+
     // Supported Classes
     public static let SelectedAccessibilityFeatureConfig: AccessibilityFeatureClassConfig = AccessibilityFeatureConfig.mapillaryCustom12Config
     
