@@ -65,6 +65,30 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
         case categorical(typeID: String)
     }
 
+    public enum PrimitiveValue: Sendable, Codable, Equatable {
+        case number(Double)
+        case boolean(Bool)
+        case string(String)
+
+        /// The stable scalar representation used at the OSW tag boundary.
+        /// Invalid floating-point values are omitted instead of being uploaded.
+        public var oswTagValue: String? {
+            switch self {
+            case .number(let value):
+                guard value.isFinite else { return nil }
+                return String(
+                    format: "%.2f",
+                    locale: Locale(identifier: "en_US_POSIX"),
+                    value
+                )
+            case .boolean(let value):
+                return value ? "yes" : "no"
+            case .string(let value):
+                return value
+            }
+        }
+    }
+
     public struct NumericConstraints: Sendable, Equatable {
         public let minimum: Double?
         public let maximum: Double?
@@ -382,7 +406,7 @@ public extension AccessibilityFeatureAttribute {
         guard isCompatible(with: value) else {
             throw AccessibilityFeatureError.attributeValueMismatch(attribute: self, value: value)
         }
-        guard let numericValue = value.toDouble() else {
+        guard let numericValue = value.canonicalNumericValue else {
             return
         }
         guard numericValue.isFinite else {
@@ -434,7 +458,7 @@ public extension AccessibilityFeatureAttribute.Value {
         }
     }
 
-    func toDouble() -> Double? {
+    var canonicalNumericValue: Double? {
         switch self {
         case .length(let measurement):
             return measurement.converted(to: .meters).value
@@ -450,30 +474,21 @@ public extension AccessibilityFeatureAttribute.Value {
             return nil
         }
     }
-    
-    func toBool() -> Bool? {
-        switch self {
-        case .flag(let value):
-            return value
-        default:
-            return nil
-        }
-    }
-    
-    func toString() -> String? {
+
+    var primitiveValue: AccessibilityFeatureAttribute.PrimitiveValue {
         switch self {
         case .length(let measurement):
-            return String(format: "%.2f", measurement.converted(to: .meters).value)
+            return .number(measurement.converted(to: .meters).value)
         case .area(let measurement):
-            return String(format: "%.2f", measurement.converted(to: .squareMeters).value)
+            return .number(measurement.converted(to: .squareMeters).value)
         case .angle(let measurement):
-            return String(format: "%.2f", measurement.converted(to: .degrees).value)
+            return .number(measurement.converted(to: .degrees).value)
         case .number(let value):
-            return String(format: "%.2f", value)
+            return .number(value)
         case .flag(let value):
-            return value ? "yes" : "no"
+            return .boolean(value)
         case .categorical(let value):
-            return value.rawValue
+            return .string(value.rawValue)
         }
     }
 }
@@ -552,68 +567,6 @@ public extension AccessibilityFeatureAttribute {
         }
         let options = CategoricalAttributeRegistry.cases(for: typeID) ?? []
         return options
-    }
-    
-//    func getValueDescription(attributeValue: Value?) -> String? {
-//        guard let attributeValue = attributeValue else {
-//            return nil
-//        }
-//        switch (self, attributeValue) {
-//        case (.width, .length(let measurement)):
-//            return String(format: "%.2f", measurement.converted(to: .meters).value)
-//        case (.runningSlope, .angle(let measurement)):
-//            return String(format: "%.2f", measurement.converted(to: .degrees).value)
-//        case (.crossSlope, .angle(let measurement)):
-//            return String(format: "%.2f", measurement.converted(to: .degrees).value)
-//        case (.surfaceIntegrity, .categorical(let categoricalValue)):
-//            return categoricalValue.rawValue
-//        case (.surfaceDisruption, .number(let value)):
-//            return String(format: "%.2f", value)
-//        case (.heightFromGround, .length(let measurement)):
-//            return String(format: "%.2f", measurement.converted(to: .meters).value)
-//        case (.lidarDepth, .length(let measurement)):
-//            return String(format: "%.2f", measurement.converted(to: .meters).value)
-//        case (.latitudeDelta, .length(let measurement)):
-//            return String(format: "%.2f", measurement.converted(to: .meters).value)
-//        case (.longitudeDelta, .length(let measurement)):
-//            return String(format: "%.2f", measurement.converted(to: .meters).value)
-//        case (.widthLegacy, .length(let measurement)):
-//            return String(format: "%.2f", measurement.converted(to: .meters).value)
-//        case (.runningSlopeLegacy, .angle(let measurement)):
-//            return String(format: "%.2f", measurement.converted(to: .degrees).value)
-//        case (.crossSlopeLegacy, .angle(let measurement)):
-//            return String(format: "%.2f", measurement.converted(to: .degrees).value)
-//        case (.widthFromImage, .length(let measurement)):
-//            return String(format: "%.2f", measurement.converted(to: .meters).value)
-//        case (.runningSlopeFromImage, .angle(let measurement)):
-//            return String(format: "%.2f", measurement.converted(to: .degrees).value)
-//        case (.crossSlopeFromImage, .angle(let measurement)):
-//            return String(format: "%.2f", measurement.converted(to: .degrees).value)
-//        case (.rampWidth, .length(let measurement)):
-//            return String(format: "%.2f", measurement.converted(to: .meters).value)
-//        default:
-//            return nil
-//        }
-//    }
-    /// Generalize the getValueDescription to handle attribute values depending on their associated value types. (We can add exceptions before the switch if needed)
-    func getValueDescription(attributeValue: Value?) -> String? {
-        guard let attributeValue = attributeValue else {
-            return nil
-        }
-        switch attributeValue {
-        case .length(let measurement):
-            return String(format: "%.2f", measurement.converted(to: .meters).value)
-        case .area(let measurement):
-            return String(format: "%.2f", measurement.converted(to: .squareMeters).value)
-        case .angle(let measurement):
-            return String(format: "%.2f", measurement.converted(to: .degrees).value)
-        case .number(let value):
-            return String(format: "%.2f", value)
-        case .flag(let value):
-            return value ? "yes" : "no"
-        case .categorical(let categoricalValue):
-            return categoricalValue.rawValue
-        }
     }
     
     func defaultValue() -> Value? {

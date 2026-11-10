@@ -39,7 +39,7 @@ public enum AnnotationFeatureDetailViewConstants {
 func annotationFeatureDetailNumericEstimate(
     _ calculatedValue: AccessibilityFeatureAttribute.Value?
 ) -> Double? {
-    guard let estimate = calculatedValue?.toDouble(), estimate.isFinite else {
+    guard let estimate = calculatedValue?.canonicalNumericValue, estimate.isFinite else {
         return nil
     }
     return estimate
@@ -404,7 +404,7 @@ public struct AnnotationFeatureDetailViewBase<
                 get: {
                     guard let attributeValue = accessibilityFeature.attributeValues[attribute],
                           let attributeValue,
-                          let attributeBindableValue = attributeValue.toDouble() else {
+                          let attributeBindableValue = attributeValue.canonicalNumericValue else {
                         return 0.0
                     }
                     return attributeBindableValue
@@ -501,7 +501,7 @@ public struct AnnotationFeatureDetailViewBase<
         let valueToDisplay: String = {
             guard let attributeValue = accessibilityFeature.experimentalAttributeValues[attribute],
                   let attributeValue,
-                  let attributeBindableValue = attributeValue.toDouble() else {
+                  let attributeBindableValue = attributeValue.canonicalNumericValue else {
                 return AnnotationFeatureDetailViewConstants.Texts.invalidTextKey
             }
             return String(attributeBindableValue)
@@ -530,7 +530,7 @@ public struct AnnotationFeatureDetailViewBase<
                 get: {
                     guard let attributeValue = accessibilityFeature.attributeValues[attribute],
                           let attributeValue,
-                          let attributeBindableValue = attributeValue.toBool() else {
+                          case .boolean(let attributeBindableValue) = attributeValue.primitiveValue else {
                         return false
                     }
                     return attributeBindableValue
