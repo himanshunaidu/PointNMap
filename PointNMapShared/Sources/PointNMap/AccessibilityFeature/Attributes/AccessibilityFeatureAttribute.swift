@@ -58,6 +58,7 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
     
     public enum ValueType: Sendable, Codable, Equatable {
         case length
+        case area
         case angle
         case number
         case flag
@@ -88,6 +89,7 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
     
     public enum Value: Sendable, Codable, Equatable, CustomStringConvertible {
         case length(Measurement<UnitLength>)
+        case area(Measurement<UnitArea>)
         case angle(Measurement<UnitAngle>)
         case number(Double)
         case flag(Bool)
@@ -97,6 +99,8 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
             switch (lhs, rhs) {
             case (.length(let l1), .length(let l2)):
                 return l1 == l2
+            case (.area(let a1), .area(let a2)):
+                return a1 == a2
             case (.angle(let a1), .angle(let a2)):
                 return a1 == a2
             case (.number(let n1), .number(let n2)):
@@ -114,6 +118,8 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
             switch self {
             case .length(let measurement):
                 return String(format: "%.2f %@", measurement.value, measurement.unit.symbol)
+            case .area(let measurement):
+                return String(format: "%.2f %@", measurement.value, measurement.unit.symbol)
             case .angle(let measurement):
                 return String(format: "%.2f %@", measurement.value, measurement.unit.symbol)
             case .number(let value):
@@ -129,7 +135,7 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
     public struct Metadata {
         let id: Int
         let name: String
-        let unit: Dimension?
+        let canonicalUnit: Dimension?
         let valueType: ValueType
         let numericConstraints: NumericConstraints?
 
@@ -142,7 +148,7 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
         ) {
             self.id = id
             self.name = name
-            self.unit = unit
+            self.canonicalUnit = unit
             self.valueType = valueType
             self.numericConstraints = numericConstraints
         }
@@ -188,7 +194,7 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
         case .surfaceDisruptionArea:
             return Metadata(
                 id: 43, name: "Surface Disruption Area", unit: UnitArea.squareMeters,
-                valueType: .length,
+                valueType: .area,
                 numericConstraints: .nonNegative
             )
         case .surfaceDisruptionLength:
@@ -312,8 +318,8 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
         return metadata.name
     }
     
-    public var unit: Dimension? {
-        return metadata.unit
+    public var canonicalUnit: Dimension? {
+        return metadata.canonicalUnit
     }
     
     public var valueType: ValueType {
@@ -325,7 +331,7 @@ public enum AccessibilityFeatureAttribute: String, Identifiable, CaseIterable, C
     }
     
     public var displayName: String {
-        if let unit = unit {
+        if let unit = canonicalUnit {
             return "\(name) (\(unit.symbol))"
         } else {
             return name
@@ -341,6 +347,7 @@ public extension AccessibilityFeatureAttribute.Value {
     var valueType: AccessibilityFeatureAttribute.ValueType {
         switch self {
         case .length: return .length
+        case .area: return .area
         case .angle: return .angle
         case .number: return .number
         case .flag: return .flag
@@ -359,6 +366,7 @@ public extension AccessibilityFeatureAttribute {
     func isCompatible(with value: Value) -> Bool {
         switch (self.valueType, value) {
         case (.length, .length),
+             (.area, .area),
              (.angle, .angle),
             (.number, .number),
              (.flag, .flag):
@@ -413,6 +421,9 @@ public extension AccessibilityFeatureAttribute.Value {
         case .length(let measurement):
             let meters = measurement.converted(to: .meters).value
             return .length(Measurement(value: rounded(meters), unit: .meters))
+        case .area(let measurement):
+            let squareMeters = measurement.converted(to: .squareMeters).value
+            return .area(Measurement(value: rounded(squareMeters), unit: .squareMeters))
         case .angle(let measurement):
             let degrees = measurement.converted(to: .degrees).value
             return .angle(Measurement(value: rounded(degrees), unit: .degrees))
@@ -427,6 +438,8 @@ public extension AccessibilityFeatureAttribute.Value {
         switch self {
         case .length(let measurement):
             return measurement.converted(to: .meters).value
+        case .area(let measurement):
+            return measurement.converted(to: .squareMeters).value
         case .angle(let measurement):
             return measurement.converted(to: .degrees).value
         case .number(let value):
@@ -451,6 +464,8 @@ public extension AccessibilityFeatureAttribute.Value {
         switch self {
         case .length(let measurement):
             return String(format: "%.2f", measurement.converted(to: .meters).value)
+        case .area(let measurement):
+            return String(format: "%.2f", measurement.converted(to: .squareMeters).value)
         case .angle(let measurement):
             return String(format: "%.2f", measurement.converted(to: .degrees).value)
         case .number(let value):
@@ -468,6 +483,8 @@ public extension AccessibilityFeatureAttribute {
         switch self.valueType {
         case .length:
             return .length(Measurement(value: double, unit: .meters))
+        case .area:
+            return .area(Measurement(value: double, unit: .squareMeters))
         case .angle:
             return .angle(Measurement(value: double, unit: .degrees))
         case .number:
@@ -586,6 +603,8 @@ public extension AccessibilityFeatureAttribute {
         switch attributeValue {
         case .length(let measurement):
             return String(format: "%.2f", measurement.converted(to: .meters).value)
+        case .area(let measurement):
+            return String(format: "%.2f", measurement.converted(to: .squareMeters).value)
         case .angle(let measurement):
             return String(format: "%.2f", measurement.converted(to: .degrees).value)
         case .number(let value):
@@ -601,6 +620,8 @@ public extension AccessibilityFeatureAttribute {
         switch self.valueType {
         case .length:
             return .length(Measurement(value: 0.0, unit: .meters))
+        case .area:
+            return .area(Measurement(value: 0.0, unit: .squareMeters))
         case .angle:
             return .angle(Measurement(value: 0.0, unit: .degrees))
         case .number:
