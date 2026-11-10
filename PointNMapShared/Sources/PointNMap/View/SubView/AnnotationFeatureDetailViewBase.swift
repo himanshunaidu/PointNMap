@@ -37,12 +37,22 @@ public enum AnnotationFeatureDetailViewConstants {
 }
 
 func annotationFeatureDetailNumericEstimate(
-    _ calculatedValue: AccessibilityFeatureAttribute.Value?
+    _ calculatedValue: AccessibilityFeatureAttribute.Value?,
+    using preferences: MeasurementUnitPreferences = .default
 ) -> Double? {
-    guard let estimate = calculatedValue?.toDouble(), estimate.isFinite else {
+    guard let estimate = calculatedValue?.displayNumericValue(using: preferences),
+          estimate.isFinite else {
         return nil
     }
     return estimate
+}
+
+func annotationFeatureDetailValue(
+    _ numericValue: Double,
+    for attribute: AccessibilityFeatureAttribute,
+    using preferences: MeasurementUnitPreferences
+) -> AccessibilityFeatureAttribute.Value? {
+    attribute.value(from: numericValue, using: preferences)
 }
 
 func annotationFeatureDetailCanUseEstimate(
@@ -116,6 +126,7 @@ public struct AnnotationFeatureDetailViewBase<
     
     public var accessibilityFeature: Feature
     public let title: String
+    public let measurementUnitPreferences: MeasurementUnitPreferences
     private let locationSection: (Feature) -> LocationSection
     private let locationFormatter = AnnotationFeatureDetailLocationFormatter()
     
@@ -129,10 +140,12 @@ public struct AnnotationFeatureDetailViewBase<
     public init(
         accessibilityFeature: Feature,
         title: String,
+        measurementUnitPreferences: MeasurementUnitPreferences = .default,
         @ViewBuilder locationSection: @escaping (Feature) -> LocationSection
     ) {
         self.accessibilityFeature = accessibilityFeature
         self.title = title
+        self.measurementUnitPreferences = measurementUnitPreferences
         self.locationSection = locationSection
     }
     
@@ -163,28 +176,28 @@ public struct AnnotationFeatureDetailViewBase<
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.width))
                 {
-                    Section(header: Text(AccessibilityFeatureAttribute.width.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.width.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .width)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.runningSlope))
                 {
-                    Section(header: Text(AccessibilityFeatureAttribute.runningSlope.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.runningSlope.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .runningSlope)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.crossSlope))
                 {
-                    Section(header: Text(AccessibilityFeatureAttribute.crossSlope.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.crossSlope.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .crossSlope)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceIntegrity))
                 {
-                    Section(header: Text(AccessibilityFeatureAttribute.surfaceIntegrity.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.surfaceIntegrity.displayName(using: measurementUnitPreferences))) {
                         pickerView(attribute: .surfaceIntegrity)
                             .focused($focusedField, equals: .surfaceIntegrity)
                             .id(pickerRefreshTrigger) // Refresh the Picker view when its value changes
@@ -192,44 +205,44 @@ public struct AnnotationFeatureDetailViewBase<
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceDisruption)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruption.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruption.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .surfaceDisruption)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.heightFromGround)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.heightFromGround.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.heightFromGround.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .heightFromGround)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceDisruptionArea)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruptionArea.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruptionArea.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .surfaceDisruptionArea)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.surfaceDisruptionLength)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruptionLength.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.surfaceDisruptionLength.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .surfaceDisruptionLength)
                     }
                 }
                 
                 /// Experimental Attributes Section
                 if (accessibilityFeature.accessibilityFeatureClass.kind.experimentalAttributes.contains(.lidarDepth)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.lidarDepth.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.lidarDepth.displayName(using: measurementUnitPreferences))) {
                         numberTextView(attribute: .lidarDepth)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.experimentalAttributes.contains(.latitudeDelta)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.latitudeDelta.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.latitudeDelta.displayName(using: measurementUnitPreferences))) {
                         numberTextView(attribute: .latitudeDelta)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.experimentalAttributes.contains(.longitudeDelta)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.longitudeDelta.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.longitudeDelta.displayName(using: measurementUnitPreferences))) {
                         numberTextView(attribute: .longitudeDelta)
                     }
                 }
@@ -237,41 +250,41 @@ public struct AnnotationFeatureDetailViewBase<
                 /// Legacy Attributes Section
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.widthLegacy))
                 {
-                    Section(header: Text(AccessibilityFeatureAttribute.widthLegacy.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.widthLegacy.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .widthLegacy)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.runningSlopeLegacy))
                 {
-                    Section(header: Text(AccessibilityFeatureAttribute.runningSlopeLegacy.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.runningSlopeLegacy.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .runningSlopeLegacy)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.crossSlopeLegacy))
                 {
-                    Section(header: Text(AccessibilityFeatureAttribute.crossSlopeLegacy.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.crossSlopeLegacy.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .crossSlopeLegacy)
                     }
                 }
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.widthFromImage))
                 {
-                    Section(header: Text(AccessibilityFeatureAttribute.widthFromImage.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.widthFromImage.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .widthFromImage)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.runningSlopeFromImage))
                 {
-                    Section(header: Text(AccessibilityFeatureAttribute.runningSlopeFromImage.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.runningSlopeFromImage.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .runningSlopeFromImage)
                     }
                 }
                 
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.crossSlopeFromImage))
                 {
-                    Section(header: Text(AccessibilityFeatureAttribute.crossSlopeFromImage.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.crossSlopeFromImage.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .crossSlopeFromImage)
                     }
                 }
@@ -280,67 +293,67 @@ public struct AnnotationFeatureDetailViewBase<
                 /// TODO: Find a more generic way to handle this in the future.
                 // ramp width
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampWidth)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.rampWidth.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.rampWidth.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .rampWidth)
                     }
                 }
                 // ramp length
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampLength)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.rampLength.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.rampLength.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .rampLength)
                     }
                 }
                 // ramp running slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampRunningSlope)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.rampRunningSlope.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.rampRunningSlope.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .rampRunningSlope)
                     }
                 }
                 // ramp cross slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rampCrossSlope)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.rampCrossSlope.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.rampCrossSlope.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .rampCrossSlope)
                     }
                 }
                 // left flare slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.leftFlareSlope)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.leftFlareSlope.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.leftFlareSlope.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .leftFlareSlope)
                     }
                 }
                 // right flare slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.rightFlareSlope)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.rightFlareSlope.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.rightFlareSlope.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .rightFlareSlope)
                     }
                 }
                 // counter slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.counterSlope)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.counterSlope.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.counterSlope.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .counterSlope)
                     }
                 }
                 // turning space width
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceWidth)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceWidth.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceWidth.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .turningSpaceWidth)
                     }
                 }
                 // turning space length
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceLength)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceLength.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceLength.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .turningSpaceLength)
                     }
                 }
                 // turning space running slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceRunningSlope)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceRunningSlope.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceRunningSlope.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .turningSpaceRunningSlope)
                     }
                 }
                 // turning space cross slope
                 if (accessibilityFeature.accessibilityFeatureClass.kind.attributes.contains(.turningSpaceCrossSlope)) {
-                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceCrossSlope.displayName)) {
+                    Section(header: Text(AccessibilityFeatureAttribute.turningSpaceCrossSlope.displayName(using: measurementUnitPreferences))) {
                         numberTextFieldView(attribute: .turningSpaceCrossSlope)
                     }
                 }
@@ -358,7 +371,10 @@ public struct AnnotationFeatureDetailViewBase<
         let attributeStatus = statusViewModel.attributeStatusMap[attribute] ?? .init(isError: false, errorMessage: "")
         let currentValue = accessibilityFeature.attributeValues[attribute] ?? nil
         let calculatedValue = accessibilityFeature.calculatedAttributeValues[attribute] ?? nil
-        let appEstimate = annotationFeatureDetailNumericEstimate(calculatedValue)
+        let appEstimate = annotationFeatureDetailNumericEstimate(
+            calculatedValue,
+            using: measurementUnitPreferences
+        )
         let canUseAppEstimate = annotationFeatureDetailCanUseEstimate(
             attribute: attribute,
             currentValue: currentValue,
@@ -399,19 +415,25 @@ public struct AnnotationFeatureDetailViewBase<
 
     private func numberTextField(attribute: AccessibilityFeatureAttribute) -> some View {
         TextField(
-            attribute.displayName,
+            attribute.displayName(using: measurementUnitPreferences),
             value: Binding(
                 get: {
                     guard let attributeValue = accessibilityFeature.attributeValues[attribute],
                           let attributeValue,
-                          let attributeBindableValue = attributeValue.toDouble() else {
+                          let attributeBindableValue = attributeValue.displayNumericValue(
+                            using: measurementUnitPreferences
+                          ) else {
                         return 0.0
                     }
                     return attributeBindableValue
                 },
                 set: { newValue in
                     do {
-                        guard let newAttributeValue = attribute.value(from: newValue) else {
+                        guard let newAttributeValue = annotationFeatureDetailValue(
+                            newValue,
+                            for: attribute,
+                            using: measurementUnitPreferences
+                        ) else {
                             return
                         }
                         try accessibilityFeature.setAttributeValue(newAttributeValue, for: attribute)
@@ -433,7 +455,7 @@ public struct AnnotationFeatureDetailViewBase<
         .onSubmit {
             focusedField = nil
         }
-        .accessibilityLabel(Text(attribute.displayName))
+        .accessibilityLabel(Text(attribute.displayName(using: measurementUnitPreferences)))
     }
 
     @ViewBuilder
@@ -501,7 +523,9 @@ public struct AnnotationFeatureDetailViewBase<
         let valueToDisplay: String = {
             guard let attributeValue = accessibilityFeature.experimentalAttributeValues[attribute],
                   let attributeValue,
-                  let attributeBindableValue = attributeValue.toDouble() else {
+                  let attributeBindableValue = attributeValue.displayNumericValue(
+                    using: measurementUnitPreferences
+                  ) else {
                 return AnnotationFeatureDetailViewConstants.Texts.invalidTextKey
             }
             return String(attributeBindableValue)
@@ -530,7 +554,7 @@ public struct AnnotationFeatureDetailViewBase<
                 get: {
                     guard let attributeValue = accessibilityFeature.attributeValues[attribute],
                           let attributeValue,
-                          let attributeBindableValue = attributeValue.toBool() else {
+                          case .boolean(let attributeBindableValue) = attributeValue.primitiveValue else {
                         return false
                     }
                     return attributeBindableValue
@@ -548,14 +572,14 @@ public struct AnnotationFeatureDetailViewBase<
                 }
             )
         ) {
-            Text(attribute.displayName)
+            Text(attribute.displayName(using: measurementUnitPreferences))
         }
     }
     
     @ViewBuilder
     private func pickerView(attribute: AccessibilityFeatureAttribute) -> some View {
         Picker(
-            attribute.displayName,
+            attribute.displayName(using: measurementUnitPreferences),
             selection: Binding<AnyCategoricalValue?>(
                 get: {
                     guard case .categorical(let category) = accessibilityFeature.attributeValues[attribute] else {
