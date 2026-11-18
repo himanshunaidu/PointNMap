@@ -107,22 +107,11 @@ class AnnotationFeatureClassSelectionViewBaseModel: ObservableObject {
     }
 }
 
-enum AnnotationViewBaseReviewScope: Hashable {
-    case all
-    case individual
-}
-
-struct AnnotationViewBaseDecisionSummary: Equatable {
-    let keptCount: Int
-    let discardedCount: Int
-    let exceptionCount: Int
-}
-
 class AnnotationFeatureSelectionViewBaseModel: ObservableObject {
     @Published var instances: [EditableAccessibilityFeature] = []
     @Published var currentIndex: Int? = nil
     @Published var currentFeature: EditableAccessibilityFeature? = nil
-    @Published var reviewScope: AnnotationViewBaseReviewScope = .all
+    @Published var reviewScope: AnnotationReviewScope = .all
 
     private var lastSelectedFeatureID: UUID?
 
@@ -130,9 +119,9 @@ class AnnotationFeatureSelectionViewBaseModel: ObservableObject {
         instances.first?.groupAnnotationDecision ?? .keep
     }
 
-    var decisionSummary: AnnotationViewBaseDecisionSummary {
+    var decisionSummary: AnnotationDecisionSummary {
         instances.reduce(
-            into: AnnotationViewBaseDecisionSummary(
+            into: AnnotationDecisionSummary(
                 keptCount: 0,
                 discardedCount: 0,
                 exceptionCount: 0
@@ -140,14 +129,14 @@ class AnnotationFeatureSelectionViewBaseModel: ObservableObject {
         ) { summary, feature in
             switch feature.effectiveAnnotationDecision {
             case .keep:
-                summary = AnnotationViewBaseDecisionSummary(
+                summary = AnnotationDecisionSummary(
                     keptCount: summary.keptCount + 1,
                     discardedCount: summary.discardedCount,
                     exceptionCount: summary.exceptionCount
                         + (feature.isAnnotationDecisionException ? 1 : 0)
                 )
             case .discard:
-                summary = AnnotationViewBaseDecisionSummary(
+                summary = AnnotationDecisionSummary(
                     keptCount: summary.keptCount,
                     discardedCount: summary.discardedCount + 1,
                     exceptionCount: summary.exceptionCount
@@ -184,7 +173,7 @@ class AnnotationFeatureSelectionViewBaseModel: ObservableObject {
     }
 
     func setReviewScope(
-        _ scope: AnnotationViewBaseReviewScope,
+        _ scope: AnnotationReviewScope,
         currentClass: AccessibilityFeatureClass
     ) throws {
         guard !currentClass.kind.isUniquePerCapture else {
@@ -583,9 +572,9 @@ public struct AnnotationViewBase: View {
             )
         ) {
             Text("\(AnnotationViewBaseConstants.Texts.allText) (\(featureSelectionViewModel.instances.count))")
-                .tag(AnnotationViewBaseReviewScope.all)
+                .tag(AnnotationReviewScope.all)
             Text(AnnotationViewBaseConstants.Texts.individualText)
-                .tag(AnnotationViewBaseReviewScope.individual)
+                .tag(AnnotationReviewScope.individual)
         }
         .pickerStyle(.segmented)
     }
