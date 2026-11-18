@@ -92,6 +92,62 @@ public struct AnnotationImageSelection<Feature: EditableAccessibilityFeature> {
     }
 }
 
+public struct SurfaceDisruptionOverlaySelection: Equatable, Sendable {
+    public let validMemberIndices: Set<Int>
+    public let selectedMemberIndices: Set<Int>
+    public let keptMemberIndices: Set<Int>
+    public let discardedMemberIndices: Set<Int>
+
+    public init(
+        validMemberIndices: Set<Int>,
+        selectedMemberIndices: Set<Int>,
+        keptMemberIndices: Set<Int>,
+        discardedMemberIndices: Set<Int>
+    ) {
+        self.validMemberIndices = validMemberIndices
+        self.selectedMemberIndices = selectedMemberIndices
+        self.keptMemberIndices = keptMemberIndices
+        self.discardedMemberIndices = discardedMemberIndices
+    }
+}
+
+public func makeSurfaceDisruptionOverlaySelection(
+    regions: [SurfaceDisruptionRegion],
+    reviewScope: AnnotationReviewScope,
+    selectedRegionID: SurfaceDisruptionRegion.ID?,
+    decisionForRegion: (SurfaceDisruptionRegion) -> AnnotationDecision
+) -> SurfaceDisruptionOverlaySelection {
+    var validMemberIndices = Set<Int>()
+    var keptMemberIndices = Set<Int>()
+    var discardedMemberIndices = Set<Int>()
+
+    for region in regions {
+        let memberIndices = Set(region.windowIndices)
+        validMemberIndices.formUnion(memberIndices)
+        switch decisionForRegion(region) {
+        case .keep:
+            keptMemberIndices.formUnion(memberIndices)
+        case .discard:
+            discardedMemberIndices.formUnion(memberIndices)
+        }
+    }
+
+    let selectedMemberIndices: Set<Int>
+    if reviewScope == .individual,
+       let selectedRegion = regions.first(where: { $0.id == selectedRegionID }) {
+        selectedMemberIndices = Set(selectedRegion.windowIndices)
+    } else {
+        selectedMemberIndices = []
+    }
+
+    return SurfaceDisruptionOverlaySelection(
+        validMemberIndices: validMemberIndices,
+        selectedMemberIndices: selectedMemberIndices,
+        keptMemberIndices: keptMemberIndices,
+        discardedMemberIndices: discardedMemberIndices
+    )
+}
+
 /**
     A class to manage annotation image processing including segmentation mask post-processing and feature detection.
  */
@@ -264,7 +320,8 @@ public final class AnnotationImageManager<
     public func updateFeature(
         accessibilityFeatureClass: AccessibilityFeatureClass,
         selection: AnnotationImageSelection<Feature>?,
-        updateFeatureResults: AnnotationImageFeatureUpdateResults?
+        updateFeatureResults: AnnotationImageFeatureUpdateResults?,
+        surfaceDisruptionOverlaySelection: SurfaceDisruptionOverlaySelection? = nil
     ) throws {
         guard isConfigured else {
             throw AnnotationImageManagerError.notConfigured
@@ -309,7 +366,8 @@ public final class AnnotationImageManager<
             surfaceAnalysisOverlayImage = try getSurfaceDisruptionOverlayOutputImage(
                 captureImageData: captureImageData,
                 analysis: analysis,
-                size: captureImageData.originalSize
+                size: captureImageData.originalSize,
+                selection: surfaceDisruptionOverlaySelection
             )
         } else {
             surfaceAnalysisOverlayImage = self.getDamageDetectionImage(
@@ -558,39 +616,86 @@ public extension AnnotationImageManager {
     private func getSurfaceDisruptionOverlayOutputImage(
         captureImageData: any CaptureImageDataProtocol,
         analysis: SurfaceIntegrityWindowAnalysisResult,
-        size: CGSize
+        size: CGSize,
+        selection: SurfaceDisruptionOverlaySelection?
     ) throws -> CIImage? {
         let viewMatrix = captureImageData.cameraTransform.inverse
         let intrinsics = captureImageData.cameraIntrinsics
         let width = Float(size.width)
         let height = Float(size.height)
 
-        let disruptedCells = analysis.windows.indices.compactMap { index -> [SIMD2<Float>]? in
-            guard analysis.windows[index].hasSurfaceDisruption else { return nil }
-            let projectedCorners = analysis.grid.predictionCellBounds3D[index].compactMap {
-                MeshHelpers.projectWorldToPixel(
-                    $0,
-                    viewMatrix: viewMatrix,
-                    intrinsics: intrinsics,
-                    imageSize: size
-                )
+        func projectedCells(for indices: Set<Int>) -> [[SIMD2<Float>]] {
+            indices.compactMap { index -> [SIMD2<Float>]? in
+                guard analysis.windows.indices.contains(index),
+                      analysis.grid.predictionCellBounds3D.indices.contains(index) else {
+                    return nil
+                }
+                let projectedCorners = analysis.grid.predictionCellBounds3D[index].compactMap {
+                    MeshHelpers.projectWorldToPixel(
+                        $0,
+                        viewMatrix: viewMatrix,
+                        intrinsics: intrinsics,
+                        imageSize: size
+                    )
+                }
+                guard projectedCorners.count == 4 else { return nil }
+                return projectedCorners.map { SIMD2<Float>($0.x / width, $0.y / height) }
             }
-            guard projectedCorners.count == 4 else { return nil }
-            return projectedCorners.map { SIMD2<Float>($0.x / width, $0.y / height) }
         }
-        guard !disruptedCells.isEmpty,
-              let rasterizedImage = MeshRasterizer.rasterizePolygons(
-                polygonsNormalizedCoordinates: disruptedCells,
-                size: size,
-                fillConfig: RasterizeConfig(color: .red, alpha: 0.55)
-              ) else {
+
+        func rasterizedImage(
+            indices: Set<Int>,
+            color: UIColor,
+            alpha: CGFloat
+        ) -> CIImage? {
+            let cells = projectedCells(for: indices)
+            guard !cells.isEmpty,
+                  let image = MeshRasterizer.rasterizePolygons(
+                    polygonsNormalizedCoordinates: cells,
+                    size: size,
+                    fillConfig: RasterizeConfig(color: color, alpha: alpha)
+                  ) else {
+                return nil
+            }
+            return CIImage(cgImage: image)
+        }
+
+        let rasterizedOverlay: CIImage?
+        if let selection {
+            let selectedIndices = selection.selectedMemberIndices
+            let unselectedKept = selection.keptMemberIndices.subtracting(selectedIndices)
+            let unselectedDiscarded = selection.discardedMemberIndices.subtracting(selectedIndices)
+            let selectedKept = selection.keptMemberIndices.intersection(selectedIndices)
+            let selectedDiscarded = selection.discardedMemberIndices.intersection(selectedIndices)
+            let layers = [
+                rasterizedImage(indices: unselectedKept, color: .green, alpha: 0.30),
+                rasterizedImage(indices: unselectedDiscarded, color: .red, alpha: 0.30),
+                rasterizedImage(indices: selectedKept, color: .green, alpha: 0.75),
+                rasterizedImage(indices: selectedDiscarded, color: .red, alpha: 0.75)
+            ].compactMap { $0 }
+            rasterizedOverlay = layers.reduce(nil) { partialResult, layer in
+                guard let partialResult else { return layer }
+                return layer.composited(over: partialResult)
+            }
+        } else {
+            let disruptedIndices = Set(
+                analysis.windows.indices.filter { analysis.windows[$0].hasSurfaceDisruption }
+            )
+            rasterizedOverlay = rasterizedImage(
+                indices: disruptedIndices,
+                color: .red,
+                alpha: 0.55
+            )
+        }
+
+        guard let rasterizedOverlay else {
             return nil
         }
 
         let imageOrientation = CameraOrientation.getCGImageOrientationForInterface(
             currentInterfaceOrientation: captureImageData.interfaceOrientation
         )
-        let orientedImage = CIImage(cgImage: rasterizedImage).oriented(imageOrientation)
+        let orientedImage = rasterizedOverlay.oriented(imageOrientation)
         let outputImage = CenterCropTransformUtils.centerCropAspectFit(
             orientedImage,
             to: PointNMapConstants.SelectedAccessibilityFeatureConfig.inputSize
