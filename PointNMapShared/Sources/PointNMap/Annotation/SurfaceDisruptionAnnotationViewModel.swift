@@ -18,7 +18,7 @@ public final class SurfaceDisruptionAnnotationViewModel: ObservableObject {
     @Published public private(set) var currentRegionID: SurfaceDisruptionRegion.ID?
     @Published public private(set) var groupDecision: AnnotationDecision = .keep
 
-    private var individualDecisions: [SurfaceDisruptionRegion.ID: AnnotationDecision] = [:]
+    @Published private var individualDecisions: [SurfaceDisruptionRegion.ID: AnnotationDecision] = [:]
 
     public init(regions: [SurfaceDisruptionRegion] = []) {
         setRegions(regions)
@@ -29,6 +29,13 @@ public final class SurfaceDisruptionAnnotationViewModel: ObservableObject {
             return nil
         }
         return regions.first { $0.id == currentRegionID }
+    }
+
+    public var currentIndividualDecision: AnnotationDecision? {
+        guard let currentRegionID else {
+            return nil
+        }
+        return individualDecisions[currentRegionID]
     }
 
     public var decisionSummary: AnnotationDecisionSummary {
