@@ -115,6 +115,7 @@ public func makeSurfaceDisruptionOverlaySelection(
     regions: [SurfaceDisruptionRegion],
     reviewScope: AnnotationReviewScope,
     selectedRegionID: SurfaceDisruptionRegion.ID?,
+    isSelectionVisible: Bool = true,
     decisionForRegion: (SurfaceDisruptionRegion) -> AnnotationDecision
 ) -> SurfaceDisruptionOverlaySelection {
     var validMemberIndices = Set<Int>()
@@ -133,7 +134,8 @@ public func makeSurfaceDisruptionOverlaySelection(
     }
 
     let selectedMemberIndices: Set<Int>
-    if reviewScope == .individual,
+    if isSelectionVisible,
+       reviewScope == .individual,
        let selectedRegion = regions.first(where: { $0.id == selectedRegionID }) {
         selectedMemberIndices = Set(selectedRegion.windowIndices)
     } else {
@@ -665,13 +667,10 @@ public extension AnnotationImageManager {
             let selectedIndices = selection.selectedMemberIndices
             let unselectedKept = selection.keptMemberIndices.subtracting(selectedIndices)
             let unselectedDiscarded = selection.discardedMemberIndices.subtracting(selectedIndices)
-            let selectedKept = selection.keptMemberIndices.intersection(selectedIndices)
-            let selectedDiscarded = selection.discardedMemberIndices.intersection(selectedIndices)
             let layers = [
-                rasterizedImage(indices: unselectedKept, color: .green, alpha: 0.30),
-                rasterizedImage(indices: unselectedDiscarded, color: .red, alpha: 0.30),
-                rasterizedImage(indices: selectedKept, color: .green, alpha: 0.75),
-                rasterizedImage(indices: selectedDiscarded, color: .red, alpha: 0.75)
+                rasterizedImage(indices: unselectedKept, color: .red, alpha: 0.75),
+                rasterizedImage(indices: unselectedDiscarded, color: .red, alpha: 0.12),
+                rasterizedImage(indices: selectedIndices, color: .white, alpha: 0.75)
             ].compactMap { $0 }
             rasterizedOverlay = layers.reduce(nil) { partialResult, layer in
                 guard let partialResult else { return layer }

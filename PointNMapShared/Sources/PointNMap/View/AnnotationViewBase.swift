@@ -996,13 +996,11 @@ public struct AnnotationViewBase: View {
     }
 
     private func currentSurfaceDisruptionOverlaySelection() -> SurfaceDisruptionOverlaySelection? {
-        guard surfaceDisruptionViewModel.reviewMode == .disruptions else {
-            return nil
-        }
         return makeSurfaceDisruptionOverlaySelection(
             regions: surfaceDisruptionViewModel.regions,
             reviewScope: surfaceDisruptionViewModel.reviewScope,
             selectedRegionID: surfaceDisruptionViewModel.currentRegionID,
+            isSelectionVisible: surfaceDisruptionViewModel.reviewMode == .disruptions,
             decisionForRegion: surfaceDisruptionViewModel.effectiveDecision
         )
     }
