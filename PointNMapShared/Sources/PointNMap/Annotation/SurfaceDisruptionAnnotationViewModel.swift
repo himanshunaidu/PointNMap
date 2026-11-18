@@ -111,6 +111,30 @@ public final class SurfaceDisruptionAnnotationViewModel: ObservableObject {
     }
 }
 
+public enum SurfaceDisruptionAreaApplicationError: Error {
+    case invalidArea(Double)
+}
+
+/// Applies the accepted disruption area at the annotation boundary without changing
+/// the raw estimator result used before review.
+public func applyAcceptedSurfaceDisruptionArea<Feature: EditableAccessibilityFeature>(
+    _ acceptedAreaSquareMeters: Double,
+    to features: [Feature],
+    isAttributeSelected: Bool
+) throws {
+    guard isAttributeSelected else { return }
+    guard let value = AccessibilityFeatureAttribute.surfaceDisruptionArea.value(
+        from: acceptedAreaSquareMeters
+    ) else {
+        throw SurfaceDisruptionAreaApplicationError.invalidArea(acceptedAreaSquareMeters)
+    }
+
+    for feature in features where feature.accessibilityFeatureClass.kind == .sidewalk
+        && feature.effectiveAnnotationDecision == .keep {
+        try feature.setAttributeValue(value, for: .surfaceDisruptionArea, isCalculated: true)
+    }
+}
+
 public func isSurfaceDisruptionReviewAvailable<Analysis>(
     featureClass: AccessibilityFeatureClass,
     selectedAttributes: Set<AccessibilityFeatureAttribute>,
