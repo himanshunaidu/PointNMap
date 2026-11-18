@@ -58,10 +58,7 @@ private struct SurfaceDisruptionGroupControls: View {
     @ObservedObject var model: SurfaceDisruptionAnnotationViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Apply a decision to all surface disruptions", bundle: #bundle)
-                .font(.subheadline.weight(.semibold))
-
+        HStack(spacing: 8) {
             SurfaceDisruptionDecisionButton(
                 decision: .keep,
                 isGroupAction: true,
@@ -75,7 +72,6 @@ private struct SurfaceDisruptionGroupControls: View {
                 action: { model.setGroupDecision(.discard) }
             )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -84,56 +80,63 @@ private struct SurfaceDisruptionIndividualControls: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Picker(
-                "Surface disruption region",
-                selection: Binding(
-                    get: { model.currentRegionID },
-                    set: { regionID in
-                        if let regionID {
-                            model.selectRegion(id: regionID)
+            HStack(spacing: 8) {
+                Picker(
+                    "Surface disruption region",
+                    selection: Binding(
+                        get: { model.currentRegionID },
+                        set: { regionID in
+                            if let regionID {
+                                model.selectRegion(id: regionID)
+                            }
                         }
+                    )
+                ) {
+                    ForEach(model.regions) { region in
+                        Text("Surface Disruption #\(regionNumber(for: region))", bundle: #bundle)
+                            .tag(Optional(region.id))
                     }
-                )
-            ) {
-                ForEach(model.regions) { region in
-                    Text("Surface Disruption #\(regionNumber(for: region))", bundle: #bundle)
-                        .tag(Optional(region.id))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityLabel("Surface disruption region")
+                .accessibilityHint("Select a detected surface disruption to review")
+
+                if let region = model.currentRegion {
+                    Text(
+                        "\(region.areaSquareMeters, format: .number.precision(.fractionLength(0...3))) m²",
+                        bundle: #bundle
+                    )
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize()
+                    .accessibilityLabel("Area")
+                    .accessibilityValue(
+                        "\(region.areaSquareMeters, format: .number.precision(.fractionLength(0...3))) square meters"
+                    )
                 }
             }
-            .accessibilityLabel("Surface disruption region")
-            .accessibilityHint("Select a detected surface disruption to review")
 
             if let region = model.currentRegion {
                 SurfaceDisruptionEffectiveDecisionView(
                     decision: model.effectiveDecision(for: region),
                     isOverride: model.currentIndividualDecision != nil,
-                    areaSquareMeters: region.areaSquareMeters
+                    clearOverride: model.clearIndividualDecision
                 )
 
-                Text("Override for this surface disruption", bundle: #bundle)
-                    .font(.subheadline.weight(.semibold))
-
-                SurfaceDisruptionDecisionButton(
-                    decision: .keep,
-                    isGroupAction: false,
-                    isSelected: model.currentIndividualDecision == .keep,
-                    action: { model.setIndividualDecision(.keep) }
-                )
-                SurfaceDisruptionDecisionButton(
-                    decision: .discard,
-                    isGroupAction: false,
-                    isSelected: model.currentIndividualDecision == .discard,
-                    action: { model.setIndividualDecision(.discard) }
-                )
-
-                Button {
-                    model.clearIndividualDecision()
-                } label: {
-                    Text("Use Group Decision", bundle: #bundle)
-                        .frame(maxWidth: .infinity)
+                HStack(spacing: 8) {
+                    SurfaceDisruptionDecisionButton(
+                        decision: .keep,
+                        isGroupAction: false,
+                        isSelected: model.currentIndividualDecision == .keep,
+                        action: { model.setIndividualDecision(.keep) }
+                    )
+                    SurfaceDisruptionDecisionButton(
+                        decision: .discard,
+                        isGroupAction: false,
+                        isSelected: model.currentIndividualDecision == .discard,
+                        action: { model.setIndividualDecision(.discard) }
+                    )
                 }
-                .buttonStyle(.bordered)
-                .accessibilityHint("Removes the individual override for this region")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -148,45 +151,38 @@ private struct SurfaceDisruptionIndividualControls: View {
 private struct SurfaceDisruptionEffectiveDecisionView: View {
     let decision: AnnotationDecision
     let isOverride: Bool
-    let areaSquareMeters: Double
+    let clearOverride: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: decision == .keep ? "checkmark.circle.fill" : "trash.circle.fill")
-                .foregroundStyle(decision == .keep ? .green : .red)
-                .accessibilityHidden(true)
+        let decisionColor: Color = decision == .keep ? .green : .red
 
-            VStack(alignment: .leading, spacing: 4) {
-                if decision == .keep {
-                    Text("Kept", bundle: #bundle)
-                        .font(.headline)
-                } else {
-                    Text("Discarded", bundle: #bundle)
-                        .font(.headline)
-                }
-                if isOverride {
-                    Text("Individual override", bundle: #bundle)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("Group decision", bundle: #bundle)
+        HStack(spacing: 12) {
+            Label {
+                HStack(spacing: 4) {
+                    Text(decision == .keep ? "Keep" : "Discard", bundle: #bundle)
+                        .fontWeight(.semibold)
+                    Text(isOverride ? "(Override)" : "(Group)", bundle: #bundle)
                         .foregroundStyle(.secondary)
                 }
-                Text(
-                    "Area: \(areaSquareMeters, format: .number.precision(.fractionLength(0...3))) m²",
-                    bundle: #bundle
-                )
-                .foregroundStyle(.secondary)
+            } icon: {
+                Image(systemName: decision == .keep ? "checkmark" : "trash")
             }
+            .foregroundStyle(decisionColor)
+
+            Spacer(minLength: 0)
+
+            Button(action: clearOverride) {
+                Text("Use Group Decision", bundle: #bundle)
+            }
+            .buttonStyle(.bordered)
+            .disabled(!isOverride)
+            .accessibilityHint("Removes the individual override for this region")
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Effective decision")
-        .accessibilityValue(
-            decision == .keep
-                ? "Kept, \(isOverride ? "individual override" : "group decision")"
-                : "Discarded, \(isOverride ? "individual override" : "group decision")"
+        .font(.subheadline)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(decisionColor.opacity(0.1))
         )
     }
 }
@@ -198,6 +194,8 @@ private struct SurfaceDisruptionDecisionButton: View {
     let action: () -> Void
 
     var body: some View {
+        let decisionColor: Color = decision == .keep ? .green : .red
+
         Button(action: action) {
             Label {
                 if isGroupAction {
@@ -216,11 +214,23 @@ private struct SurfaceDisruptionDecisionButton: View {
             } icon: {
                 Image(systemName: decision == .keep ? "checkmark" : "trash")
             }
+            .font(.subheadline)
             .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .foregroundStyle(decisionColor)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(decisionColor.opacity(isSelected ? 0.18 : 0.08))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(
+                        decisionColor.opacity(isSelected ? 1 : 0.3),
+                        lineWidth: isSelected ? 2 : 1
+                    )
+            }
         }
-        .buttonStyle(.borderedProminent)
-        .opacity(isSelected ? 1 : 0.65)
-        .tint(decision == .keep ? .green : .red)
+        .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
         .accessibilityHint(
@@ -235,18 +245,23 @@ private struct SurfaceDisruptionDecisionSummaryView: View {
     let summary: AnnotationDecisionSummary
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Surface disruption summary", bundle: #bundle)
-                .font(.subheadline.weight(.semibold))
+        HStack(spacing: 8) {
             Text("\(summary.keptCount) kept", bundle: #bundle)
+                .foregroundStyle(.green)
+            Text("·")
+                .accessibilityHidden(true)
             Text("\(summary.discardedCount) discarded", bundle: #bundle)
-            Text("\(summary.exceptionCount) overrides", bundle: #bundle)
+                .foregroundStyle(.red)
+            Text("·")
+                .accessibilityHidden(true)
+            Text("\(summary.exceptionCount) exceptions", bundle: #bundle)
+                .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .font(.subheadline.weight(.semibold))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Surface disruption decision summary")
         .accessibilityValue(
-            "\(summary.keptCount) kept, \(summary.discardedCount) discarded, \(summary.exceptionCount) overrides"
+            "\(summary.keptCount) kept, \(summary.discardedCount) discarded, \(summary.exceptionCount) exceptions"
         )
     }
 }
