@@ -274,6 +274,7 @@ public struct AnnotationViewBase: View {
     
     @StateObject var featureClassSelectionViewModel = AnnotationFeatureClassSelectionViewBaseModel()
     @StateObject var featureSelectionViewModel = AnnotationFeatureSelectionViewBaseModel()
+    @StateObject private var surfaceDisruptionViewModel = SurfaceDisruptionAnnotationViewModel()
     @State private var isShowingAnnotationFeatureDetailView: Bool = false
     @State private var temporaryVisualizationFeatureID: UUID?
     @State private var temporaryVisualizationResults: AnnotationImageFeatureUpdateResults?
@@ -336,6 +337,18 @@ public struct AnnotationViewBase: View {
         /// But while rendering the picker, we would need to create a new Array of enumerated instances, which would be less efficient.
         .onChange(of: featureSelectionViewModel.currentIndex) { [oldIndex = featureSelectionViewModel.currentIndex] newIndex in
             handleOnInstanceChange(oldIndex: oldIndex, newIndex: newIndex)
+        }
+        .onChange(of: surfaceDisruptionViewModel.reviewMode) { _ in
+            refreshSurfaceDisruptionOverlay()
+        }
+        .onChange(of: surfaceDisruptionViewModel.reviewScope) { _ in
+            refreshSurfaceDisruptionOverlay()
+        }
+        .onChange(of: surfaceDisruptionViewModel.currentRegionID) { _ in
+            refreshSurfaceDisruptionOverlay()
+        }
+        .onChange(of: surfaceDisruptionViewModel.decisionSummary) { _ in
+            refreshSurfaceDisruptionOverlay()
         }
         .sheet(isPresented: $isShowingAnnotationFeatureDetailView) {
             if let currentFeature = featureSelectionViewModel.currentFeature,
@@ -490,29 +503,56 @@ public struct AnnotationViewBase: View {
                     }
                 }
 
+                if isSurfaceDisruptionReviewEligible(for: currentClass) {
+                    surfaceDisruptionModePicker
+                }
+
                 Divider()
 
-                if !currentClass.kind.isUniquePerCapture {
-                    reviewScopePicker(currentClass: currentClass)
-                }
+                if surfaceDisruptionViewModel.reviewMode == .disruptions,
+                   isSurfaceDisruptionReviewEligible(for: currentClass) {
+                    SurfaceDisruptionAnnotationView(model: surfaceDisruptionViewModel)
+                } else {
+                    if !currentClass.kind.isUniquePerCapture {
+                        reviewScopePicker(currentClass: currentClass)
+                    }
 
-                if currentClass.kind.isUniquePerCapture
-                    || featureSelectionViewModel.reviewScope == .individual {
-                    individualSelectionView(currentClass: currentClass)
-                }
+                    if currentClass.kind.isUniquePerCapture
+                        || featureSelectionViewModel.reviewScope == .individual {
+                        individualSelectionView(currentClass: currentClass)
+                    }
 
-                if !currentClass.kind.isUniquePerCapture
-                    && featureSelectionViewModel.reviewScope == .individual {
-                    effectiveDecisionView()
-                    Text("Override for this \(currentClass.name.capitalized)")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+                    if !currentClass.kind.isUniquePerCapture
+                        && featureSelectionViewModel.reviewScope == .individual {
+                        effectiveDecisionView()
+                        Text("Override for this \(currentClass.name.capitalized)")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
 
-                annotationOptionsView(currentClass: currentClass)
-                decisionSummaryView(currentClass: currentClass)
+                    annotationOptionsView(currentClass: currentClass)
+                    decisionSummaryView(currentClass: currentClass)
+                }
             }
         }
+    }
+
+    private var surfaceDisruptionModePicker: some View {
+        Picker(
+            "Sidewalk review mode",
+            selection: Binding(
+                get: { surfaceDisruptionViewModel.reviewMode },
+                set: surfaceDisruptionViewModel.setReviewMode
+            )
+        ) {
+            Text("Sidewalk", bundle: #bundle)
+                .tag(SurfaceDisruptionReviewMode.sidewalk)
+            Text("Surface Disruptions", bundle: #bundle)
+                .tag(SurfaceDisruptionReviewMode.disruptions)
+        }
+        .pickerStyle(.segmented)
+        .accessibilityLabel("Sidewalk review mode")
+        .accessibilityHint("Switch between reviewing the sidewalk and detected surface disruptions")
     }
 
     private func emptyInstancesView(currentClass: AccessibilityFeatureClass) -> some View {
@@ -814,6 +854,8 @@ public struct AnnotationViewBase: View {
     private func handleOnClassChange() {
         isSegmentationOverlayVisible = true
         isSurfaceAnalysisOverlayVisible = true
+        surfaceDisruptionViewModel.setReviewMode(.sidewalk)
+        surfaceDisruptionViewModel.setRegions([])
 
         do {
             guard let currentClass = featureClassSelectionViewModel.currentClass else {
@@ -837,7 +879,7 @@ public struct AnnotationViewBase: View {
                     if index == accessibilityFeatures.index(before: accessibilityFeatures.endIndex),
                        currentClass.kind.attributes.contains(where: {
                            $0 == .width || $0 == .runningSlope || $0 == .crossSlope
-                               || $0 == .surfaceIntegrity
+                               || $0 == .surfaceIntegrity || $0 == .surfaceDisruptionArea
                        }) {
                         temporaryVisualizationFeatureID = accessibilityFeature.id
                         temporaryVisualizationResults = try makeVisualizationResults(
@@ -851,6 +893,15 @@ public struct AnnotationViewBase: View {
             }
             featureClassSelectionViewModel.setOption(option: .classOption(.default))
             try featureSelectionViewModel.setInstances(accessibilityFeatures, currentClass: currentClass)
+            if currentClass.kind == .sidewalk,
+               selectedAttributesByClass[currentClass, default: []].contains(.surfaceDisruptionArea),
+               let analysis = temporaryVisualizationResults?.surfaceIntegrityWindowAnalysis {
+                let clusteringResult = try SurfaceDisruptionRegionClusterer().cluster(
+                    analysis: analysis,
+                    configuration: .init(minimumWindowCount: 2)
+                )
+                surfaceDisruptionViewModel.setRegions(clusteringResult.regions)
+            }
             if let lastEstimationError {
                 throw AnnotationViewBaseError.attributeEstimationFailed(lastEstimationError)
             }
@@ -882,7 +933,8 @@ public struct AnnotationViewBase: View {
                     index: currentIndex
                 )
                 if currentClass.kind.attributes.contains(where: {
-                    $0 == .width || $0 == .runningSlope || $0 == .crossSlope || $0 == .surfaceIntegrity
+                    $0 == .width || $0 == .runningSlope || $0 == .crossSlope
+                        || $0 == .surfaceIntegrity || $0 == .surfaceDisruptionArea
                 }) {
                     if temporaryVisualizationFeatureID == currentFeature.id,
                        let temporaryVisualizationResults {
@@ -896,7 +948,8 @@ public struct AnnotationViewBase: View {
             try manager.updateFeature(
                 accessibilityFeatureClass: currentClass,
                 selection: selection,
-                updateFeatureResults: updateFeatureResults
+                updateFeatureResults: updateFeatureResults,
+                surfaceDisruptionOverlaySelection: currentSurfaceDisruptionOverlaySelection()
             )
         } catch {
             managerStatusViewModel.update(isFailed: true, error: error, shouldDismiss: false)
@@ -929,6 +982,35 @@ public struct AnnotationViewBase: View {
             projectedPlane: projectedPlane,
             damageDetectionResults: damageDetectionResults,
             surfaceIntegrityWindowAnalysis: surfaceIntegrityWindowAnalysis
+        )
+    }
+
+    private func isSurfaceDisruptionReviewEligible(
+        for featureClass: AccessibilityFeatureClass
+    ) -> Bool {
+        isSurfaceDisruptionReviewAvailable(
+            featureClass: featureClass,
+            selectedAttributes: selectedAttributesByClass[featureClass, default: []],
+            analysis: temporaryVisualizationResults?.surfaceIntegrityWindowAnalysis
+        )
+    }
+
+    private func currentSurfaceDisruptionOverlaySelection() -> SurfaceDisruptionOverlaySelection? {
+        guard surfaceDisruptionViewModel.reviewMode == .disruptions else {
+            return nil
+        }
+        return makeSurfaceDisruptionOverlaySelection(
+            regions: surfaceDisruptionViewModel.regions,
+            reviewScope: surfaceDisruptionViewModel.reviewScope,
+            selectedRegionID: surfaceDisruptionViewModel.currentRegionID,
+            decisionForRegion: surfaceDisruptionViewModel.effectiveDecision
+        )
+    }
+
+    private func refreshSurfaceDisruptionOverlay() {
+        handleOnInstanceChange(
+            oldIndex: featureSelectionViewModel.currentIndex,
+            newIndex: featureSelectionViewModel.currentIndex
         )
     }
     
