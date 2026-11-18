@@ -38,10 +38,11 @@ public enum AccessibilityFeatureKind: String, Identifiable, Codable, CaseIterabl
         case .sidewalk: return [
             .width, .runningSlope, .crossSlope,
 //            .surfaceIntegrity,
-            .surfaceDisruption, .heightFromGround,
-            .surfaceDisruptionArea, .surfaceDisruptionLength,
-            .widthLegacy, .runningSlopeLegacy, .crossSlopeLegacy,
-            .widthFromImage, .runningSlopeFromImage, .crossSlopeFromImage
+//            .surfaceDisruption, .heightFromGround,
+            .surfaceDisruptionArea,
+//                .surfaceDisruptionLength,
+//            .widthLegacy, .runningSlopeLegacy, .crossSlopeLegacy,
+//            .widthFromImage, .runningSlopeFromImage, .crossSlopeFromImage
         ]
         case .curbRamp: return [
             .rampWidth, .rampLength,

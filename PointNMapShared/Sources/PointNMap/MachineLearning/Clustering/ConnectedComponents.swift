@@ -7,11 +7,11 @@
 
 /**
     A clustering algorithm that groups values based on their connectivity using a user-defined adjacency function.
- 
+
     TODO: Move the logic to Metal for performance improvements.
  */
 public struct ConnectedComponents<Value: Equatable> {
-    private class Point: Equatable {
+    private class Point {
         typealias Label = Int
 
         let value: Value
@@ -20,79 +20,85 @@ public struct ConnectedComponents<Value: Equatable> {
         init(_ value: Value) {
             self.value = value
         }
-
-        static func == (lhs: Point, rhs: Point) -> Bool {
-            return lhs.value == rhs.value
-        }
     }
-    
-    private var minimumNumberOfPoints: Int
-    private var adjacencyFunction: (Value, Value, Float) throws -> Bool
-    private var adjacencyThreshold: Float = 0.0
-    
+
+    private let minimumComponentSize: Int
+    private let adjacencyFunction: (Value, Value, Float) throws -> Bool
+    private let adjacencyThreshold: Float
+
     /**
      Initializes the ConnectedComponents clustering algorithm.
-     
+
      - Parameters:
-        - minimumNumberOfPoints: The minimum number of points required to form a dense region (cluster).
+        - minimumComponentSize: The minimum number of values required for a connected component to be retained.
         - adjacencyFunction: A function that checks if two values are adjacent (connected).
             If they are not, checks if their distance is within a threshold.
+        - adjacencyThreshold: The threshold forwarded to the adjacency function.
      */
     public init(
-        minimumNumberOfPoints: Int,
-        adjacencyFunction: @escaping (Value, Value, Float) throws -> Bool, adjacencyThreshold: Float = 0.0
+        minimumComponentSize: Int,
+        adjacencyFunction: @escaping (Value, Value, Float) throws -> Bool,
+        adjacencyThreshold: Float = 0.0
     ) {
-        self.minimumNumberOfPoints = minimumNumberOfPoints
+        self.minimumComponentSize = minimumComponentSize
         self.adjacencyFunction = adjacencyFunction
         self.adjacencyThreshold = adjacencyThreshold
     }
-    
-    /**
-    Clusters values according to the specified parameters.
 
-     - Parameters:
-        - values: An array of values to be clustered.
-     - Throws: Rethrows any errors produced by `distanceFunction`.
-     - Returns: A tuple containing an array of clustered values
-                and an array of outlier values.
-    */
+    @available(*, deprecated, message: "Use init(minimumComponentSize:adjacencyFunction:adjacencyThreshold:) instead.")
+    public init(
+        minimumNumberOfPoints: Int,
+        adjacencyFunction: @escaping (Value, Value, Float) throws -> Bool,
+        adjacencyThreshold: Float = 0.0
+    ) {
+        self.init(
+            minimumComponentSize: minimumNumberOfPoints,
+            adjacencyFunction: adjacencyFunction,
+            adjacencyThreshold: adjacencyThreshold
+        )
+    }
+
+    /**
+     Clusters values according to the specified parameters.
+
+     Components are returned in discovery order. Components smaller than
+     ``minimumComponentSize`` are returned as outliers.
+
+     - Parameter values: The values to cluster.
+     - Throws: Rethrows any error produced by the adjacency function.
+     - Returns: Retained connected components and values from filtered components.
+     */
     public func fit(values: [Value]) throws -> (clusters: [[Value]], outliers: [Value]) {
         let points = values.map { Point($0) }
-
-        var currentLabel = 0
-        for point in points {
-            guard point.label == nil else { continue }
-            
-            var neighbors = try points.filter {
-                try adjacencyFunction(point.value, $0.value, adjacencyThreshold)
-            }
-            defer { currentLabel += 1 }
-            point.label = currentLabel
-            while !neighbors.isEmpty {
-                let neighbor = neighbors.removeFirst()
-                guard neighbor.label == nil else { continue }
-
-                neighbor.label = currentLabel
-
-                let n1 = try points.filter {
-                    try adjacencyFunction(point.value, $0.value, adjacencyThreshold)
-                }
-                if n1.count >= minimumNumberOfPoints {
-                    neighbors.append(contentsOf: n1)
-                }
-            }
-        }
-
         var clusters: [[Value]] = []
         var outliers: [Value] = []
-        
-        for (label, labelPoints) in Dictionary(grouping: points, by: { $0.label }) {
-            let values = labelPoints.map { $0.value }
-            if (label == nil || values.count < minimumNumberOfPoints) {
-                outliers.append(contentsOf: values)
-            } else {
-                clusters.append(values)
+        var currentLabel = 0
+
+        for seed in points where seed.label == nil {
+            seed.label = currentLabel
+            var queue = [seed]
+            var queueIndex = 0
+            var component: [Value] = []
+
+            while queueIndex < queue.count {
+                let current = queue[queueIndex]
+                queueIndex += 1
+                component.append(current.value)
+
+                for candidate in points where candidate.label == nil {
+                    if try adjacencyFunction(current.value, candidate.value, adjacencyThreshold) {
+                        candidate.label = currentLabel
+                        queue.append(candidate)
+                    }
+                }
             }
+
+            if component.count < minimumComponentSize {
+                outliers.append(contentsOf: component)
+            } else {
+                clusters.append(component)
+            }
+            currentLabel += 1
         }
 
         return (clusters, outliers)
